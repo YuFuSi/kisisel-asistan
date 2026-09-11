@@ -2,7 +2,7 @@ import { APICallError } from 'ai'
 import { getSettings } from '../settings'
 import { PROVIDERS } from '../../shared/api'
 
-// Hata zincirindeki (cause) tüm mesajları ve hata kodlarını tek metinde topla
+// Hata zincirindeki (cause) tüm mesajları, hata kodlarını ve sunucu cevaplarını tek metinde topla
 function collectMessages(err: unknown): string {
   const parts: string[] = []
   let current: unknown = err
@@ -14,6 +14,7 @@ function collectMessages(err: unknown): string {
     parts.push(current.name, current.message)
     const code = (current as NodeJS.ErrnoException).code
     if (code) parts.push(code)
+    if (APICallError.isInstance(current) && current.responseBody) parts.push(current.responseBody)
     current = current.cause
   }
   return parts.join(' | ')
@@ -29,11 +30,16 @@ export function describeError(err: unknown): string {
     err && typeof err === 'object' && 'lastError' in err
       ? (err as { lastError: unknown }).lastError
       : err
+  const text = collectMessages(actual)
 
   const notFound =
     provider === 'ollama'
       ? `"${model}" modeli bulunamadı. Terminalde "ollama pull ${model}" komutuyla indirebilirsin.`
       : `"${model}" modeli bulunamadı. Ayarlar'dan model adını kontrol et.`
+
+  if (/does not support tools/i.test(text)) {
+    return `"${model}" modeli araç kullanmayı (görev, hatırlatma vb.) desteklemiyor. Ayarlar'dan araç destekli bir model seç (ör. qwen3:14b).`
+  }
 
   if (APICallError.isInstance(actual) && actual.statusCode) {
     const status = actual.statusCode
@@ -42,11 +48,11 @@ export function describeError(err: unknown): string {
     }
     if (status === 404) return notFound
     if (status === 429) return `${label} kullanım limitine ulaşıldı. Biraz bekleyip tekrar dene.`
-    if (status >= 500)
+    if (status >= 500) {
       return `${label} sunucusunda bir sorun oluştu (${status}). Biraz sonra tekrar dene.`
+    }
   }
 
-  const text = collectMessages(actual)
   if (/ECONNREFUSED|ENOTFOUND|ECONNRESET|fetch failed|Cannot connect/i.test(text)) {
     return provider === 'ollama'
       ? `Ollama'ya bağlanılamadı (${ollamaBaseUrl}). Ollama uygulamasının açık olduğundan emin ol.`

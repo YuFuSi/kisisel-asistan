@@ -2,8 +2,11 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { closeDb, initDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
-import { closeDb } from './db'
+import { startReminderScheduler } from './scheduler/reminders'
+
+let stopReminderScheduler: (() => void) | null = null
 
 // Sadece web linklerini varsayılan tarayıcıda aç (file:// vb. açılmasın)
 function openExternalSafe(url: string): void {
@@ -63,8 +66,11 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // Veritabanı dosyası: %APPDATA%\kisisel-asistan\asistan.db
+  initDatabase(join(app.getPath('userData'), 'asistan.db'))
   registerIpcHandlers()
   createWindow()
+  stopReminderScheduler = startReminderScheduler()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -78,4 +84,7 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('will-quit', () => closeDb())
+app.on('will-quit', () => {
+  stopReminderScheduler?.()
+  closeDb()
+})

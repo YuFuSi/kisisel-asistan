@@ -1,7 +1,8 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { Api, ChatEvent } from '../shared/api'
+import type { Api, ChatEvent, DataScope } from '../shared/api'
 
 // Arayüze sadece bu listedeki işlemler açılır; ham ipcRenderer erişimi verilmez.
+// Kanal adları src/main/ipc.ts ile birebir aynı olmalı.
 const api: Api = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
@@ -25,6 +26,35 @@ const api: Api = {
       const handler = (_event: IpcRendererEvent, chatEvent: ChatEvent): void => listener(chatEvent)
       ipcRenderer.on('chat:event', handler)
       return () => ipcRenderer.removeListener('chat:event', handler)
+    }
+  },
+  tasks: {
+    list: () => ipcRenderer.invoke('tasks:list'),
+    create: (input) => ipcRenderer.invoke('tasks:create', input),
+    update: (id, patch) => ipcRenderer.invoke('tasks:update', id, patch),
+    remove: (id) => ipcRenderer.invoke('tasks:remove', id)
+  },
+  reminders: {
+    list: () => ipcRenderer.invoke('reminders:list'),
+    create: (message, remindAt) => ipcRenderer.invoke('reminders:create', message, remindAt),
+    remove: (id) => ipcRenderer.invoke('reminders:remove', id)
+  },
+  notes: {
+    list: () => ipcRenderer.invoke('notes:list'),
+    create: (input) => ipcRenderer.invoke('notes:create', input),
+    update: (id, patch) => ipcRenderer.invoke('notes:update', id, patch),
+    remove: (id) => ipcRenderer.invoke('notes:remove', id)
+  },
+  memories: {
+    list: () => ipcRenderer.invoke('memories:list'),
+    create: (content) => ipcRenderer.invoke('memories:create', content),
+    remove: (id) => ipcRenderer.invoke('memories:remove', id)
+  },
+  events: {
+    onDataChanged: (listener) => {
+      const handler = (_event: IpcRendererEvent, scope: DataScope): void => listener(scope)
+      ipcRenderer.on('data:changed', handler)
+      return () => ipcRenderer.removeListener('data:changed', handler)
     }
   }
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import Sidebar, { type PageId } from './components/Sidebar'
-import ComingSoon from './components/ComingSoon'
 import ChatPage from './pages/ChatPage'
+import TasksPage from './pages/TasksPage'
+import NotesPage from './pages/NotesPage'
 import SettingsPage from './pages/SettingsPage'
 
 function App(): React.JSX.Element {
@@ -16,11 +17,11 @@ function App(): React.JSX.Element {
           <ChatPage active={page === 'chat'} onOpenSettings={() => setPage('settings')} />
         </div>
         {page === 'tasks' && (
-          <ComingSoon title="Görevler" description="Yapılacaklar ve hatırlatmalar" stage={2} />
+          <div className="h-full overflow-y-auto">
+            <TasksPage />
+          </div>
         )}
-        {page === 'notes' && (
-          <ComingSoon title="Notlar" description="Notların ve asistanın hafızası" stage={2} />
-        )}
+        {page === 'notes' && <NotesPage />}
         {page === 'settings' && (
           <div className="h-full overflow-y-auto">
             <SettingsPage />

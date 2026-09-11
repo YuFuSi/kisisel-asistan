@@ -1,10 +1,9 @@
 import Database from 'better-sqlite3'
-import { app } from 'electron'
-import { join } from 'path'
 
 // Her eleman bir veritabanı sürümü. Yeni tablo/sütun gerekirse sona yeni bir eleman eklenir,
 // mevcutlar asla değiştirilmez (kullanıcının eski veritabanı sırayla güncellenir).
 const migrations: string[] = [
+  // 1: Ayarlar ve sohbetler
   `
   CREATE TABLE settings (
     key   TEXT PRIMARY KEY,
@@ -27,6 +26,43 @@ const migrations: string[] = [
   );
 
   CREATE INDEX idx_messages_conversation ON messages(conversation_id, id);
+  `,
+  // 2: Araç etkinlikleri, görevler, hatırlatmalar, notlar, hafıza
+  `
+  ALTER TABLE messages ADD COLUMN tools TEXT NOT NULL DEFAULT '[]';
+
+  CREATE TABLE tasks (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    title      TEXT NOT NULL,
+    notes      TEXT NOT NULL DEFAULT '',
+    due_date   TEXT,
+    done_at    TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE reminders (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    message    TEXT NOT NULL,
+    remind_at  INTEGER NOT NULL,
+    sent_at    INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX idx_reminders_pending ON reminders(sent_at, remind_at);
+
+  CREATE TABLE notes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    title      TEXT NOT NULL DEFAULT '',
+    content    TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE memories (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    content    TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
   `
 ]
 
@@ -50,9 +86,15 @@ function migrate(database: Database.Database): void {
   }
 }
 
-// Veritabanı dosyası: %APPDATA%\kisisel-asistan\asistan.db
+// Uygulama açılırken bir kez çağrılır. Testlerde ':memory:' ile geçici veritabanı açılır.
+// (Bu dosya electron'u import etmez; böylece veri katmanı testlerde de çalışır.)
+export function initDatabase(path: string): void {
+  db?.close()
+  db = openDatabase(path)
+}
+
 export function getDb(): Database.Database {
-  db ??= openDatabase(join(app.getPath('userData'), 'asistan.db'))
+  if (!db) throw new Error('Veritabanı henüz açılmadı.')
   return db
 }
 

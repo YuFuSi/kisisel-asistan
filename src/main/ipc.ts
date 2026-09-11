@@ -6,13 +6,33 @@ import {
   deleteConversation,
   listConversations,
   listMessages
-} from './conversations'
+} from './data/conversations'
+import { createMemory, deleteMemory, listMemories } from './data/memories'
+import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
+import { createReminder, deleteReminder, listPendingReminders } from './data/reminders'
+import { createTask, deleteTask, listTasks, updateTask } from './data/tasks'
+import { notifyDataChanged } from './events'
 import { getSettingsView, setApiKey, updateSettings } from './settings'
-import type { CloudProviderId, SettingsPatch } from '../shared/api'
+import type {
+  CloudProviderId,
+  DataScope,
+  NotePatch,
+  SettingsPatch,
+  TaskInput,
+  TaskPatch
+} from '../shared/api'
+
+// Veriyi değiştiren işlemden sonra açık sayfalara "bu veri değişti" haberi gönder
+function changing<T>(scope: DataScope, action: () => T): T {
+  const result = action()
+  notifyDataChanged(scope)
+  return result
+}
 
 // Arayüzün (renderer) çağırabileceği tüm işlemler burada tanımlı.
 // Kanal adları src/preload/index.ts ile birebir aynı olmalı.
 export function registerIpcHandlers(): void {
+  // Ayarlar
   ipcMain.handle('settings:get', () => getSettingsView())
   ipcMain.handle('settings:update', (_event, patch: SettingsPatch) => {
     updateSettings(patch)
@@ -23,9 +43,9 @@ export function registerIpcHandlers(): void {
     return getSettingsView()
   })
   ipcMain.handle('settings:testConnection', () => testConnection())
-
   ipcMain.handle('ollama:listModels', () => listOllamaModels())
 
+  // Sohbet
   ipcMain.handle('conversations:list', () => listConversations())
   ipcMain.handle('conversations:create', () => createConversation())
   ipcMain.handle('conversations:remove', (_event, id: number) => {
@@ -33,9 +53,46 @@ export function registerIpcHandlers(): void {
     deleteConversation(id)
   })
   ipcMain.handle('conversations:messages', (_event, id: number) => listMessages(id))
-
   ipcMain.handle('chat:send', (event, conversationId: number, text: string) =>
     sendMessage(event.sender, conversationId, text)
   )
   ipcMain.handle('chat:stop', (_event, conversationId: number) => stopChat(conversationId))
+
+  // Görevler
+  ipcMain.handle('tasks:list', () => listTasks())
+  ipcMain.handle('tasks:create', (_event, input: TaskInput) =>
+    changing('tasks', () => createTask(input))
+  )
+  ipcMain.handle('tasks:update', (_event, id: number, patch: TaskPatch) =>
+    changing('tasks', () => updateTask(id, patch))
+  )
+  ipcMain.handle('tasks:remove', (_event, id: number) => changing('tasks', () => deleteTask(id)))
+
+  // Hatırlatmalar
+  ipcMain.handle('reminders:list', () => listPendingReminders())
+  ipcMain.handle('reminders:create', (_event, message: string, remindAt: number) =>
+    changing('reminders', () => createReminder(message, remindAt))
+  )
+  ipcMain.handle('reminders:remove', (_event, id: number) =>
+    changing('reminders', () => deleteReminder(id))
+  )
+
+  // Notlar
+  ipcMain.handle('notes:list', () => listNotes())
+  ipcMain.handle('notes:create', (_event, input: NotePatch) =>
+    changing('notes', () => createNote(input))
+  )
+  ipcMain.handle('notes:update', (_event, id: number, patch: NotePatch) =>
+    changing('notes', () => updateNote(id, patch))
+  )
+  ipcMain.handle('notes:remove', (_event, id: number) => changing('notes', () => deleteNote(id)))
+
+  // Hafıza
+  ipcMain.handle('memories:list', () => listMemories())
+  ipcMain.handle('memories:create', (_event, content: string) =>
+    changing('memories', () => createMemory(content))
+  )
+  ipcMain.handle('memories:remove', (_event, id: number) =>
+    changing('memories', () => deleteMemory(id))
+  )
 }

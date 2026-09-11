@@ -1,5 +1,5 @@
-import { getDb } from './db'
-import type { ChatMessage, ChatRole, Conversation } from '../shared/api'
+import { getDb } from '../db'
+import type { ChatMessage, ChatRole, Conversation, ToolActivity } from '../../shared/api'
 
 interface ConversationRow {
   id: number
@@ -12,6 +12,7 @@ interface MessageRow {
   conversation_id: number
   role: ChatRole
   content: string
+  tools: string
   created_at: string
 }
 
@@ -26,6 +27,7 @@ const toMessage = (row: MessageRow): ChatMessage => ({
   conversationId: row.conversation_id,
   role: row.role,
   content: row.content,
+  tools: JSON.parse(row.tools) as ToolActivity[],
   createdAt: row.created_at
 })
 
@@ -63,12 +65,17 @@ export function listMessages(conversationId: number): ChatMessage[] {
   return rows.map(toMessage)
 }
 
-export function addMessage(conversationId: number, role: ChatRole, content: string): ChatMessage {
+export function addMessage(
+  conversationId: number,
+  role: ChatRole,
+  content: string,
+  tools: ToolActivity[] = []
+): ChatMessage {
   const db = getDb()
   return db.transaction(() => {
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)')
-      .run(conversationId, role, content)
+      .prepare('INSERT INTO messages (conversation_id, role, content, tools) VALUES (?, ?, ?, ?)')
+      .run(conversationId, role, content, JSON.stringify(tools))
     db.prepare("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?").run(
       conversationId
     )

@@ -62,6 +62,8 @@ export interface ConnectionResult {
   message: string
 }
 
+// ---- Sohbet ----
+
 export interface Conversation {
   id: number
   title: string
@@ -70,19 +72,86 @@ export interface Conversation {
 
 export type ChatRole = 'user' | 'assistant'
 
+export type ToolStatus = 'running' | 'done' | 'error'
+
+// Asistanın bir cevap sırasında kullandığı araç (arayüzde küçük etiket olarak görünür)
+export interface ToolActivity {
+  id: string
+  name: string
+  label: string
+  status: ToolStatus
+}
+
 export interface ChatMessage {
   id: number
   conversationId: number
   role: ChatRole
   content: string
+  tools: ToolActivity[]
   createdAt: string
 }
 
 export type ChatEvent =
   | { conversationId: number; type: 'delta'; text: string }
+  | { conversationId: number; type: 'tool'; activity: ToolActivity }
   | { conversationId: number; type: 'done'; message: ChatMessage }
   | { conversationId: number; type: 'stopped'; message: ChatMessage | null }
-  | { conversationId: number; type: 'error'; error: string }
+  | { conversationId: number; type: 'error'; error: string; message: ChatMessage | null }
+
+// ---- Görevler, hatırlatmalar, notlar, hafıza ----
+
+export type DataScope = 'tasks' | 'reminders' | 'notes' | 'memories'
+
+export interface Task {
+  id: number
+  title: string
+  notes: string
+  /** Yerel tarih, YYYY-MM-DD */
+  dueDate: string | null
+  /** Tamamlanma zamanı (ISO); null ise bekliyor */
+  doneAt: string | null
+  createdAt: string
+}
+
+export interface TaskInput {
+  title: string
+  notes?: string
+  dueDate?: string | null
+}
+
+export interface TaskPatch {
+  title?: string
+  notes?: string
+  dueDate?: string | null
+  done?: boolean
+}
+
+export interface Reminder {
+  id: number
+  message: string
+  /** Epoch milisaniye */
+  remindAt: number
+  sentAt: number | null
+}
+
+export interface Note {
+  id: number
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NotePatch {
+  title?: string
+  content?: string
+}
+
+export interface Memory {
+  id: number
+  content: string
+  createdAt: string
+}
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
 export interface Api {
@@ -106,5 +175,32 @@ export interface Api {
     send(conversationId: number, text: string): Promise<ChatMessage>
     stop(conversationId: number): Promise<void>
     onEvent(listener: (event: ChatEvent) => void): () => void
+  }
+  tasks: {
+    list(): Promise<Task[]>
+    create(input: TaskInput): Promise<Task>
+    update(id: number, patch: TaskPatch): Promise<Task>
+    remove(id: number): Promise<void>
+  }
+  reminders: {
+    /** Henüz gösterilmemiş hatırlatmalar */
+    list(): Promise<Reminder[]>
+    create(message: string, remindAt: number): Promise<Reminder>
+    remove(id: number): Promise<void>
+  }
+  notes: {
+    list(): Promise<Note[]>
+    create(input: NotePatch): Promise<Note>
+    update(id: number, patch: NotePatch): Promise<Note>
+    remove(id: number): Promise<void>
+  }
+  memories: {
+    list(): Promise<Memory[]>
+    create(content: string): Promise<Memory>
+    remove(id: number): Promise<void>
+  }
+  events: {
+    /** Veri değişince (arayüzden veya asistanın araçlarından) haber verir */
+    onDataChanged(listener: (scope: DataScope) => void): () => void
   }
 }

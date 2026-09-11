@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Settings, Sparkles } from 'lucide-react'
-import { PROVIDERS, type ChatMessage, type Conversation, type SettingsView } from '@shared/api'
+import {
+  PROVIDERS,
+  type ChatMessage,
+  type Conversation,
+  type SettingsView,
+  type ToolActivity
+} from '@shared/api'
 import ConversationList from '../components/chat/ConversationList'
 import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
@@ -8,8 +14,8 @@ import { errorMessage } from '../lib/errors'
 
 const SUGGESTIONS = [
   'Bugünümü planlamama yardım et',
-  'Bana kısa bir motivasyon mesajı yaz',
-  'Resmi bir e-posta taslağı hazırla'
+  'Yarın saat 9’da spor yapmamı hatırlat',
+  'Listeme market alışverişi ekle'
 ]
 
 interface ChatPageProps {
@@ -17,9 +23,17 @@ interface ChatPageProps {
   onOpenSettings: () => void
 }
 
+// O an yazılmakta olan cevap
 interface Streaming {
   conversationId: number
   text: string
+  tools: ToolActivity[]
+}
+
+function upsertTool(list: ToolActivity[], activity: ToolActivity): ToolActivity[] {
+  return list.some((t) => t.id === activity.id)
+    ? list.map((t) => (t.id === activity.id ? activity : t))
+    : [...list, activity]
 }
 
 function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element {
@@ -53,7 +67,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       .catch((err) => setError(errorMessage(err)))
   }, [])
 
-  // Ana süreçten parça parça gelen cevabı dinle
+  // Ana süreçten parça parça gelen cevabı ve araç kullanımlarını dinle
   useEffect(() => {
     return window.api.chat.onEvent((event) => {
       if (event.type === 'delta') {
@@ -62,26 +76,32 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         )
         return
       }
+      if (event.type === 'tool') {
+        setStreaming((s) =>
+          s && s.conversationId === event.conversationId
+            ? { ...s, tools: upsertTool(s.tools, event.activity) }
+            : s
+        )
+        return
+      }
 
+      // Cevap bitti, durduruldu veya hata oldu
       setStreaming((s) => (s?.conversationId === event.conversationId ? null : s))
       if (event.conversationId === activeIdRef.current) {
-        if (event.type === 'error') {
-          setError(event.error)
-        } else if (event.message) {
-          const message = event.message
-          setMessages((list) => [...list, message])
-        }
+        const message = event.message
+        if (message) setMessages((list) => [...list, message])
+        if (event.type === 'error') setError(event.error)
       }
       refreshConversations().catch(() => {})
     })
   }, [refreshConversations])
 
-  const streamingText = streaming && streaming.conversationId === activeId ? streaming.text : null
+  const streamingView = streaming && streaming.conversationId === activeId ? streaming : null
 
   // Yeni mesaj veya yeni cevap parçası gelince en alta kaydır
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages, streamingText])
+  }, [messages, streamingView])
 
   function openConversation(id: number | null): void {
     activeIdRef.current = id
@@ -118,7 +138,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         id = (await window.api.conversations.create()).id
         openConversation(id)
       }
-      setStreaming({ conversationId: id, text: '' })
+      setStreaming({ conversationId: id, text: '', tools: [] })
       const userMessage = await window.api.chat.send(id, text)
       setMessages((list) => [...list, userMessage])
       await refreshConversations()
@@ -134,7 +154,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     modelName !== '' &&
     (settings.provider === 'ollama' || settings.hasApiKey[settings.provider])
   const activeTitle = conversations.find((c) => c.id === activeId)?.title || 'Yeni sohbet'
-  const showEmptyState = messages.length === 0 && streamingText === null
+  const showEmptyState = messages.length === 0 && streamingView === null
 
   return (
     <div className="flex h-full">
@@ -176,7 +196,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
               </h2>
               <p className="max-w-md text-sm text-zinc-400">
                 {modelReady
-                  ? 'Aşağıya bir mesaj yazarak başlayabilirsin.'
+                  ? 'Sohbet edebilir, görev ve hatırlatma ekletebilir, not tutturabilirsin.'
                   : "Başlamak için Ayarlar'dan bir yapay zeka modeli seç."}
               </p>
               {modelReady && (
@@ -197,10 +217,20 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
           ) : (
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-5 py-6">
               {messages.map((message) => (
-                <MessageBubble key={message.id} role={message.role} content={message.content} />
+                <MessageBubble
+                  key={message.id}
+                  role={message.role}
+                  content={message.content}
+                  tools={message.tools}
+                />
               ))}
-              {streamingText !== null && (
-                <MessageBubble role="assistant" content={streamingText} pending />
+              {streamingView && (
+                <MessageBubble
+                  role="assistant"
+                  content={streamingView.text}
+                  tools={streamingView.tools}
+                  pending
+                />
               )}
               <div ref={bottomRef} />
             </div>
