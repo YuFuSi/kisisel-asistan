@@ -5,7 +5,7 @@ Yapay zeka destekli Windows masaüstü kişisel asistanı. Electron, React, Type
 ## Yol haritası
 
 - [x] **Aşama 0:** Proje iskeleti, yan menü, sayfalar
-- [ ] **Aşama 1:** AI sohbet ve Ayarlar (OpenAI / Gemini / Claude / Ollama)
+- [x] **Aşama 1:** AI sohbet ve Ayarlar (OpenAI / Gemini / Claude / Ollama)
 - [ ] **Aşama 2:** Görevler, hatırlatmalar, notlar, hafıza
 - [ ] **Aşama 3:** Sistem tepsisi, kısayol tuşu, Windows ile başlama
 - [ ] **Aşama 4:** Hava durumu, web arama, bilgisayar kontrolü

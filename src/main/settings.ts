@@ -1,0 +1,95 @@
+import { safeStorage } from 'electron'
+import { getDb } from './db'
+import {
+  PROVIDER_IDS,
+  PROVIDERS,
+  type AppSettings,
+  type CloudProviderId,
+  type SettingsPatch,
+  type SettingsView
+} from '../shared/api'
+
+const SETTINGS_KEY = 'app'
+
+const defaults: AppSettings = {
+  provider: 'ollama',
+  ollamaBaseUrl: 'http://localhost:11434',
+  models: {
+    ollama: PROVIDERS.ollama.defaultModel,
+    openai: PROVIDERS.openai.defaultModel,
+    google: PROVIDERS.google.defaultModel,
+    anthropic: PROVIDERS.anthropic.defaultModel
+  }
+}
+
+function readValue(key: string): string | undefined {
+  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+    { value: string } | undefined
+  return row?.value
+}
+
+function writeValue(key: string, value: string): void {
+  getDb()
+    .prepare(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    )
+    .run(key, value)
+}
+
+export function getSettings(): AppSettings {
+  const raw = readValue(SETTINGS_KEY)
+  if (!raw) return { ...defaults, models: { ...defaults.models } }
+  const saved = JSON.parse(raw) as Partial<AppSettings>
+  return { ...defaults, ...saved, models: { ...defaults.models, ...saved.models } }
+}
+
+export function updateSettings(patch: SettingsPatch): AppSettings {
+  const current = getSettings()
+  const next: AppSettings = { ...current, models: { ...current.models } }
+
+  if (patch.provider !== undefined) {
+    if (!PROVIDER_IDS.includes(patch.provider)) throw new Error('Bilinmeyen sağlayıcı.')
+    next.provider = patch.provider
+  }
+  if (patch.ollamaBaseUrl !== undefined) {
+    const url = patch.ollamaBaseUrl.trim().replace(/\/+$/, '')
+    if (!/^https?:\/\/.+/i.test(url))
+      throw new Error('Sunucu adresi http:// veya https:// ile başlamalı.')
+    next.ollamaBaseUrl = url
+  }
+  for (const id of PROVIDER_IDS) {
+    const model = patch.models?.[id]
+    if (typeof model === 'string') next.models[id] = model.trim()
+  }
+
+  writeValue(SETTINGS_KEY, JSON.stringify(next))
+  return next
+}
+
+// API anahtarları Windows'un kullanıcı hesabına bağlı şifreleme (DPAPI) ile saklanır
+const secretKey = (provider: CloudProviderId): string => `secret:${provider}`
+
+export function setApiKey(provider: CloudProviderId, key: string): void {
+  const value = key.trim()
+  if (!value) {
+    getDb().prepare('DELETE FROM settings WHERE key = ?').run(secretKey(provider))
+    return
+  }
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error('Bu bilgisayarda şifreli saklama kullanılamıyor.')
+  }
+  writeValue(secretKey(provider), safeStorage.encryptString(value).toString('base64'))
+}
+
+export function getApiKey(provider: CloudProviderId): string | undefined {
+  const raw = readValue(secretKey(provider))
+  return raw ? safeStorage.decryptString(Buffer.from(raw, 'base64')) : undefined
+}
+
+export function getSettingsView(): SettingsView {
+  const has = (provider: CloudProviderId): boolean => readValue(secretKey(provider)) !== undefined
+  return {
+    ...getSettings(),
+    hasApiKey: { openai: has('openai'), google: has('google'), anthropic: has('anthropic') }
+  }
+}

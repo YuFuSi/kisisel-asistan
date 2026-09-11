@@ -2,13 +2,20 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { registerIpcHandlers } from './ipc'
+import { closeDb } from './db'
+
+// Sadece web linklerini varsayılan tarayıcıda aç (file:// vb. açılmasın)
+function openExternalSafe(url: string): void {
+  if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+}
 
 function createWindow(): void {
   // Ana pencere
   const mainWindow = new BrowserWindow({
     width: 1100,
     height: 750,
-    minWidth: 800,
+    minWidth: 900,
     minHeight: 560,
     title: 'Kişisel Asistan',
     backgroundColor: '#09090b',
@@ -25,10 +32,18 @@ function createWindow(): void {
     mainWindow.show()
   })
 
-  // Uygulama içindeki dış linkler varsayılan tarayıcıda açılsın
+  // target="_blank" linkler varsayılan tarayıcıda açılsın
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    openExternalSafe(details.url)
     return { action: 'deny' }
+  })
+
+  // Uygulama penceresi başka bir sayfaya gitmesin; dış linkler tarayıcıda açılsın
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow.webContents.getURL()) {
+      event.preventDefault()
+      openExternalSafe(url)
+    }
   })
 
   // Geliştirme modunda Vite sunucusunu (anlık yenileme), üretimde derlenmiş dosyayı yükle
@@ -48,6 +63,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  registerIpcHandlers()
   createWindow()
 
   app.on('activate', function () {
@@ -61,3 +77,5 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+app.on('will-quit', () => closeDb())

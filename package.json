@@ -21,15 +21,25 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
+    "@ai-sdk/anthropic": "^4.0.52",
+    "@ai-sdk/google": "^4.0.67",
+    "@ai-sdk/openai": "^4.0.65",
     "@electron-toolkit/utils": "^4.0.0",
-    "lucide-react": "^1.45.0"
+    "ai": "^7.0.97",
+    "better-sqlite3": "^13.0.3",
+    "lucide-react": "^1.45.0",
+    "ollama-ai-provider-v2": "^4.0.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
