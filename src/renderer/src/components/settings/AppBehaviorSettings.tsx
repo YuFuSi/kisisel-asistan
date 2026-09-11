@@ -1,0 +1,46 @@
+import type { SettingsPatch, SettingsView } from '@shared/api'
+import Field from './Field'
+import ShortcutRecorder from './ShortcutRecorder'
+import Toggle from './Toggle'
+
+interface AppBehaviorSettingsProps {
+  settings: SettingsView
+  onUpdate: (patch: SettingsPatch) => Promise<void>
+}
+
+// Tepsi, Windows ile başlama ve global kısayol ayarları
+function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): React.JSX.Element {
+  return (
+    <div className="space-y-6">
+      <Toggle
+        label="Kapatınca sistem tepsisinde çalışmaya devam et"
+        description="Pencereyi kapatınca asistan arka planda çalışır ve hatırlatmalar zamanında gelir. Tamamen kapatmak için tepsi simgesine sağ tıklayıp Çıkış'ı seç."
+        checked={settings.closeToTray}
+        onChange={(checked) => void onUpdate({ closeToTray: checked })}
+      />
+      <Toggle
+        label="Windows açılınca başlat"
+        description={
+          settings.loginItemSupported
+            ? 'Bilgisayar açılınca asistan pencere açmadan tepside başlar.'
+            : 'Geliştirme modunda kullanılamaz; kurulum dosyasıyla yüklenen uygulamada çalışır.'
+        }
+        checked={settings.openAtLogin}
+        disabled={!settings.loginItemSupported}
+        onChange={(checked) => void onUpdate({ openAtLogin: checked })}
+      />
+      <Field
+        label="Hızlı açma kısayolu"
+        hint="Hangi programda olursan ol, bu tuşlara basınca asistan açılır; tekrar basınca gizlenir."
+      >
+        <ShortcutRecorder
+          value={settings.globalShortcut}
+          active={settings.shortcutActive}
+          onChange={(accelerator) => onUpdate({ globalShortcut: accelerator })}
+        />
+      </Field>
+    </div>
+  )
+}
+
+export default AppBehaviorSettings

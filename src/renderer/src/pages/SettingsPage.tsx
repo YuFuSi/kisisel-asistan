@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { PROVIDER_IDS, PROVIDERS, type SettingsPatch, type SettingsView } from '@shared/api'
 import OllamaSettings from '../components/settings/OllamaSettings'
 import CloudSettings from '../components/settings/CloudSettings'
 import ConnectionTest from '../components/settings/ConnectionTest'
+import AppBehaviorSettings from '../components/settings/AppBehaviorSettings'
 import { errorMessage } from '../lib/errors'
+import { sectionTitleClass } from '../lib/styles'
 
 function Section({
   title,
@@ -14,7 +16,7 @@ function Section({
 }): React.JSX.Element {
   return (
     <section className="space-y-3">
-      <h2 className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{title}</h2>
+      <h2 className={sectionTitleClass}>{title}</h2>
       {children}
     </section>
   )
@@ -24,21 +26,28 @@ function SettingsPage(): React.JSX.Element {
   const [settings, setSettings] = useState<SettingsView | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // İlk yükleme; ayar başka yerden değişirse (ör. tepsi menüsü) yeniden yükle
   useEffect(() => {
-    window.api.settings
-      .get()
-      .then(setSettings)
-      .catch((err) => setError(errorMessage(err)))
+    const load = (): void => {
+      window.api.settings
+        .get()
+        .then(setSettings)
+        .catch((err) => setError(errorMessage(err)))
+    }
+    load()
+    return window.api.events.onDataChanged((scope) => {
+      if (scope === 'settings') load()
+    })
   }, [])
 
-  async function update(patch: SettingsPatch): Promise<void> {
+  const update = useCallback(async (patch: SettingsPatch): Promise<void> => {
     setError(null)
     try {
       setSettings(await window.api.settings.update(patch))
     } catch (err) {
       setError(errorMessage(err))
     }
-  }
+  }, [])
 
   if (!settings) {
     return <div className="p-8 text-sm text-zinc-500">{error ?? 'Yükleniyor...'}</div>
@@ -47,13 +56,13 @@ function SettingsPage(): React.JSX.Element {
   const provider = settings.provider
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 p-8">
+    <div className="mx-auto max-w-2xl space-y-10 p-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Ayarlar</h1>
-        <p className="mt-1 text-sm text-zinc-400">Yapay zeka sağlayıcısı ve model seçimi</p>
+        <p className="mt-1 text-sm text-zinc-400">Yapay zeka modeli ve uygulama tercihleri</p>
       </div>
 
-      <Section title="Sağlayıcı">
+      <Section title="Yapay zeka sağlayıcısı">
         <div className="grid grid-cols-2 gap-3">
           {PROVIDER_IDS.map((id) => (
             <button
@@ -90,7 +99,15 @@ function SettingsPage(): React.JSX.Element {
         <ConnectionTest key={`${provider}:${settings.models[provider]}`} />
       </Section>
 
-      {error && <p className="text-sm text-red-400 select-text">{error}</p>}
+      <Section title="Uygulama">
+        <AppBehaviorSettings settings={settings} onUpdate={update} />
+      </Section>
+
+      {error && (
+        <div className="rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-300 select-text">
+          {error}
+        </div>
+      )}
     </div>
   )
 }

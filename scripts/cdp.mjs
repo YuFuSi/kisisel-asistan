@@ -9,14 +9,15 @@
 //   node scripts/cdp.mjs shot cikti.png
 import { writeFileSync } from 'node:fs'
 
-const PORT = 9222
+// Kurulu uygulamayı test ederken farklı port verilebilir: $env:CDP_PORT='9223'
+const PORT = Number(process.env.CDP_PORT ?? 9222)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function getTarget() {
   for (let i = 0; i < 90; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
-      const page = list.find((t) => t.type === 'page' && t.url.startsWith('http://localhost:5173'))
+      const page = list.find((t) => t.type === 'page' && !t.url.startsWith('devtools://'))
       if (page) return page
     } catch {
       // Electron henüz açılmadı

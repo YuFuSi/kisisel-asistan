@@ -1,12 +1,12 @@
 import { safeStorage } from 'electron'
 import { getDb } from './db'
+import { DEFAULT_SHORTCUT } from '../shared/shortcut'
 import {
   PROVIDER_IDS,
   PROVIDERS,
   type AppSettings,
   type CloudProviderId,
-  type SettingsPatch,
-  type SettingsView
+  type SettingsPatch
 } from '../shared/api'
 
 const SETTINGS_KEY = 'app'
@@ -19,7 +19,10 @@ const defaults: AppSettings = {
     openai: PROVIDERS.openai.defaultModel,
     google: PROVIDERS.google.defaultModel,
     anthropic: PROVIDERS.anthropic.defaultModel
-  }
+  },
+  closeToTray: true,
+  openAtLogin: false,
+  globalShortcut: DEFAULT_SHORTCUT
 }
 
 function readValue(key: string): string | undefined {
@@ -36,6 +39,7 @@ function writeValue(key: string, value: string): void {
     .run(key, value)
 }
 
+// Kayıtlı ayarlar varsayılanlarla birleştirilir; böylece sonradan eklenen ayarlar da değer alır
 export function getSettings(): AppSettings {
   const raw = readValue(SETTINGS_KEY)
   if (!raw) return { ...defaults, models: { ...defaults.models } }
@@ -53,14 +57,18 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   }
   if (patch.ollamaBaseUrl !== undefined) {
     const url = patch.ollamaBaseUrl.trim().replace(/\/+$/, '')
-    if (!/^https?:\/\/.+/i.test(url))
+    if (!/^https?:\/\/.+/i.test(url)) {
       throw new Error('Sunucu adresi http:// veya https:// ile başlamalı.')
+    }
     next.ollamaBaseUrl = url
   }
   for (const id of PROVIDER_IDS) {
     const model = patch.models?.[id]
     if (typeof model === 'string') next.models[id] = model.trim()
   }
+  if (typeof patch.closeToTray === 'boolean') next.closeToTray = patch.closeToTray
+  if (typeof patch.openAtLogin === 'boolean') next.openAtLogin = patch.openAtLogin
+  if (typeof patch.globalShortcut === 'string') next.globalShortcut = patch.globalShortcut.trim()
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))
   return next
@@ -86,10 +94,16 @@ export function getApiKey(provider: CloudProviderId): string | undefined {
   return raw ? safeStorage.decryptString(Buffer.from(raw, 'base64')) : undefined
 }
 
-export function getSettingsView(): SettingsView {
+export function getApiKeyStatus(): Record<CloudProviderId, boolean> {
   const has = (provider: CloudProviderId): boolean => readValue(secretKey(provider)) !== undefined
-  return {
-    ...getSettings(),
-    hasApiKey: { openai: has('openai'), google: has('google'), anthropic: has('anthropic') }
-  }
+  return { openai: has('openai'), google: has('google'), anthropic: has('anthropic') }
+}
+
+// Kullanıcıya gösterilmeyen tek seferlik bayraklar (ör. "tepsi bilgisi gösterildi")
+export function hasFlag(name: string): boolean {
+  return readValue(`flag:${name}`) !== undefined
+}
+
+export function setFlag(name: string): void {
+  writeValue(`flag:${name}`, '1')
 }

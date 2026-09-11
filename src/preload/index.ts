@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { Api, ChatEvent, DataScope } from '../shared/api'
+import type { Api, AppCommand, ChatEvent, DataScope } from '../shared/api'
 
 // Arayüze sadece bu listedeki işlemler açılır; ham ipcRenderer erişimi verilmez.
 // Kanal adları src/main/ipc.ts ile birebir aynı olmalı.
@@ -8,7 +8,8 @@ const api: Api = {
     get: () => ipcRenderer.invoke('settings:get'),
     update: (patch) => ipcRenderer.invoke('settings:update', patch),
     setApiKey: (provider, key) => ipcRenderer.invoke('settings:setApiKey', provider, key),
-    testConnection: () => ipcRenderer.invoke('settings:testConnection')
+    testConnection: () => ipcRenderer.invoke('settings:testConnection'),
+    suspendShortcut: (suspended) => ipcRenderer.invoke('settings:suspendShortcut', suspended)
   },
   ollama: {
     listModels: () => ipcRenderer.invoke('ollama:listModels')
@@ -55,6 +56,11 @@ const api: Api = {
       const handler = (_event: IpcRendererEvent, scope: DataScope): void => listener(scope)
       ipcRenderer.on('data:changed', handler)
       return () => ipcRenderer.removeListener('data:changed', handler)
+    },
+    onCommand: (listener) => {
+      const handler = (_event: IpcRendererEvent, command: AppCommand): void => listener(command)
+      ipcRenderer.on('app:command', handler)
+      return () => ipcRenderer.removeListener('app:command', handler)
     }
   }
 }

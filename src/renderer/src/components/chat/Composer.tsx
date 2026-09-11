@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { SendHorizontal, Square } from 'lucide-react'
+import { COMPOSER_INPUT_ID } from '../../lib/dom'
 
 interface ComposerProps {
   busy: boolean
@@ -34,6 +35,7 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
     <div className="border-t border-zinc-800 p-4">
       <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 transition-colors focus-within:border-zinc-600">
         <textarea
+          id={COMPOSER_INPUT_ID}
           ref={textareaRef}
           rows={1}
           value={text}

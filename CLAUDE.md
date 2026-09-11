@@ -6,11 +6,13 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-11
-- **Tamamlanan:** Aşama 0, 1 ve 2. Son commit "Aşama 2: Araç sistemi, görevler, hatırlatmalar, notlar, hafıza".
-- **Sıradaki adım:** Aşama 3 (sistem tepsisi, global kısayol, Windows ile başlama).
+- **Tamamlanan:** Aşama 0, 1, 2 ve 3. Son commit "Aşama 3: Sistem tepsisi, global kısayol, Windows ile başlama".
+- **Sıradaki adım:** Aşama 4 (hava durumu, web arama, bilgisayar kontrolü). Web arama için kullanıcıdan Tavily API anahtarı istenecek.
 - **Uygulamanın durumu:**
-  - Ayarlarda sağlayıcı Ollama, model `qwen3:14b` seçili.
-  - Test verileri temizlendi. Aşama 1'den kalan 2 örnek sohbet duruyor, kullanıcı isterse silebilir.
+  - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
+  - `dist/win-unpacked` içinde Aşama 3'ün test paketi duruyor (git'e girmez).
+  - Tepsi simgesi ve sağ tık menüsü otomatik test edilemedi; kullanıcının gözle kontrol etmesi istendi.
+  - Aşama 1'den kalan 2 örnek sohbet duruyor, kullanıcı isterse silebilir.
 
 ## Proje özeti
 
@@ -35,16 +37,26 @@ Windows için yapay zeka destekli kişisel masaüstü asistanı. Asistan sohbet 
     - Notlar: otomatik kayıt, arama, "Asistanın hafızası" sekmesi.
   - Veri değişince (asistan eklese bile) sayfalar `data:changed` olayıyla kendiliğinden yenilenir.
   - Sohbette kullanılan araçlar "✓ Görev ekleme" gibi etiketlerle görünür ve mesajla birlikte saklanır.
-- [ ] **Aşama 3: Tepsi, kısayol, başlangıç.**
-  - Tepsi ikonu ve menüsü (Aç, Yeni sohbet, Çıkış). Pencere kapatılınca uygulama tepside kalır. Hatırlatmaların uygulama açık değilken de çalışması için bu gerekli.
-  - `Ctrl+Shift+Space` global kısayol (ayarlardan değiştirilebilir), `app.setLoginItemSettings` ile Windows ile başlama, `requestSingleInstanceLock` ile tek kopya çalışma.
-  - Şu an `src/main/index.ts` içinde `window-all-closed` uygulamayı kapatıyor. Aşama 3'te değişecek.
+- [x] **Aşama 3: Tepsi, kısayol, başlangıç.** Kodlar `src/main/system/` altında.
+  - **Tepsi** (`tray.ts`): simge ve menü (Aç, Yeni sohbet, Windows açılınca başlat, Çıkış). Tek tık pencereyi açar.
+  - **Kapatınca tepside kalma** (`window.ts`): X'e basınca pencere gizlenir (ayar: `closeToTray`, varsayılan açık). İlk seferde bir kez bilgi bildirimi çıkar (`flag:trayHintShown`). Gerçek çıkış için `markQuitting()` çağrılır (tepsi Çıkış, `before-quit`, Windows kapanışı / `session-end`).
+  - **Global kısayol** (`shortcut.ts`): varsayılan `CommandOrControl+Shift+Space`. Pencere öndeyse gizler, değilse gösterir ve `focus-chat` komutuyla sohbet kutusuna odaklanır. Ayarlar'da tuşlara basarak kaydedilir; kayıt sırasında mevcut kısayol askıya alınır. Alınamayan kısayolda eski kısayol korunur ve Türkçe hata verilir.
+  - **Windows ile başlama** (`startup.ts`): `app.setLoginItemSettings({ openAtLogin, args: ['--hidden'] })`. `--hidden` ile başlarsa pencere açılmaz. Sadece `app.isPackaged` iken etkin, geliştirme modunda arayüzde pasif görünür.
+  - **Tek kopya** (`index.ts`): `requestSingleInstanceLock`. İkinci açılışta mevcut pencere öne gelir.
+  - **Ayar uygulama** (`appSettings.ts`): `applySettingsPatch` ayarı kaydedip sisteme uygular ve `data:changed('settings')` gönderir. Tepsi menüsünden yapılan değişiklik Ayarlar sayfasına da yansır.
+  - **Arayüz komutları:** `app:command` kanalıyla `focus-chat` ve `new-chat` gider (`AppCommand`).
 - [ ] **Aşama 4: İnternet ve bilgisayar kontrolü.**
   - Hava durumu (Open-Meteo, anahtarsız), web arama (Tavily), sistem bilgisi (`systeminformation`), uygulama/URL açma, dosya bulma.
   - Riskli araçlar onay kartı ister (AI SDK v7'nin `toolApproval`/`needsApproval` desteğine bakılacak). Rastgele shell komutu çalıştırılmaz.
 - [ ] **Aşama 5: Gmail ve Google Takvim.** OAuth (Desktop app, loopback). Mail özetleme/arama/taslak, gönderme (onaylı), takvim listeleme/ekleme (onaylı).
 - [ ] **Aşama 6: Ses.** Mikrofon, Whisper (OpenAI/Groq) ile yazıya çevirme; `speechSynthesis` veya OpenAI TTS ile sesli okuma.
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
+  - Aşama 3'te `npm run build:unpack` ile paketli uygulama denendi. Uygulama açılıyor; "Windows ile başlat" kaydı ekleniyor ve siliniyor.
+  - **Dikkat 1, bozuk asar:** İlk paketleme, geliştirme sunucusu ve testler çalışırken arka planda yapıldı. Çıkan `app.asar` bozuktu: dosya konumları 1011 bayt kaymıştı ve uygulama 0,3 saniyede kod 1 ile, hiç log yazmadan kapanıyordu. Temiz derlemede sorun çıkmadı, ama kesin neden kanıtlanmadı. **Kural:** paketlemeden önce uygulamayı kapat, `out` ve `dist` klasörlerini sil, paketleme sürerken başka derleme veya test çalıştırma.
+  - **Elenen yanlış tahminler:** ESM paketleri (`ai`, `@ai-sdk/*`) asar içinden sorunsuz yükleniyor. Türkçe karakterli klasör yolu da sorun değil. Bunlar tekrar araştırılmasın.
+  - **Dikkat 2, sürüm düzleştirme:** electron-builder aynı paketin iki sürümünü tek yola yazıyor (ör. `escape-string-regexp` v4 ve v5). Temiz derlemede de asar'daki yaklaşık 100 dosya diskteki kopyadan farklı. Kurulum dosyasında sohbetin (ai, @ai-sdk, undici) gerçekten çalıştığı ayrıca test edilmeli.
+  - `out/renderer/assets` eski derlemelerin dosyalarını biriktiriyor. Paketlemeden önce `out` silinmeli.
+  - Paketli uygulamayı CDP ile test etmek için: `kisisel-asistan.exe --remote-debugging-port=9223`, ardından `$env:CDP_PORT='9223'; node scripts/cdp.mjs ...`
 
 Ayrıntılı ilk plan: `C:\Users\ysfll\.claude\plans\imdi-bana-bir-ki-isel-memoized-wadler.md`
 
@@ -83,9 +95,17 @@ Ayrıntılı ilk plan: `C:\Users\ysfll\.claude\plans\imdi-bana-bir-ki-isel-memoi
 
 ```
 src/
-├─ shared/api.ts            Main, preload ve renderer'ın ortak tipleri ve Api arayüzü
+├─ shared/
+│  ├─ api.ts                Main, preload ve renderer'ın ortak tipleri ve Api arayüzü
+│  └─ shortcut.ts           Kısayol yazımı ve klavye olayından accelerator üretme (+ testi)
 ├─ main/                    Arka plan (Node/Electron)
-│  ├─ index.ts              Pencere, uygulama yaşam döngüsü, veritabanı ve zamanlayıcıyı başlatma
+│  ├─ index.ts              Başlangıç: tek kopya kilidi, veritabanı, pencere, tepsi, kısayol, zamanlayıcı
+│  ├─ system/               İşletim sistemiyle ilgili kısımlar
+│  │  ├─ window.ts          Ana pencere, kapatınca tepsiye gizleme, showMainWindow, sendCommand
+│  │  ├─ tray.ts            Tepsi simgesi ve menüsü
+│  │  ├─ shortcut.ts        Global kısayol kaydı, değiştirme, askıya alma
+│  │  ├─ startup.ts         Windows ile başlama (--hidden)
+│  │  └─ appSettings.ts     applySettingsPatch (ayarı kaydet ve uygula), getSettingsView
 │  ├─ ipc.ts                Tüm ipcMain.handle kayıtları
 │  ├─ events.ts             notifyDataChanged: "veri değişti" olayını pencerelere gönderir
 │  ├─ settings.ts           Ayarlar ve şifreli API anahtarları (safeStorage)
@@ -179,6 +199,12 @@ vitest.config.ts            Test ayarları
    - PowerShell 5.1, programlara giden argümanlardaki çift tırnakları bozar. JS ifadelerinde tek tırnak kullanılır, gerekirse `\'` ile kaçırılır.
    - React kontrollü `<input type="date">` değeri, native value setter ve ardından `input` olayıyla değiştirilir.
    - Test için oluşturulan veriler (görev, hatırlatma, hafıza vb.) test sonunda **silinir**. Gerçek hatırlatmalar bildirim gösterir, sahte hafıza kayıtları asistanı yanıltır.
+   - **Tepsiye gizleme:** sayfada `window.close()` çalıştırılır.
+   - **Görünürlük ölçümü:** hiç gösterilmemiş pencerede (`--hidden`) `document.visibilityState` yanıltıcı biçimde `visible` olabilir. Gerçek görünürlük `Get-Process kisisel-asistan | Where-Object MainWindowHandle -ne 0` ile kontrol edilir.
+   - **Global kısayol:** gerçek tuş basımıyla test edilir: `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^+ ')` (Ctrl+Shift+Space).
+   - **Tek kopya:** uygulama açıkken `node_modules\electron\dist\electron.exe .` başlatılır. İkinci kopya hemen kapanmalı, mevcut pencere öne gelmeli.
+   - **Tepsi simgesi ve menüsü** otomatik test edilemiyor, gözle kontrol gerekir.
+   - PowerShell komutunda JavaScript metni (`'/'` gibi) ile `Remove-Item` bir arada olursa güvenlik denetimi komutu "sistem yolu siliniyor" diye engelliyor. Silme işlemi ayrı ve sade bir komutla yapılır.
 4. Aşama tamamlanınca commit atılır. Commit mesajı Türkçe olur ve `Co-Authored-By` satırı eklenir.
 
 ## Ortam

@@ -1,7 +1,8 @@
-import { BrowserWindow, Notification } from 'electron'
+import { Notification } from 'electron'
 import icon from '../../../resources/icon.png?asset'
 import { takeDueReminders } from '../data/reminders'
 import { notifyDataChanged } from '../events'
+import { showMainWindow } from '../system/window'
 import type { Reminder } from '../../shared/api'
 
 const CHECK_INTERVAL_MS = 15_000
@@ -10,14 +11,6 @@ const MISSED_AFTER_MS = 5 * 60_000
 
 // Bildirim nesneleri çöp toplayıcıya gitmesin (yoksa tıklama olayı kaybolabilir)
 const visibleNotifications = new Set<Notification>()
-
-function focusMainWindow(): void {
-  const window = BrowserWindow.getAllWindows()[0]
-  if (!window) return
-  if (window.isMinimized()) window.restore()
-  window.show()
-  window.focus()
-}
 
 function showReminder(reminder: Reminder, now: number): void {
   const missed = now - reminder.remindAt > MISSED_AFTER_MS
@@ -38,7 +31,7 @@ function showReminder(reminder: Reminder, now: number): void {
   }
   notification.on('click', () => {
     release()
-    focusMainWindow()
+    showMainWindow()
   })
   notification.on('close', release)
   notification.show()

@@ -12,7 +12,9 @@ import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import { createReminder, deleteReminder, listPendingReminders } from './data/reminders'
 import { createTask, deleteTask, listTasks, updateTask } from './data/tasks'
 import { notifyDataChanged } from './events'
-import { getSettingsView, setApiKey, updateSettings } from './settings'
+import { setApiKey } from './settings'
+import { applySettingsPatch, getSettingsView } from './system/appSettings'
+import { suspendGlobalShortcut } from './system/shortcut'
 import type {
   CloudProviderId,
   DataScope,
@@ -34,15 +36,17 @@ function changing<T>(scope: DataScope, action: () => T): T {
 export function registerIpcHandlers(): void {
   // Ayarlar
   ipcMain.handle('settings:get', () => getSettingsView())
-  ipcMain.handle('settings:update', (_event, patch: SettingsPatch) => {
-    updateSettings(patch)
-    return getSettingsView()
-  })
-  ipcMain.handle('settings:setApiKey', (_event, provider: CloudProviderId, key: string) => {
-    setApiKey(provider, key)
-    return getSettingsView()
-  })
+  ipcMain.handle('settings:update', (_event, patch: SettingsPatch) => applySettingsPatch(patch))
+  ipcMain.handle('settings:setApiKey', (_event, provider: CloudProviderId, key: string) =>
+    changing('settings', () => {
+      setApiKey(provider, key)
+      return getSettingsView()
+    })
+  )
   ipcMain.handle('settings:testConnection', () => testConnection())
+  ipcMain.handle('settings:suspendShortcut', (_event, suspended: boolean) =>
+    suspendGlobalShortcut(suspended)
+  )
   ipcMain.handle('ollama:listModels', () => listOllamaModels())
 
   // Sohbet

@@ -1,12 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Sidebar, { type PageId } from './components/Sidebar'
 import ChatPage from './pages/ChatPage'
 import TasksPage from './pages/TasksPage'
 import NotesPage from './pages/NotesPage'
 import SettingsPage from './pages/SettingsPage'
+import { focusComposer } from './lib/dom'
 
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('chat')
+
+  // Global kısayol veya tepsi menüsünden gelince sohbet sayfasına geç ve yazı kutusuna odaklan
+  useEffect(() => {
+    return window.api.events.onCommand(() => {
+      setPage('chat')
+      focusComposer()
+    })
+  }, [])
 
   return (
     <div className="flex h-full">

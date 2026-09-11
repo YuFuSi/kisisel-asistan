@@ -44,17 +44,30 @@ export interface AppSettings {
   provider: ProviderId
   ollamaBaseUrl: string
   models: Record<ProviderId, string>
+  /** Pencere kapatılınca uygulama sistem tepsisinde çalışmaya devam etsin */
+  closeToTray: boolean
+  /** Windows açılınca başlasın (sadece kurulu uygulamada) */
+  openAtLogin: boolean
+  /** Electron accelerator, ör. "CommandOrControl+Shift+Space"; boşsa kapalı */
+  globalShortcut: string
 }
 
 export interface SettingsPatch {
   provider?: ProviderId
   ollamaBaseUrl?: string
   models?: Partial<Record<ProviderId, string>>
+  closeToTray?: boolean
+  openAtLogin?: boolean
+  globalShortcut?: string
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
 export interface SettingsView extends AppSettings {
   hasApiKey: Record<CloudProviderId, boolean>
+  /** Windows ile başlama bu çalıştırmada kullanılabilir mi (geliştirme modunda değil) */
+  loginItemSupported: boolean
+  /** Global kısayol şu an gerçekten kayıtlı mı (başka uygulama almış olabilir) */
+  shortcutActive: boolean
 }
 
 export interface ConnectionResult {
@@ -100,7 +113,7 @@ export type ChatEvent =
 
 // ---- Görevler, hatırlatmalar, notlar, hafıza ----
 
-export type DataScope = 'tasks' | 'reminders' | 'notes' | 'memories'
+export type DataScope = 'tasks' | 'reminders' | 'notes' | 'memories' | 'settings'
 
 export interface Task {
   id: number
@@ -153,6 +166,10 @@ export interface Memory {
   createdAt: string
 }
 
+// ---- Uygulama komutları (tepsi menüsü ve global kısayoldan arayüze) ----
+
+export type AppCommand = 'focus-chat' | 'new-chat'
+
 // window.api üzerinden arayüzün kullanabildiği işlemler
 export interface Api {
   settings: {
@@ -160,6 +177,8 @@ export interface Api {
     update(patch: SettingsPatch): Promise<SettingsView>
     setApiKey(provider: CloudProviderId, key: string): Promise<SettingsView>
     testConnection(): Promise<ConnectionResult>
+    /** Kısayol kaydedilirken mevcut global kısayolu geçici olarak devre dışı bırakır */
+    suspendShortcut(suspended: boolean): Promise<void>
   }
   ollama: {
     listModels(): Promise<string[]>
@@ -200,7 +219,9 @@ export interface Api {
     remove(id: number): Promise<void>
   }
   events: {
-    /** Veri değişince (arayüzden veya asistanın araçlarından) haber verir */
+    /** Veri değişince (arayüzden, asistanın araçlarından veya tepsi menüsünden) haber verir */
     onDataChanged(listener: (scope: DataScope) => void): () => void
+    /** Tepsi menüsü veya global kısayoldan gelen komutlar */
+    onCommand(listener: (command: AppCommand) => void): () => void
   }
 }

@@ -1,90 +1,85 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { closeDb, initDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { startReminderScheduler } from './scheduler/reminders'
+import { getSettings } from './settings'
+import { applySettingsPatch } from './system/appSettings'
+import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
+import { applyOpenAtLogin, wasStartedHidden } from './system/startup'
+import { createTray, destroyTray } from './system/tray'
+import {
+  createMainWindow,
+  getMainWindow,
+  markQuitting,
+  sendCommand,
+  showMainWindow
+} from './system/window'
 
 let stopReminderScheduler: (() => void) | null = null
 
-// Sadece web linklerini varsayılan tarayıcıda aç (file:// vb. açılmasın)
-function openExternalSafe(url: string): void {
-  if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
+// Global kısayol: pencere öndeyse gizle, değilse göster ve sohbet kutusuna odaklan
+function toggleFromShortcut(): void {
+  const window = getMainWindow()
+  if (window?.isVisible() && window.isFocused()) {
+    window.hide()
+    return
+  }
+  showMainWindow()
+  sendCommand('focus-chat')
 }
 
-function createWindow(): void {
-  // Ana pencere
-  const mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 750,
-    minWidth: 900,
-    minHeight: 560,
-    title: 'Kişisel Asistan',
-    backgroundColor: '#09090b',
-    show: false,
-    autoHideMenuBar: true,
-    ...(process.platform !== 'darwin' ? { icon } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
-    }
-  })
-
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
-  // target="_blank" linkler varsayılan tarayıcıda açılsın
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    openExternalSafe(details.url)
-    return { action: 'deny' }
-  })
-
-  // Uygulama penceresi başka bir sayfaya gitmesin; dış linkler tarayıcıda açılsın
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (url !== mainWindow.webContents.getURL()) {
-      event.preventDefault()
-      openExternalSafe(url)
-    }
-  })
-
-  // Geliştirme modunda Vite sunucusunu (anlık yenileme), üretimde derlenmiş dosyayı yükle
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
+function quitApp(): void {
+  markQuitting()
+  app.quit()
 }
 
-app.whenReady().then(() => {
-  // Windows bildirimlerinde ve görev çubuğunda uygulama kimliği
-  electronApp.setAppUserModelId('com.kisisel.asistan')
+// Aynı anda tek kopya çalışsın; ikinci kez açılmaya çalışılırsa mevcut pencere öne gelir
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => showMainWindow())
 
-  // Geliştirmede F12 ile DevTools açılır, üretimde Ctrl+R yenilemesi kapatılır
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+  app.whenReady().then(() => {
+    // Windows bildirimlerinde ve görev çubuğunda uygulama kimliği
+    electronApp.setAppUserModelId('com.kisisel.asistan')
+
+    // Geliştirmede F12 ile DevTools açılır, üretimde Ctrl+R yenilemesi kapatılır
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
+
+    // Veritabanı dosyası: %APPDATA%\kisisel-asistan\asistan.db
+    initDatabase(join(app.getPath('userData'), 'asistan.db'))
+    registerIpcHandlers()
+
+    const settings = getSettings()
+    // Windows açılışında başlatıldıysa pencere gösterilmez, tepside bekler
+    createMainWindow({ startHidden: wasStartedHidden() })
+    createTray({
+      onOpen: showMainWindow,
+      onNewChat: () => {
+        showMainWindow()
+        sendCommand('new-chat')
+      },
+      onToggleOpenAtLogin: (enabled) => applySettingsPatch({ openAtLogin: enabled }),
+      onQuit: quitApp
+    })
+    initGlobalShortcut(settings.globalShortcut, toggleFromShortcut)
+    applyOpenAtLogin(settings.openAtLogin)
+    stopReminderScheduler = startReminderScheduler()
   })
 
-  // Veritabanı dosyası: %APPDATA%\kisisel-asistan\asistan.db
-  initDatabase(join(app.getPath('userData'), 'asistan.db'))
-  registerIpcHandlers()
-  createWindow()
-  stopReminderScheduler = startReminderScheduler()
+  app.on('before-quit', markQuitting)
 
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  // Buraya sadece "kapatınca tepside kal" kapalıyken veya çıkış sırasında gelinir
+  app.on('window-all-closed', () => app.quit())
+
+  app.on('will-quit', () => {
+    disposeGlobalShortcut()
+    destroyTray()
+    stopReminderScheduler?.()
+    closeDb()
   })
-})
-
-// Tüm pencereler kapanınca çık (Aşama 3'te tepside kalacak şekilde değişecek)
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('will-quit', () => {
-  stopReminderScheduler?.()
-  closeDb()
-})
+}

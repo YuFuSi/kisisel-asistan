@@ -103,12 +103,19 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [messages, streamingView])
 
-  function openConversation(id: number | null): void {
+  const openConversation = useCallback((id: number | null): void => {
     activeIdRef.current = id
     setActiveId(id)
     setMessages([])
     setError(null)
-  }
+  }, [])
+
+  // Tepsi menüsündeki "Yeni sohbet" komutu
+  useEffect(() => {
+    return window.api.events.onCommand((command) => {
+      if (command === 'new-chat') openConversation(null)
+    })
+  }, [openConversation])
 
   async function selectConversation(id: number): Promise<void> {
     openConversation(id)
