@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
+import { connectGoogle, disconnectGoogle, getGoogleStatus } from './google/auth'
 import { listOllamaModels, testConnection } from './ai/providers'
 import {
   createConversation,
@@ -49,6 +50,19 @@ export function registerIpcHandlers(): void {
     suspendGlobalShortcut(suspended)
   )
   ipcMain.handle('ollama:listModels', () => listOllamaModels())
+
+  // Google hesabı (Gmail ve Takvim)
+  ipcMain.handle('google:status', () => getGoogleStatus())
+  ipcMain.handle('google:connect', async () => {
+    const status = await connectGoogle()
+    notifyDataChanged('settings')
+    return status
+  })
+  ipcMain.handle('google:disconnect', async () => {
+    const status = await disconnectGoogle()
+    notifyDataChanged('settings')
+    return status
+  })
 
   // Sohbet
   ipcMain.handle('conversations:list', () => listConversations())

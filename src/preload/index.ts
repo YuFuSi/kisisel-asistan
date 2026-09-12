@@ -53,6 +53,11 @@ const api: Api = {
     create: (content) => ipcRenderer.invoke('memories:create', content),
     remove: (id) => ipcRenderer.invoke('memories:remove', id)
   },
+  google: {
+    status: () => ipcRenderer.invoke('google:status'),
+    connect: () => ipcRenderer.invoke('google:connect'),
+    disconnect: () => ipcRenderer.invoke('google:disconnect')
+  },
   events: {
     onDataChanged: (listener) => {
       const handler = (_event: IpcRendererEvent, scope: DataScope): void => listener(scope)

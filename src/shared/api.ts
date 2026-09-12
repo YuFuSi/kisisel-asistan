@@ -41,9 +41,18 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
 export const isCloudProvider = (id: ProviderId): id is CloudProviderId => id !== 'ollama'
 
 // Şifreli saklanan anahtarlar: bulut sağlayıcıları + diğer servisler
-export type SecretId = CloudProviderId | 'tavily'
+export type SecretId =
+  CloudProviderId | 'tavily' | 'google-client-id' | 'google-client-secret' | 'google-refresh-token'
 
-export const SECRET_IDS: SecretId[] = ['openai', 'google', 'anthropic', 'tavily']
+export const SECRET_IDS: SecretId[] = [
+  'openai',
+  'google',
+  'anthropic',
+  'tavily',
+  'google-client-id',
+  'google-client-secret',
+  'google-refresh-token'
+]
 
 export interface AppSettings {
   provider: ProviderId
@@ -55,6 +64,8 @@ export interface AppSettings {
   openAtLogin: boolean
   /** Electron accelerator, ör. "CommandOrControl+Shift+Space"; boşsa kapalı */
   globalShortcut: string
+  /** Bağlı Google hesabının e-posta adresi; bağlı değilse null */
+  googleAccount: string | null
 }
 
 export interface SettingsPatch {
@@ -64,6 +75,7 @@ export interface SettingsPatch {
   closeToTray?: boolean
   openAtLogin?: boolean
   globalShortcut?: string
+  googleAccount?: string | null
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -186,6 +198,16 @@ export interface Memory {
   createdAt: string
 }
 
+// ---- Google hesabı ----
+
+export interface GoogleStatus {
+  /** İstemci kimliği ve gizli anahtarı girilmiş mi */
+  hasClient: boolean
+  /** Hesap bağlı mı (yenileme anahtarı var mı) */
+  connected: boolean
+  email: string | null
+}
+
 // ---- Uygulama komutları (tepsi menüsü ve global kısayoldan arayüze) ----
 
 export type AppCommand = 'focus-chat' | 'new-chat'
@@ -240,6 +262,12 @@ export interface Api {
     list(): Promise<Memory[]>
     create(content: string): Promise<Memory>
     remove(id: number): Promise<void>
+  }
+  google: {
+    status(): Promise<GoogleStatus>
+    /** Tarayıcıda Google giriş sayfasını açar ve hesabı bağlar; bağlanan hesabın adresini döndürür */
+    connect(): Promise<GoogleStatus>
+    disconnect(): Promise<GoogleStatus>
   }
   events: {
     /** Veri değişince (arayüzden, asistanın araçlarından veya tepsi menüsünden) haber verir */

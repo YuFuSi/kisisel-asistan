@@ -7,6 +7,8 @@ import weatherTools from './weather'
 import searchTools from './websearch'
 import systemTools from './system'
 import computerTools from './computer'
+import gmailTools from './gmail'
+import calendarTools from './calendar'
 import type { ToolModule } from './types'
 
 // Asistanın kullanabildiği tüm yetenekler. Yeni bir modül eklemek için buraya eklemek yeterli.
@@ -18,7 +20,9 @@ const modules: ToolModule[] = [
   weatherTools,
   searchTools,
   systemTools,
-  computerTools
+  computerTools,
+  gmailTools,
+  calendarTools
 ]
 
 export const assistantTools: ToolSet = Object.assign({}, ...modules.map((m) => m.tools))

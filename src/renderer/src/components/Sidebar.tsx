@@ -48,7 +48,7 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
         ))}
       </nav>
 
-      <div className="mt-auto px-3 text-xs text-zinc-600">v0.5 · Aşama 4</div>
+      <div className="mt-auto px-3 text-xs text-zinc-600">v0.6 · Aşama 5</div>
     </aside>
   )
 }

@@ -6,11 +6,12 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-12
-- **Tamamlanan:** Aşama 0, 1, 2, 3 ve 4. Son commit "Aşama 4: Hava durumu, internette arama, bilgisayar kontrolü".
-- **Sıradaki adım:** Aşama 5 (Gmail ve Google Takvim). Kullanıcıdan Google Cloud OAuth istemcisi istenecek.
+- **Tamamlanan:** Aşama 0-4. Aşama 5'in (Gmail ve Takvim) kodu yazıldı ve commit'lendi, ama kullanıcı Google hesabını bağlayana kadar uçtan uca test edilemedi.
+- **Sıradaki adım:** Kullanıcı Google Cloud'da OAuth istemcisi oluşturup Ayarlar'a girecek, hesabı bağlayacak. Sonra Gmail ve Takvim uçtan uca test edilip Aşama 6'ya (ses) geçilecek.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
-  - **Tavily anahtarı girilmedi.** İnternette arama, kullanıcı Ayarlar > Servisler bölümünden anahtar ekleyene kadar Türkçe bir hata döndürür.
+  - **Tavily anahtarı girilmedi.** Kullanıcı anahtarı sohbete yazdı; kimlik bilgilerini ben uygulamaya girmiyorum, kullanıcı Ayarlar > Servisler bölümünden kendisi girecek. O zamana kadar internette arama Türkçe bir hata döndürür.
+  - **Google hesabı bağlı değil.** Gmail ve Takvim araçları kullanıcıyı Ayarlar'a yönlendiren hata veriyor.
   - `dist/win-unpacked` içinde Aşama 3'ün test paketi duruyor (git'e girmez).
   - Tepsi simgesi ve sağ tık menüsü otomatik test edilemedi; kullanıcının gözle kontrol etmesi istendi.
   - Sohbet listesinde kullanıcının kendi başlattığı bir sohbet var; test sohbetleri silindi.
@@ -53,7 +54,15 @@ Windows için yapay zeka destekli kişisel masaüstü asistanı. Asistan sohbet 
   - Araç hangi sohbette çalıştığını `AsyncLocalStorage` ile öğrenir (`src/main/tools/context.ts`); böylece aynı anda birden fazla sohbet cevap yazsa da onay kartı doğru pencereye gider.
   - **Uygulama açma:** Windows 11'de Not Defteri gibi Mağaza uygulamalarının Başlat menüsünde `.lnk` dosyası yok. Bu yüzden uygulamalar `Get-StartApps` listesinden bulunur ve `explorer.exe shell:AppsFolder\<AppID>` ile açılır (`src/main/lib/apps.ts`). Çalıştırılan komut sabittir, modelin yazdığı metin komuta girmez; kimlik listeden gelir ve karakter kontrolünden geçer.
   - Gizli anahtarlar artık sadece AI sağlayıcıları için değil: `SecretId` (`openai`, `google`, `anthropic`, `tavily`) ve `settings.setSecret` kullanılıyor. Ayarlar'daki "Servisler" bölümü Tavily anahtarını alır.
-- [ ] **Aşama 5: Gmail ve Google Takvim.** OAuth (Desktop app, loopback). Mail özetleme/arama/taslak, gönderme (onaylı), takvim listeleme/ekleme (onaylı).
+- [ ] **Aşama 5: Gmail ve Google Takvim.** Kod yazıldı; hesap bağlanınca test edilecek.
+  - **Bağlantı** (`src/main/google/auth.ts`): PKCE'li OAuth. Tarayıcıda Google giriş sayfası açılır, cevap `127.0.0.1` üzerindeki geçici sunucuda alınır (port işletim sisteminden istenir, `state` doğrulanır).
+  - Yenileme anahtarı `google-refresh-token` gizli anahtarı olarak şifreli saklanır; erişim anahtarı bellekte tutulup süresi dolunca yenilenir. `invalid_grant` gelirse kayıt silinir ve kullanıcıya yeniden bağlanması söylenir.
+  - İzinler: `gmail.readonly`, `gmail.compose`, `gmail.send`, `calendar.events`.
+  - **İstek katmanı** (`src/main/google/api.ts`): erişim anahtarı, zaman aşımı, 401/403/429 için Türkçe mesajlar.
+  - **Araçlar:** `epostalari_ozetle`, `eposta_ara`, `eposta_oku`, `taslak_olustur`, `eposta_gonder` (onaylı), `takvim_listele`, `etkinlik_ekle` (onaylı).
+  - E-posta metni `src/main/lib/mime.ts` ile kurulur: Türkçe başlıklar encoded-word, gövde base64, tamamı base64url. Başlıklardaki satır sonları temizlenir (başlık enjeksiyonu önlenir).
+  - Ayarlar'daki "Google hesabı" bölümü istemci kimliği ile gizli anahtarı alır, bağla/bağlantıyı kes düğmelerini gösterir.
+  - **Kullanıcının yapması gerekenler:** Google Cloud'da proje, Gmail + Calendar API etkinleştirme, OAuth izin ekranı (Harici + kendi adresi test kullanıcısı), "Masaüstü uygulaması" türünde OAuth istemcisi.
 - [ ] **Aşama 6: Ses.** Mikrofon, Whisper (OpenAI/Groq) ile yazıya çevirme; `speechSynthesis` veya OpenAI TTS ile sesli okuma.
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
   - Aşama 3'te `npm run build:unpack` ile paketli uygulama denendi. Uygulama açılıyor; "Windows ile başlat" kaydı ekleniyor ve siliniyor.

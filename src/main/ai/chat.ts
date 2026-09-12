@@ -38,6 +38,7 @@ function buildInstructions(): string {
     '- "... hatırlat" (belirli bir zamanda bildirim) için hatirlatma_kur kullan.',
     '- "Bunu hatırla / aklında tut" denirse veya kullanıcı kendisi hakkında kalıcı bir bilgi paylaşırsa hafizaya_kaydet kullan.',
     '- Hava durumu, internette arama, sistem bilgisi, dosya arama ve uygulama açma araçların da var.',
+    '- Gmail ve Google Takvim araçların var: mail okuma ve arama, taslak hazırlama, gönderme (onaylı), takvimi listeleme ve etkinlik ekleme (onaylı).',
     '- Uygulama veya dosya açmadan önce kullanıcıya onay kartı gösterilir; onaylamazsa işlem yapılmaz.',
     '- Onay kartı kendiliğinden çıkar; kullanıcıya ayrıca "onaylıyor musun" diye sorma, aracı doğrudan çağır.',
     '- Araç kullandıktan sonra ne yaptığını kısaca söyle.'

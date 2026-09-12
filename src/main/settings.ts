@@ -23,7 +23,8 @@ const defaults: AppSettings = {
   },
   closeToTray: true,
   openAtLogin: false,
-  globalShortcut: DEFAULT_SHORTCUT
+  globalShortcut: DEFAULT_SHORTCUT,
+  googleAccount: null
 }
 
 function readValue(key: string): string | undefined {
@@ -70,6 +71,7 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.closeToTray === 'boolean') next.closeToTray = patch.closeToTray
   if (typeof patch.openAtLogin === 'boolean') next.openAtLogin = patch.openAtLogin
   if (typeof patch.globalShortcut === 'string') next.globalShortcut = patch.globalShortcut.trim()
+  if (patch.googleAccount !== undefined) next.googleAccount = patch.googleAccount
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))
   return next
@@ -97,13 +99,9 @@ export function getSecret(id: SecretId): string | undefined {
 }
 
 export function getSecretStatus(): Record<SecretId, boolean> {
-  const has = (id: SecretId): boolean => readValue(secretKey(id)) !== undefined
-  return {
-    openai: has('openai'),
-    google: has('google'),
-    anthropic: has('anthropic'),
-    tavily: has('tavily')
-  }
+  const status = {} as Record<SecretId, boolean>
+  for (const id of SECRET_IDS) status[id] = readValue(secretKey(id)) !== undefined
+  return status
 }
 
 // Kullanıcıya gösterilmeyen tek seferlik bayraklar (ör. "tepsi bilgisi gösterildi")

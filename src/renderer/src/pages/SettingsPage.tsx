@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PROVIDER_IDS, PROVIDERS, type SettingsPatch, type SettingsView } from '@shared/api'
+import {
+  PROVIDER_IDS,
+  PROVIDERS,
+  type GoogleStatus,
+  type SettingsPatch,
+  type SettingsView
+} from '@shared/api'
 import OllamaSettings from '../components/settings/OllamaSettings'
 import CloudSettings from '../components/settings/CloudSettings'
 import ConnectionTest from '../components/settings/ConnectionTest'
 import AppBehaviorSettings from '../components/settings/AppBehaviorSettings'
 import SecretField from '../components/settings/SecretField'
+import GoogleSettings from '../components/settings/GoogleSettings'
 import { errorMessage } from '../lib/errors'
 import { sectionTitleClass } from '../lib/styles'
 
@@ -25,6 +32,7 @@ function Section({
 
 function SettingsPage(): React.JSX.Element {
   const [settings, setSettings] = useState<SettingsView | null>(null)
+  const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // İlk yükleme; ayar başka yerden değişirse (ör. tepsi menüsü) yeniden yükle
@@ -33,6 +41,10 @@ function SettingsPage(): React.JSX.Element {
       window.api.settings
         .get()
         .then(setSettings)
+        .catch((err) => setError(errorMessage(err)))
+      window.api.google
+        .status()
+        .then(setGoogleStatus)
         .catch((err) => setError(errorMessage(err)))
     }
     load()
@@ -108,6 +120,15 @@ function SettingsPage(): React.JSX.Element {
           description="Asistanın internette arama yapabilmesi için gerekir. tavily.com ücretsiz anahtar veriyor."
           helpUrl="https://app.tavily.com/home"
           onSaved={setSettings}
+        />
+      </Section>
+
+      <Section title="Google hesabı (Gmail ve Takvim)">
+        <GoogleSettings
+          settings={settings}
+          status={googleStatus}
+          onSettings={setSettings}
+          onStatus={setGoogleStatus}
         />
       </Section>
 
