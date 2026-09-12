@@ -202,17 +202,17 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-zinc-800 px-5">
-          <h1 className="truncate text-sm font-medium text-zinc-200">{activeTitle}</h1>
+        <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line px-4">
+          <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
           {settings &&
             (modelReady ? (
-              <span className="shrink-0 rounded-full border border-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
+              <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs text-muted">
                 {PROVIDERS[settings.provider].label} · {modelName}
               </span>
             ) : (
               <button
                 onClick={onOpenSettings}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-400 transition-colors hover:bg-amber-500/20"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-caution/10 px-3 py-1 text-xs text-caution transition-colors hover:bg-caution/20"
               >
                 <Settings className="h-3.5 w-3.5" />
                 Model seçilmedi, Ayarlar&apos;a git
@@ -223,13 +223,13 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         <div className="flex flex-1 flex-col overflow-y-auto">
           {showEmptyState ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600/15">
-                <Sparkles className="h-7 w-7 text-violet-400" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15">
+                <Sparkles className="h-7 w-7 text-accent" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">
                 Merhaba! Nasıl yardımcı olabilirim?
               </h2>
-              <p className="max-w-md text-sm text-zinc-400">
+              <p className="max-w-md text-sm text-muted">
                 {modelReady
                   ? 'Sohbet edebilir, görev ve hatırlatma ekletebilir, not tutturabilirsin.'
                   : "Başlamak için Ayarlar'dan bir yapay zeka modeli seç."}
@@ -241,7 +241,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                       key={suggestion}
                       onClick={() => void send(suggestion)}
                       disabled={streaming !== null}
-                      className="rounded-full border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200 disabled:opacity-40"
+                      className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition-colors hover:border-line-strong hover:text-ink disabled:opacity-40"
                     >
                       {suggestion}
                     </button>
@@ -257,6 +257,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   role={message.role}
                   content={message.content}
                   tools={message.tools}
+                  voiceUri={settings?.voiceUri ?? ''}
                 />
               ))}
               {streamingView && (
@@ -265,6 +266,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   content={streamingView.text}
                   tools={streamingView.tools}
                   pending
+                  voiceUri={settings?.voiceUri ?? ''}
                 />
               )}
               {approvalView && (
@@ -282,7 +284,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
           {error && (
             <div className="mx-auto w-full max-w-3xl px-5 pb-4">
-              <div className="rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-300 select-text">
+              <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative select-text">
                 {error}
               </div>
             </div>

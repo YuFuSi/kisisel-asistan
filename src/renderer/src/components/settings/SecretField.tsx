@@ -3,6 +3,7 @@ import { CheckCircle2, ExternalLink } from 'lucide-react'
 import type { SecretId, SettingsView } from '@shared/api'
 import Field from './Field'
 import { errorMessage } from '../../lib/errors'
+import { useToast } from '../../lib/toast'
 import { inputClass, primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
 
 interface SecretFieldProps {
@@ -30,6 +31,7 @@ function SecretField({
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   // Boş anahtar gönderilirse kayıtlı anahtar silinir
   async function save(key: string): Promise<void> {
@@ -38,6 +40,7 @@ function SecretField({
     try {
       onSaved(await window.api.settings.setSecret(id, key))
       setValue('')
+      toast.success(key.trim() ? 'Anahtar kaydedildi.' : 'Anahtar silindi.')
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -51,7 +54,7 @@ function SecretField({
         label={label}
         hint={
           saved ? (
-            <span className="inline-flex items-center gap-1 text-emerald-400">
+            <span className="inline-flex items-center gap-1 text-positive">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Anahtar kayıtlı, bu bilgisayarda şifreli saklanıyor.
             </span>
@@ -98,13 +101,13 @@ function SecretField({
           href={helpUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300"
+          className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
         >
           Anahtarı nereden alırım?
           <ExternalLink className="h-3 w-3" />
         </a>
       )}
-      {error && <p className="text-sm text-red-400 select-text">{error}</p>}
+      {error && <p className="text-sm text-negative select-text">{error}</p>}
     </div>
   )
 }

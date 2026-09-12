@@ -6,8 +6,9 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-12
-- **Tamamlanan:** Aşama 0-4 ve 6 (ses). Aşama 5'in (Gmail ve Takvim) kodu yazıldı ama kullanıcı Google hesabını bağlayana kadar test edilemedi.
-- **Sıradaki adım:** Aşama 7 (paketleme). Ayrıca bekleyen iki test var: kullanıcı Google hesabını bağlayınca Gmail/Takvim, Groq anahtarı girince mikrofonla yazma.
+- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'nin ilk turu olan **Tur A (arayüz yenilemesi)** bitti.
+- **Sıradaki adım:** Tur B (sohbet deneyimi). Kurulum (Tur F) en sona kaldı.
+- Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim, Groq anahtarı girilince mikrofonla yazma.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
   - **Tavily anahtarı girildi**, internette arama çalışıyor (kullanıcı kendi girdi; kimlik bilgilerini ben girmiyorum).
@@ -71,6 +72,23 @@ Windows için yapay zeka destekli kişisel masaüstü asistanı. Asistan sohbet 
   - **Sesli okuma:** `speechSynthesis` ile Windows sesleri kullanılır, ek anahtar ve internet gerekmez. Markdown işaretleri okunmadan önce temizlenir (`src/renderer/src/lib/voice.ts`).
   - **Ayarlar > Ses:** servis seçimi, API anahtarı, "cevapları sesli oku" anahtarı, ses seçimi ve "Dene" düğmesi.
   - Doğrulandı: mikrofon izni ve cihaz erişimi, cevabın okunması (`speechSynthesis.speaking`), anahtar yokken Türkçe hata. Gerçek konuşma-metin dönüşümü Groq anahtarı girilince test edilecek.
+### Bölüm 2: Geliştirme turları
+
+Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasöründe).
+
+- [x] **Tur A: Arayüz yenilemesi.**
+  - Tasarım belirteçleri `src/renderer/src/assets/main.css` içindeki `@theme` bloğunda: app, surface, elevated, line, line-strong, ink, muted, faint, accent, positive, caution, negative. Tailwind bunlardan `bg-surface`, `text-muted`, `border-line` gibi sınıflar üretir.
+  - Özel başlık çubuğu: `titleBarStyle: 'hidden'` + `titleBarOverlay` (Windows düğmeleri kalır), `components/TitleBar.tsx`, sürükleme için `.drag-region` sınıfı.
+  - Daraltılabilir yan menü (`Sidebar.tsx`, tercih localStorage'da), sayfa adları `lib/pages.ts` dosyasında.
+  - Sohbet: mesaj altında kopyala ve sesli oku düğmeleri; kod bloklarında `rehype-highlight` ile renklendirme ve kopyalama (`components/chat/CodeBlock.tsx`).
+  - Bildirimler: `components/ui/ToastProvider.tsx` + `lib/toast.ts` (`useToast()`).
+  - Yükleniyor iskeletleri (`components/ui/Skeleton.tsx`) ve Ayarlar sekmeleri (Model, Ses, Servisler, Google, Uygulama).
+- [ ] **Tur B: Sohbet deneyimi.** Arama, yeniden adlandırma, sabitleme, cevabı yeniden üretme, mesajı düzenleme, modelin başlık üretmesi, klavye kısayolları, Markdown dışa aktarma.
+- [ ] **Tur C: Yeni yetenekler.** Belge okuma (PDF/docx), sabah özeti, tekrarlayan hatırlatmalar, pano araçları, Gmail/Takvim genişletme.
+- [ ] **Tur D: Asistanın zekası.** Araç sonuçlarının geçmişe eklenmesi, uzun sohbet özeti, kişiselleştirme, hafıza yönetimi, model ayarları.
+- [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri.
+- [ ] **Tur F (eski Aşama 7): Paketleme ve otomatik güncelleme.**
+
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
   - Aşama 3'te `npm run build:unpack` ile paketli uygulama denendi. Uygulama açılıyor; "Windows ile başlat" kaydı ekleniyor ve siliniyor.
   - **Dikkat 1, bozuk asar:** İlk paketleme, geliştirme sunucusu ve testler çalışırken arka planda yapıldı. Çıkan `app.asar` bozuktu: dosya konumları 1011 bayt kaymıştı ve uygulama 0,3 saniyede kod 1 ile, hiç log yazmadan kapanıyordu. Temiz derlemede sorun çıkmadı, ama kesin neden kanıtlanmadı. **Kural:** paketlemeden önce uygulamayı kapat, `out` ve `dist` klasörlerini sil, paketleme sürerken başka derleme veya test çalıştırma.
@@ -191,6 +209,8 @@ vitest.config.ts            Test ayarları
 - ESLint her fonksiyonda **açık dönüş tipi** ister: `function x(): void`. `.mjs` betiklerinde bu kural kapalı.
 - `react-hooks/set-state-in-effect` kuralı var. Effect içinde senkron setState çağrılmaz; veri yüklerken `promise.then(setState)` kullanılır.
 - `useLiveData`'ya verilen `load` fonksiyonu **bileşenin dışında** tanımlanır. Aksi halde her render'da yeniden yükleme döngüsü olur.
+- Renkler için `zinc-*` / `violet-*` değil, tasarım belirteçleri kullanılır: `bg-app`, `bg-surface`, `bg-elevated`, `border-line`, `text-ink`, `text-muted`, `text-faint`, `bg-accent`, `text-positive`, `text-caution`, `text-negative`.
+- Kullanıcıya hata veya başarı bildirimi `useToast()` ile verilir (sohbetteki bağlamsal hata kutusu hariç).
 - Tailwind'de aynı özelliği değiştiren iki sınıf (ör. `w-full` ve `w-40`) birlikte kullanılmaz. Bunun için `styles.ts` içinde `inputClass` ve `compactInputClass` ayrı tanımlı.
 
 ## AI SDK v7 notları
@@ -235,6 +255,7 @@ vitest.config.ts            Test ayarları
    - **Global kısayol:** gerçek tuş basımıyla test edilir: `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^+ ')` (Ctrl+Shift+Space).
    - **Tek kopya:** uygulama açıkken `node_modules\electron\dist\electron.exe .` başlatılır. İkinci kopya hemen kapanmalı, mevcut pencere öne gelmeli.
    - **Tepsi simgesi ve menüsü** otomatik test edilemiyor, gözle kontrol gerekir.
+   - **Uzun komut tuzağı:** Çok uzun bash komutları (büyük heredoc'lar) kesilip "unexpected EOF" hatası veriyor. Büyük dosyaları Write aracıyla yaz; Write "file modified" derse dosyayı silip yeniden oluştur.
    - PowerShell komutunda JavaScript metni (`'/'` gibi) ile `Remove-Item` bir arada olursa güvenlik denetimi komutu "sistem yolu siliniyor" diye engelliyor. Silme işlemi ayrı ve sade bir komutla yapılır.
 4. Aşama tamamlanınca commit atılır. Commit mesajı Türkçe olur ve `Co-Authored-By` satırı eklenir.
 

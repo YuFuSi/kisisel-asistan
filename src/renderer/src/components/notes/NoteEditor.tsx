@@ -36,22 +36,22 @@ function NoteEditor({ note, onDelete }: NoteEditorProps): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-zinc-800 px-6 py-3">
+      <div className="flex items-center gap-3 border-b border-line px-6 py-3">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={flush}
           placeholder="Başlık"
-          className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:text-zinc-600"
+          className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:text-faint"
         />
-        <span className="shrink-0 text-xs text-zinc-500">
+        <span className="shrink-0 text-xs text-faint">
           {dirty ? 'Kaydediliyor...' : 'Kaydedildi'}
         </span>
         <button
           onClick={onDelete}
           aria-label="Notu sil"
           title="Notu sil"
-          className="rounded p-1.5 text-zinc-500 transition-colors hover:text-red-400"
+          className="rounded p-1.5 text-faint transition-colors hover:text-negative"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -61,9 +61,9 @@ function NoteEditor({ note, onDelete }: NoteEditorProps): React.JSX.Element {
         onChange={(e) => setContent(e.target.value)}
         onBlur={flush}
         placeholder="Notunu yaz..."
-        className="flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-7 text-zinc-200 outline-none placeholder:text-zinc-600"
+        className="flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-7 text-ink outline-none placeholder:text-faint"
       />
-      {error && <p className="px-6 pb-3 text-sm text-red-400 select-text">{error}</p>}
+      {error && <p className="px-6 pb-3 text-sm text-negative select-text">{error}</p>}
     </div>
   )
 }

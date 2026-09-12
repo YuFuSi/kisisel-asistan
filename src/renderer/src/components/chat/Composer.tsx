@@ -67,8 +67,8 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
   }
 
   return (
-    <div className="border-t border-zinc-800 p-4">
-      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 transition-colors focus-within:border-zinc-600">
+    <div className="border-t border-line p-4">
+      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-xl border border-line bg-surface px-4 py-3 transition-colors focus-within:border-line-strong">
         <textarea
           id={COMPOSER_INPUT_ID}
           ref={textareaRef}
@@ -91,17 +91,15 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
               : 'Bir mesaj yaz... (Shift+Enter: yeni satır)'
           }
           style={{ maxHeight: MAX_HEIGHT }}
-          className="flex-1 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-zinc-600 disabled:cursor-not-allowed"
+          className="flex-1 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-faint disabled:cursor-not-allowed"
         />
         <button
           onClick={() => void toggleMicrophone()}
           disabled={disabled || transcribing}
           aria-label={recording ? 'Kaydı bitir' : 'Sesli yaz'}
           title={recording ? 'Kaydı bitir ve yazıya çevir' : 'Mikrofonla yaz'}
-          className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:text-zinc-700 ${
-            recording
-              ? 'bg-red-600 text-white hover:bg-red-500'
-              : 'text-zinc-400 hover:text-zinc-200'
+          className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:text-line-strong ${
+            recording ? 'bg-negative text-white hover:bg-negative' : 'text-muted hover:text-ink'
           }`}
         >
           {transcribing ? (
@@ -115,7 +113,7 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
             onClick={onStop}
             aria-label="Durdur"
             title="Durdur"
-            className="rounded-lg bg-zinc-700 p-1.5 text-white transition-colors hover:bg-zinc-600"
+            className="rounded-lg bg-line-strong p-1.5 text-white transition-colors hover:bg-line-strong"
           >
             <Square className="h-4 w-4 fill-current" />
           </button>
@@ -125,7 +123,7 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
             disabled={disabled || !text.trim()}
             aria-label="Gönder"
             title="Gönder"
-            className="rounded-lg bg-violet-600 p-1.5 text-white transition-colors hover:bg-violet-500 disabled:bg-transparent disabled:text-zinc-600"
+            className="rounded-lg bg-accent p-1.5 text-white transition-colors hover:bg-accent-hover disabled:bg-transparent disabled:text-faint"
           >
             <SendHorizontal className="h-4 w-4" />
           </button>
@@ -134,10 +132,10 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
       {(recording || transcribing || micError) && (
         <div className="mx-auto mt-2 max-w-3xl text-xs">
           {recording && (
-            <span className="text-red-400">Dinliyorum... Bitirmek için mikrofona tekrar bas.</span>
+            <span className="text-negative">Dinliyorum... Bitirmek için mikrofona tekrar bas.</span>
           )}
-          {transcribing && <span className="text-zinc-400">Yazıya çevriliyor...</span>}
-          {micError && <span className="text-red-400 select-text">{micError}</span>}
+          {transcribing && <span className="text-muted">Yazıya çevriliyor...</span>}
+          {micError && <span className="text-negative select-text">{micError}</span>}
         </div>
       )}
     </div>

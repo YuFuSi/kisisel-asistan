@@ -65,26 +65,24 @@ function ReminderSection({
       </form>
 
       {reminders && reminders.length === 0 && (
-        <p className="px-1 py-2 text-sm text-zinc-500">Bekleyen hatırlatma yok.</p>
+        <p className="px-1 py-2 text-sm text-faint">Bekleyen hatırlatma yok.</p>
       )}
       <ul className="space-y-1">
         {reminders?.map((reminder) => (
           <li
             key={reminder.id}
-            className="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-zinc-900"
+            className="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface"
           >
-            <Bell className="h-4 w-4 shrink-0 text-violet-400" />
-            <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">
-              {reminder.message}
-            </span>
-            <span className="shrink-0 text-xs text-zinc-400">
+            <Bell className="h-4 w-4 shrink-0 text-accent" />
+            <span className="min-w-0 flex-1 truncate text-sm text-ink">{reminder.message}</span>
+            <span className="shrink-0 text-xs text-muted">
               {formatReminderTime(reminder.remindAt)}
             </span>
             <button
               onClick={() => onDelete(reminder.id)}
               aria-label="Hatırlatmayı sil"
               title="Sil"
-              className={`${iconButtonClass} hover:text-red-400`}
+              className={`${iconButtonClass} hover:text-negative`}
             >
               <Trash2 className="h-4 w-4" />
             </button>

@@ -3,7 +3,9 @@ import type { Reminder, Task } from '@shared/api'
 import NewTaskForm from '../components/tasks/NewTaskForm'
 import TaskItem from '../components/tasks/TaskItem'
 import ReminderSection from '../components/tasks/ReminderSection'
+import Skeleton from '../components/ui/Skeleton'
 import { errorMessage } from '../lib/errors'
+import { useToast } from '../lib/toast'
 import { tabClass } from '../lib/styles'
 import { useLiveData } from '../lib/useLiveData'
 
@@ -17,16 +19,15 @@ function TasksPage(): React.JSX.Element {
   const tasks = useLiveData(loadTasks, 'tasks')
   const reminders = useLiveData(loadReminders, 'reminders')
   const [filter, setFilter] = useState<Filter>('pending')
-  const [actionError, setActionError] = useState<string | null>(null)
+  const toast = useToast()
 
   // Değişiklikten sonra listeler, ana süreçten gelen "veri değişti" haberiyle kendiliğinden yenilenir
   async function run(action: () => Promise<unknown>): Promise<boolean> {
-    setActionError(null)
     try {
       await action()
       return true
     } catch (err) {
-      setActionError(errorMessage(err))
+      toast.error(errorMessage(err))
       return false
     }
   }
@@ -35,7 +36,7 @@ function TasksPage(): React.JSX.Element {
   const pending = all.filter((task) => task.doneAt === null)
   const done = all.filter((task) => task.doneAt !== null)
   const visible = filter === 'pending' ? pending : done
-  const error = actionError ?? tasks.error ?? reminders.error
+  const error = tasks.error ?? reminders.error
 
   const tabs: { id: Filter; label: string }[] = [
     { id: 'pending', label: `Bekleyen (${pending.length})` },
@@ -46,7 +47,7 @@ function TasksPage(): React.JSX.Element {
     <div className="mx-auto max-w-3xl space-y-10 p-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Görevler</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-muted">
           Yapılacaklar ve hatırlatmalar. Sohbette &quot;listeme ekle&quot; veya &quot;yarın
           10&apos;da hatırlat&quot; diyerek de ekleyebilirsin.
         </p>
@@ -55,7 +56,7 @@ function TasksPage(): React.JSX.Element {
       <section className="space-y-3">
         <NewTaskForm onCreate={(input) => run(() => window.api.tasks.create(input))} />
 
-        <div className="flex gap-1 border-b border-zinc-800">
+        <div className="flex gap-1 border-b border-line">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -68,9 +69,16 @@ function TasksPage(): React.JSX.Element {
         </div>
 
         {tasks.data && visible.length === 0 && (
-          <p className="px-1 py-4 text-sm text-zinc-500">
+          <p className="px-1 py-4 text-sm text-faint">
             {filter === 'pending' ? 'Bekleyen görev yok.' : 'Henüz tamamlanan görev yok.'}
           </p>
+        )}
+        {!tasks.data && (
+          <div className="space-y-2 py-2">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-2/3" />
+          </div>
         )}
         <ul className="space-y-1">
           {visible.map((task) => (
@@ -93,7 +101,7 @@ function TasksPage(): React.JSX.Element {
         onDelete={(id) => void run(() => window.api.reminders.remove(id))}
       />
 
-      {error && <p className="text-sm text-red-400 select-text">{error}</p>}
+      {error && <p className="text-sm text-negative select-text">{error}</p>}
     </div>
   )
 }

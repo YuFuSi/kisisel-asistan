@@ -32,7 +32,7 @@ function ConnectionTest(): React.JSX.Element {
       </button>
 
       {testing && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-faint">
           Yerel modeller ilk kullanımda belleğe yüklenirken biraz bekletebilir.
         </p>
       )}
@@ -41,8 +41,8 @@ function ConnectionTest(): React.JSX.Element {
         <div
           className={`flex items-start gap-2 rounded-lg border px-4 py-3 text-sm select-text ${
             result.ok
-              ? 'border-emerald-900/60 bg-emerald-950/30 text-emerald-300'
-              : 'border-red-900/60 bg-red-950/40 text-red-300'
+              ? 'border-positive/30 bg-positive/10 text-positive'
+              : 'border-negative/30 bg-negative/10 text-negative'
           }`}
         >
           {result.ok ? (

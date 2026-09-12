@@ -49,11 +49,11 @@ function ShortcutRecorder({ value, active, onChange }: ShortcutRecorderProps): R
         <div
           className={`flex h-10 min-w-52 items-center gap-2 rounded-lg border px-3 text-sm ${
             recording
-              ? 'border-violet-500 bg-violet-500/10 text-violet-300'
-              : 'border-zinc-800 bg-zinc-900 text-zinc-100'
+              ? 'border-accent bg-accent/10 text-accent-hover'
+              : 'border-line bg-surface text-ink'
           }`}
         >
-          <Keyboard className="h-4 w-4 text-zinc-500" />
+          <Keyboard className="h-4 w-4 text-faint" />
           {recording ? 'Tuş kombinasyonuna bas...' : formatAccelerator(value)}
         </div>
         {recording ? (
@@ -82,12 +82,12 @@ function ShortcutRecorder({ value, active, onChange }: ShortcutRecorderProps): R
         )}
       </div>
       {recording && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-faint">
           Ctrl, Alt veya Win ile birlikte bir tuşa bas. Vazgeçmek için Esc.
         </p>
       )}
       {!recording && value && !active && (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-caution">
           Bu kısayol şu an çalışmıyor; başka bir uygulama kullanıyor olabilir. Farklı bir
           kombinasyon dene.
         </p>

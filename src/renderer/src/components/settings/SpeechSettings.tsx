@@ -56,12 +56,12 @@ function SpeechSettings({
               onClick={() => void onUpdate({ sttProvider: id })}
               className={`rounded-xl border p-3 text-left transition-colors ${
                 id === provider
-                  ? 'border-violet-500 bg-violet-500/10'
-                  : 'border-zinc-800 hover:border-zinc-700'
+                  ? 'border-accent bg-accent/10'
+                  : 'border-line hover:border-line-strong'
               }`}
             >
               <div className="text-sm font-medium">{SPEECH_PROVIDERS[id].label}</div>
-              <div className="mt-1 text-xs text-zinc-400">{SPEECH_PROVIDERS[id].description}</div>
+              <div className="mt-1 text-xs text-muted">{SPEECH_PROVIDERS[id].description}</div>
             </button>
           ))}
         </div>

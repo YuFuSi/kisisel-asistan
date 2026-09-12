@@ -1,8 +1,30 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+/* Tasarım belirteçleri: renkler ve ölçüler tek yerden yönetilir.
+   Tailwind bunlardan bg-surface, text-muted, border-line gibi sınıflar üretir. */
+@theme {
+  --color-app: #0a0a0f;
+  --color-surface: #101017;
+  --color-elevated: #16161f;
+  --color-line: #23232e;
+  --color-line-strong: #32323f;
+  --color-ink: #ededf2;
+  --color-muted: #a1a1b0;
+  --color-faint: #6e6e80;
+  --color-accent: #7c5cff;
+  --color-accent-hover: #8f74ff;
+  --color-positive: #34d399;
+  --color-caution: #fbbf24;
+  --color-negative: #f87171;
+
+  --radius-card: 14px;
+}
+
 :root {
   color-scheme: dark;
+  /* Özel başlık çubuğunun yüksekliği; pencere ayarlarıyla aynı olmalı */
+  --titlebar-height: 40px;
 }
 
 html,
@@ -14,9 +36,11 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  background-color: var(--color-zinc-950);
-  color: var(--color-zinc-100);
+  background-color: var(--color-app);
+  color: var(--color-ink);
   font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -24,4 +48,80 @@ body {
 input,
 textarea {
   user-select: text;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 40%, transparent);
+}
+
+/* İnce ve sessiz kaydırma çubukları */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #45455a;
+  background-clip: content-box;
+  border: 3px solid transparent;
+}
+
+/* Klavyeyle gezinirken görünür odak halkası */
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* Başlık çubuğunda pencereyi sürükleme bölgeleri */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-enter {
+  animation: enter-up 180ms ease-out;
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade {
+  animation: enter-fade 140ms ease-out;
+}
+
+/* Kod bloklarında highlight.js temasının arka planı yerine kendi yüzeyimiz kullanılır */
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
 }

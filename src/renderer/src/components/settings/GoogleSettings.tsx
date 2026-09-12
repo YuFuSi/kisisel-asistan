@@ -37,8 +37,8 @@ function GoogleSettings({
   if (status?.connected) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-900/60 bg-emerald-950/20 px-4 py-3">
-          <span className="flex min-w-0 items-center gap-2 text-sm text-emerald-300">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-positive/30 bg-positive/10 px-4 py-3">
+          <span className="flex min-w-0 items-center gap-2 text-sm text-positive">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span className="truncate select-text">Bağlı: {status.email ?? 'Google hesabı'}</span>
           </span>
@@ -50,18 +50,18 @@ function GoogleSettings({
             Bağlantıyı kes
           </button>
         </div>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-faint">
           Asistan bu hesapta e-postaları okuyabilir, taslak hazırlayabilir ve takvime bakabilir.
           E-posta gönderme ve etkinlik ekleme işlemlerinde senden onay ister.
         </p>
-        {error && <p className="text-sm text-red-400 select-text">{error}</p>}
+        {error && <p className="text-sm text-negative select-text">{error}</p>}
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-muted">
         Gmail ve Takvim kullanmak için önce Google Cloud&apos;da &quot;Masaüstü uygulaması&quot;
         türünde bir OAuth istemcisi oluştur, sonra bilgilerini buraya gir.
       </p>
@@ -69,7 +69,7 @@ function GoogleSettings({
         href="https://console.cloud.google.com/apis/credentials"
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300"
+        className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
       >
         Google Cloud kimlik bilgileri sayfası
         <ExternalLink className="h-3 w-3" />
@@ -100,11 +100,11 @@ function GoogleSettings({
         {busy ? 'Tarayıcıda giriş bekleniyor...' : 'Google hesabını bağla'}
       </button>
       {!status?.hasClient && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-faint">
           Bağlanmak için önce istemci kimliği ve gizli anahtarı kaydedilmeli.
         </p>
       )}
-      {error && <p className="text-sm text-red-400 select-text">{error}</p>}
+      {error && <p className="text-sm text-negative select-text">{error}</p>}
     </div>
   )
 }

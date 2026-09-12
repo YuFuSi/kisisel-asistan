@@ -48,7 +48,10 @@ export function createMainWindow(options: { startHidden: boolean }): BrowserWind
     minWidth: 900,
     minHeight: 560,
     title: 'Kişisel Asistan',
-    backgroundColor: '#09090b',
+    backgroundColor: '#0a0a0f',
+    // Kendi başlık çubuğumuzu çiziyoruz; kapat/küçült düğmelerini Windows çiziyor
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#0a0a0f', symbolColor: '#a1a1b0', height: 40 },
     show: false,
     autoHideMenuBar: true,
     icon,

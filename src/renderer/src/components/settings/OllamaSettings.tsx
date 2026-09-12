@@ -99,18 +99,18 @@ function OllamaSettings({ settings, onUpdate }: OllamaSettingsProps): React.JSX.
             disabled={loading}
             aria-label="Listeyi yenile"
             title="Listeyi yenile"
-            className="shrink-0 rounded-lg border border-zinc-700 px-3 text-zinc-300 transition-colors hover:bg-zinc-800 disabled:opacity-50"
+            className="shrink-0 rounded-lg border border-line-strong px-3 text-ink transition-colors hover:bg-elevated disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </Field>
 
-      {error && <p className="text-sm text-red-400 select-text">{error}</p>}
+      {error && <p className="text-sm text-negative select-text">{error}</p>}
       {models && models.length === 0 && (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted">
           Hiç model yüklü değil. Terminalde{' '}
-          <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-200">ollama pull qwen3</code>{' '}
+          <code className="rounded bg-elevated px-1.5 py-0.5 text-ink">ollama pull qwen3</code>{' '}
           komutuyla bir model indirip listeyi yenileyebilirsin.
         </p>
       )}

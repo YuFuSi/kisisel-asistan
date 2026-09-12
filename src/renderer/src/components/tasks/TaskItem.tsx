@@ -35,12 +35,12 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
     if (value && value !== task.title) onRename(value)
   }
 
-  let dueClass = 'bg-zinc-800 text-zinc-400'
-  if (due && !done && due.overdue) dueClass = 'bg-red-500/10 text-red-400'
-  else if (due && !done && due.today) dueClass = 'bg-amber-500/10 text-amber-400'
+  let dueClass = 'bg-elevated text-muted'
+  if (due && !done && due.overdue) dueClass = 'bg-negative/10 text-negative'
+  else if (due && !done && due.today) dueClass = 'bg-caution/10 text-caution'
 
   return (
-    <li className="group flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-zinc-900">
+    <li className="group flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-surface">
       <button
         onClick={onToggle}
         role="checkbox"
@@ -48,8 +48,8 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
         aria-label={done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'}
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
           done
-            ? 'border-emerald-500 bg-emerald-500 text-zinc-950'
-            : 'border-zinc-600 hover:border-zinc-400'
+            ? 'border-positive bg-positive text-app'
+            : 'border-line-strong hover:border-line-strong'
         }`}
       >
         {done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
@@ -75,7 +75,7 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
           onDoubleClick={startEditing}
           title="Düzenlemek için çift tıkla"
           className={`min-w-0 flex-1 truncate py-1 text-sm ${
-            done ? 'text-zinc-500 line-through' : 'text-zinc-200'
+            done ? 'text-faint line-through' : 'text-ink'
           }`}
         >
           {task.title}
@@ -90,7 +90,7 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
           onClick={startEditing}
           aria-label="Görevi düzenle"
           title="Düzenle"
-          className={`${iconButtonClass} hover:text-zinc-200`}
+          className={`${iconButtonClass} hover:text-ink`}
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -99,7 +99,7 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
         onClick={onDelete}
         aria-label="Görevi sil"
         title="Sil"
-        className={`${iconButtonClass} hover:text-red-400`}
+        className={`${iconButtonClass} hover:text-negative`}
       >
         <Trash2 className="h-4 w-4" />
       </button>
