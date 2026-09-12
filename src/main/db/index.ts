@@ -63,6 +63,15 @@ const migrations: string[] = [
     content    TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  `,
+  // 3: Sohbet sabitleme ve (uzun sohbet özeti için) özet alanı
+  `
+  ALTER TABLE conversations ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE conversations ADD COLUMN summary TEXT NOT NULL DEFAULT '';
+  `,
+  // 4: Başlığı model mi verdi (1) yoksa kullanıcı mı adlandırdı (0)
+  `
+  ALTER TABLE conversations ADD COLUMN title_auto INTEGER NOT NULL DEFAULT 1;
   `
 ]
 

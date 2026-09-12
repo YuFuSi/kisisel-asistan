@@ -1,6 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { closeDb, initDatabase } from '../db'
-import { addMessage, createConversation, listMessages } from './conversations'
+import {
+  addMessage,
+  clearGeneratedTitle,
+  createConversation,
+  deleteMessagesFrom,
+  getConversation,
+  listConversations,
+  listMessages,
+  renameConversation,
+  searchConversations,
+  setConversationPinned,
+  setGeneratedTitle,
+  setTitleIfEmpty
+} from './conversations'
 import { createMemory, listMemories } from './memories'
 import { createNote, searchNotes, updateNote } from './notes'
 import { createReminder, listPendingReminders, takeDueReminders } from './reminders'
@@ -88,5 +101,77 @@ describe('sohbet mesajları', () => {
     expect(message.tools).toEqual([
       { id: 'call-1', name: 'gorev_ekle', label: 'Görev ekleme', status: 'done' }
     ])
+  })
+})
+
+describe('sohbet listesi', () => {
+  it('sabitlenen sohbeti başa alır', () => {
+    const eski = createConversation()
+    const yeni = createConversation()
+    expect(listConversations().map((c) => c.id)).toEqual([yeni.id, eski.id])
+
+    expect(setConversationPinned(eski.id, true).pinned).toBe(true)
+    expect(listConversations().map((c) => c.id)).toEqual([eski.id, yeni.id])
+
+    setConversationPinned(eski.id, false)
+    expect(listConversations().map((c) => c.id)).toEqual([yeni.id, eski.id])
+  })
+
+  it('başlığı kırpar ve boş başlığı reddeder', () => {
+    const conversation = createConversation()
+    expect(renameConversation(conversation.id, '  Tatil   planı  ').title).toBe('Tatil planı')
+    expect(() => renameConversation(conversation.id, '   ')).toThrow()
+  })
+
+  it('başlıkta ve mesajlarda Türkçe duyarlı arar', () => {
+    const ilk = createConversation()
+    renameConversation(ilk.id, 'Kahve tarifleri')
+    const ikinci = createConversation()
+    addMessage(ikinci.id, 'user', 'IZMIR hava durumu nasıl?')
+
+    expect(searchConversations('kahve').map((r) => r.conversation.id)).toEqual([ilk.id])
+    // "IZMIR" hem "izmir" hem "ızmır" yazımıyla bulunmalı
+    expect(searchConversations('izmir')[0].conversation.id).toBe(ikinci.id)
+    expect(searchConversations('ızmır')[0].conversation.id).toBe(ikinci.id)
+    expect(searchConversations('izmir')[0].snippet).toContain('IZMIR')
+    expect(searchConversations('bulunmayan')).toEqual([])
+    // Boş arama tüm sohbetleri döndürür
+    expect(searchConversations('  ')).toHaveLength(2)
+  })
+
+  it('bir mesajdan sonrasını siler', () => {
+    const conversation = createConversation()
+    addMessage(conversation.id, 'user', 'Merhaba')
+    const ikinci = addMessage(conversation.id, 'assistant', 'Selam')
+    addMessage(conversation.id, 'user', 'Nasılsın?')
+
+    deleteMessagesFrom(conversation.id, ikinci.id)
+    expect(listMessages(conversation.id).map((m) => m.content)).toEqual(['Merhaba'])
+  })
+})
+
+describe('sohbet başlığı', () => {
+  it('modelin başlığı kullanıcının verdiği adı ezmez', () => {
+    const otomatik = createConversation()
+    setTitleIfEmpty(otomatik.id, 'Kahve nasıl demlenir')
+    setGeneratedTitle(otomatik.id, 'Kahve demleme')
+    expect(getConversation(otomatik.id)?.title).toBe('Kahve demleme')
+
+    const elle = createConversation()
+    renameConversation(elle.id, 'Benim sohbetim')
+    setGeneratedTitle(elle.id, 'Model başlığı')
+    expect(getConversation(elle.id)?.title).toBe('Benim sohbetim')
+  })
+
+  it('otomatik başlık sıfırlanır, kullanıcının adı korunur', () => {
+    const otomatik = createConversation()
+    setTitleIfEmpty(otomatik.id, 'Bir soru')
+    clearGeneratedTitle(otomatik.id)
+    expect(getConversation(otomatik.id)?.title).toBe('')
+
+    const elle = createConversation()
+    renameConversation(elle.id, 'Benim sohbetim')
+    clearGeneratedTitle(elle.id)
+    expect(getConversation(elle.id)?.title).toBe('Benim sohbetim')
   })
 })

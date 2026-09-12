@@ -2,10 +2,11 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import { Check, Copy, Loader2, Volume2, X } from 'lucide-react'
+import { Check, Copy, Loader2, Pencil, RotateCcw, Volume2, X } from 'lucide-react'
 import type { ChatRole, ToolActivity, ToolStatus } from '@shared/api'
 import CodeBlock from './CodeBlock'
 import { speakText } from '../../lib/voice'
+import { primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
 
 interface MessageBubbleProps {
   role: ChatRole
@@ -14,6 +15,10 @@ interface MessageBubbleProps {
   pending?: boolean
   /** Sesli okuma için seçili Windows sesi */
   voiceUri?: string
+  /** Verilirse asistan cevabının altında "yeniden üret" düğmesi çıkar */
+  onRegenerate?: () => void
+  /** Verilirse kullanıcı mesajı düzenlenebilir */
+  onEdit?: (text: string) => void
 }
 
 const STATUS_TEXT: Record<ToolStatus, string> = {
@@ -21,6 +26,9 @@ const STATUS_TEXT: Record<ToolStatus, string> = {
   done: 'tamamlandı',
   error: 'başarısız'
 }
+
+const actionButtonClass =
+  'rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink'
 
 function TypingDots(): React.JSX.Element {
   return (
@@ -65,9 +73,12 @@ function MessageBubble({
   content,
   tools = [],
   pending = false,
-  voiceUri = ''
+  voiceUri = '',
+  onRegenerate,
+  onEdit
 }: MessageBubbleProps): React.JSX.Element {
   const [copied, setCopied] = useState(false)
+  const [draft, setDraft] = useState<string | null>(null)
 
   async function copyContent(): Promise<void> {
     try {
@@ -79,9 +90,57 @@ function MessageBubble({
     }
   }
 
+  function saveEdit(): void {
+    const text = (draft ?? '').trim()
+    setDraft(null)
+    if (text && text !== content) onEdit?.(text)
+  }
+
   if (role === 'user') {
+    if (draft !== null) {
+      return (
+        <div className="animate-enter flex justify-end">
+          <div className="w-full max-w-[80%] rounded-2xl border border-accent/40 bg-accent/10 p-3">
+            <textarea
+              autoFocus
+              rows={Math.min(10, draft.split('\n').length + 1)}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.stopPropagation()
+                  setDraft(null)
+                }
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveEdit()
+              }}
+              aria-label="Mesajı düzenle"
+              className="w-full resize-none bg-transparent text-sm leading-6 text-ink outline-none"
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              <button onClick={() => setDraft(null)} className={`${secondaryButtonClass} py-1.5`}>
+                Vazgeç
+              </button>
+              <button onClick={saveEdit} className={`${primaryButtonClass} py-1.5`}>
+                Gönder
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div className="animate-enter flex justify-end">
+      <div className="group/message animate-enter flex items-start justify-end gap-1">
+        {onEdit && (
+          <button
+            onClick={() => setDraft(content)}
+            aria-label="Mesajı düzenle"
+            title="Düzenle ve yeniden gönder"
+            className={`${actionButtonClass} mt-1 opacity-0 group-hover/message:opacity-100 focus:opacity-100`}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
         <div className="max-w-[80%] rounded-2xl rounded-br-md border border-accent/30 bg-accent/15 px-4 py-2.5 text-sm whitespace-pre-wrap text-ink select-text">
           {content}
         </div>
@@ -121,7 +180,7 @@ function MessageBubble({
               onClick={() => void copyContent()}
               aria-label="Cevabı kopyala"
               title="Kopyala"
-              className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink"
+              className={actionButtonClass}
             >
               {copied ? (
                 <Check className="h-3.5 w-3.5 text-positive" />
@@ -133,10 +192,20 @@ function MessageBubble({
               onClick={() => speakText(content, voiceUri)}
               aria-label="Cevabı sesli oku"
               title="Sesli oku"
-              className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink"
+              className={actionButtonClass}
             >
               <Volume2 className="h-3.5 w-3.5" />
             </button>
+            {onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                aria-label="Cevabı yeniden üret"
+                title="Yeniden üret"
+                className={actionButtonClass}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         )}
       </div>

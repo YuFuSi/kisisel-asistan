@@ -1,5 +1,6 @@
-import { ipcMain } from 'electron'
-import { sendMessage, stopChat } from './ai/chat'
+import { dialog, ipcMain } from 'electron'
+import { promises as fs } from 'node:fs'
+import { editAndResend, regenerateReply, sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
 import { connectGoogle, disconnectGoogle, getGoogleStatus } from './google/auth'
 import { listOllamaModels, testConnection } from './ai/providers'
@@ -7,9 +8,14 @@ import { transcribeAudio } from './ai/speech'
 import {
   createConversation,
   deleteConversation,
+  getConversation,
   listConversations,
-  listMessages
+  listMessages,
+  renameConversation,
+  searchConversations,
+  setConversationPinned
 } from './data/conversations'
+import { conversationToMarkdown, suggestFileName } from './lib/markdownExport'
 import { createMemory, deleteMemory, listMemories } from './data/memories'
 import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import { createReminder, deleteReminder, listPendingReminders } from './data/reminders'
@@ -32,6 +38,22 @@ function changing<T>(scope: DataScope, action: () => T): T {
   const result = action()
   notifyDataChanged(scope)
   return result
+}
+
+// Sohbeti Markdown olarak diske kaydeder. Kullanıcı vazgeçerse null döner.
+async function exportConversation(id: number): Promise<string | null> {
+  const conversation = getConversation(id)
+  if (!conversation) throw new Error('Sohbet bulunamadı.')
+
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Sohbeti kaydet',
+    defaultPath: suggestFileName(conversation),
+    filters: [{ name: 'Markdown', extensions: ['md'] }]
+  })
+  if (canceled || !filePath) return null
+
+  await fs.writeFile(filePath, conversationToMarkdown(conversation, listMessages(id)), 'utf8')
+  return filePath
 }
 
 // Arayüzün (renderer) çağırabileceği tüm işlemler burada tanımlı.
@@ -72,16 +94,37 @@ export function registerIpcHandlers(): void {
 
   // Sohbet
   ipcMain.handle('conversations:list', () => listConversations())
-  ipcMain.handle('conversations:create', () => createConversation())
-  ipcMain.handle('conversations:remove', (_event, id: number) => {
-    stopChat(id)
-    deleteConversation(id)
-  })
+  ipcMain.handle('conversations:create', () =>
+    changing('conversations', () => createConversation())
+  )
+  ipcMain.handle('conversations:remove', (_event, id: number) =>
+    changing('conversations', () => {
+      stopChat(id)
+      deleteConversation(id)
+    })
+  )
   ipcMain.handle('conversations:messages', (_event, id: number) => listMessages(id))
+  ipcMain.handle('conversations:rename', (_event, id: number, title: string) =>
+    changing('conversations', () => renameConversation(id, title))
+  )
+  ipcMain.handle('conversations:pin', (_event, id: number, pinned: boolean) =>
+    changing('conversations', () => setConversationPinned(id, pinned))
+  )
+  ipcMain.handle('conversations:search', (_event, query: string) => searchConversations(query))
+  ipcMain.handle('conversations:export', (_event, id: number) => exportConversation(id))
+
   ipcMain.handle('chat:send', (event, conversationId: number, text: string) =>
     sendMessage(event.sender, conversationId, text)
   )
   ipcMain.handle('chat:stop', (_event, conversationId: number) => stopChat(conversationId))
+  ipcMain.handle('chat:regenerate', (event, conversationId: number) =>
+    regenerateReply(event.sender, conversationId)
+  )
+  ipcMain.handle(
+    'chat:editAndResend',
+    (event, conversationId: number, messageId: number, text: string) =>
+      editAndResend(event.sender, conversationId, messageId, text)
+  )
   ipcMain.handle('chat:respondToApproval', (_event, approvalId: string, approved: boolean) =>
     respondToApproval(approvalId, approved)
   )

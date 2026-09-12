@@ -6,8 +6,8 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-12
-- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'nin ilk turu olan **Tur A (arayüz yenilemesi)** bitti.
-- **Sıradaki adım:** Tur B (sohbet deneyimi). Kurulum (Tur F) en sona kaldı.
+- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A (arayüz)** ve **Tur B (sohbet deneyimi)** bitti.
+- **Sıradaki adım:** Tur C (yeni yetenekler). Kurulum (Tur F) en sona kaldı.
 - Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim, Groq anahtarı girilince mikrofonla yazma.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
@@ -83,7 +83,14 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - Sohbet: mesaj altında kopyala ve sesli oku düğmeleri; kod bloklarında `rehype-highlight` ile renklendirme ve kopyalama (`components/chat/CodeBlock.tsx`).
   - Bildirimler: `components/ui/ToastProvider.tsx` + `lib/toast.ts` (`useToast()`).
   - Yükleniyor iskeletleri (`components/ui/Skeleton.tsx`) ve Ayarlar sekmeleri (Model, Ses, Servisler, Google, Uygulama).
-- [ ] **Tur B: Sohbet deneyimi.** Arama, yeniden adlandırma, sabitleme, cevabı yeniden üretme, mesajı düzenleme, modelin başlık üretmesi, klavye kısayolları, Markdown dışa aktarma.
+- [x] **Tur B: Sohbet deneyimi.**
+  - **Arama:** yan menüdeki kutu başlıkta ve mesaj içeriğinde arar (`searchConversations`), eşleşen mesajdan kısa alıntı gösterir. Arama JavaScript'te yapılır; `I/İ/ı/i` hepsi "i" sayılır, yoksa "Ikinci" başlığı "ikinci" ile bulunamıyor.
+  - **Sabitleme ve yeniden adlandırma:** satırdaki "..." menüsü (çift tıklama da adı düzenler). Sabitlenenler listenin başında (`ORDER BY pinned DESC, updated_at DESC`).
+  - **Cevabı yeniden üret** (`chat:regenerate`): son asistan mesajı silinip aynı soru tekrar sorulur.
+  - **Mesajı düzenle ve yeniden gönder** (`chat:editAndResend`): o mesaj ve sonrası silinir, yenisi eklenir.
+  - **Modelin başlık üretmesi:** ilk soru-cevap bitince `generateText` ile kısa başlık istenir (`lib/title.ts` → `cleanTitle`, `<think>` bloğunu ve tırnakları atar). `conversations.title_auto` sütunu başlığı kullanıcının mı modelin mi verdiğini tutar; kullanıcı adlandırdıysa model bir daha dokunmaz.
+  - **Klavye kısayolları:** `Ctrl+N` yeni sohbet, `Ctrl+F` arama kutusu, `Esc` cevabı durdur.
+  - **Markdown dışa aktarma** (`conversations:export`): `lib/markdownExport.ts` metni üretir, `dialog.showSaveDialog` yeri sorar, arayüzde toast çıkar.
 - [ ] **Tur C: Yeni yetenekler.** Belge okuma (PDF/docx), sabah özeti, tekrarlayan hatırlatmalar, pano araçları, Gmail/Takvim genişletme.
 - [ ] **Tur D: Asistanın zekası.** Araç sonuçlarının geçmişe eklenmesi, uzun sohbet özeti, kişiselleştirme, hafıza yönetimi, model ayarları.
 - [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri.
@@ -163,7 +170,9 @@ src/
 │  │  ├─ datetime.ts        Yerel tarih/saat okuma ve biçimlendirme (+ testi)
 │  │  ├─ weather.ts         Open-Meteo sorguları ve WMO kodları (+ testi)
 │  │  ├─ files.ts           Dosya arama (+ testi)
-│  │  └─ apps.ts            Başlat menüsü uygulama listesi, eşleştirme ve açma (+ testi)
+│  │  ├─ apps.ts            Başlat menüsü uygulama listesi, eşleştirme ve açma (+ testi)
+│  │  ├─ markdownExport.ts  Sohbeti Markdown metnine çevirme ve dosya adı önerisi (+ testi)
+│  │  └─ title.ts           Modelin ürettiği başlığı temizleme (+ testi)
 │  └─ ai/                   providers.ts (model seçimi, Ollama listesi, bağlantı testi),
 │                           chat.ts (sistem talimatı, akışlı cevap, araç takibi), errors.ts (Türkçe hatalar)
 ├─ preload/index.ts         window.api köprüsü (sadece tanımlı işlemler)
@@ -195,7 +204,7 @@ vitest.config.ts            Test ayarları
 - **Veri değişim olayı:** IPC'deki değiştirici işlemler `changing(scope, ...)` ile sarılır. Sayfalar veriyi `useLiveData(load, scope)` ile alır ve kendiliğinden yenilenir.
 - **`data/` klasörü** `electron` import etmez. Electron'a bağlı işler `events.ts`, `scheduler/`, `settings.ts`, `ai/` içinde durur.
 - **Renderer**, Node/Electron'a doğrudan erişmez, sadece `window.api` kullanır. Ham `ipcRenderer` açılmaz.
-- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 2.
+- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 4.
 - **Zaman:** Hatırlatma zamanı epoch ms (INTEGER), görev son tarihi yerel `YYYY-MM-DD`. Modele ve modelden gelen zamanlar yerel `YYYY-MM-DDTHH:mm` biçimindedir (`lib/datetime.ts`).
 - **API anahtarları** sadece main süreçte, `safeStorage` ile şifreli tutulur. Renderer'a sadece `hasApiKey` gider.
 - **Dış linkler:** sadece `http(s)` adresler `shell.openExternal` ile açılır. `will-navigate` engellenir.
@@ -240,7 +249,7 @@ vitest.config.ts            Test ayarları
    node scripts/cdp.mjs eval "<js>"          # window.api dahil sayfada JS çalıştır (await destekli)
    node scripts/cdp.mjs waitfor "<js>" [ms]   # ifade doğru olana kadar bekle
    node scripts/cdp.mjs type "<seçici>" "<metin>"
-   node scripts/cdp.mjs key Enter
+   node scripts/cdp.mjs key Enter                # "Escape", "Ctrl+N" gibi birleşimler de olur
    node scripts/cdp.mjs shot cikti.png        # ekran görüntüsü
    ```
    - Browser pane'de `window.api` yok (preload yüklenmez), bu yüzden gerçek test CDP ile yapılır.
@@ -250,6 +259,9 @@ vitest.config.ts            Test ayarları
    - **Onay kartı testi:** `document.body.innerText.includes('açılsın mı')` ile kart beklenir, sonra metni "Onayla" veya "İptal" olan butona tıklanır. Uygulamanın gerçekten açıldığı `tasklist` ile doğrulanır ve test sonunda kapatılır.
    - **Ters bölü tuzağı:** Bash heredoc veya python ile dosya yazarken `\` işaretleri teke iniyor. Ters bölü içeren içerik (Windows yolları, regex) Write aracıyla yazılmalı.
    - Test için oluşturulan veriler (görev, hatırlatma, hafıza vb.) test sonunda **silinir**. Gerçek hatırlatmalar bildirim gösterir, sahte hafıza kayıtları asistanı yanıltır.
+   - `eval` verilen ifadeyi `(...)` içine alır; birden çok satır gerekiyorsa `(async () => { ... })()` yazılır.
+   - `type` metni imlecin olduğu yere **ekler**. Dolu bir kutunun içeriğini değiştirmek için önce `eval` ile `el.focus(); el.select()` yapılır.
+   - **Native pencereler** (ör. "Sohbeti kaydet" kaydetme penceresi) CDP ile sürülemez. Önce arka planda başlatılır (`window.__x = api...(); ` şeklinde beklenmeden), sonra PowerShell'den `(New-Object -ComObject WScript.Shell).AppActivate('Sohbeti kaydet')` ile öne alınıp `SendKeys` ile yol yazılır. AppActivate olmadan tuşlar başka pencereye gider.
    - **Tepsiye gizleme:** sayfada `window.close()` çalıştırılır.
    - **Görünürlük ölçümü:** hiç gösterilmemiş pencerede (`--hidden`) `document.visibilityState` yanıltıcı biçimde `visible` olabilir. Gerçek görünürlük `Get-Process kisisel-asistan | Where-Object MainWindowHandle -ne 0` ile kontrol edilir.
    - **Global kısayol:** gerçek tuş basımıyla test edilir: `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^+ ')` (Ctrl+Shift+Space).

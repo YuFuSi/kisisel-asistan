@@ -18,11 +18,18 @@ const api: Api = {
     list: () => ipcRenderer.invoke('conversations:list'),
     create: () => ipcRenderer.invoke('conversations:create'),
     remove: (id) => ipcRenderer.invoke('conversations:remove', id),
-    messages: (id) => ipcRenderer.invoke('conversations:messages', id)
+    messages: (id) => ipcRenderer.invoke('conversations:messages', id),
+    rename: (id, title) => ipcRenderer.invoke('conversations:rename', id, title),
+    pin: (id, pinned) => ipcRenderer.invoke('conversations:pin', id, pinned),
+    search: (query) => ipcRenderer.invoke('conversations:search', query),
+    exportMarkdown: (id) => ipcRenderer.invoke('conversations:export', id)
   },
   chat: {
     send: (conversationId, text) => ipcRenderer.invoke('chat:send', conversationId, text),
     stop: (conversationId) => ipcRenderer.invoke('chat:stop', conversationId),
+    regenerate: (conversationId) => ipcRenderer.invoke('chat:regenerate', conversationId),
+    editAndResend: (conversationId, messageId, text) =>
+      ipcRenderer.invoke('chat:editAndResend', conversationId, messageId, text),
     respondToApproval: (approvalId, approved) =>
       ipcRenderer.invoke('chat:respondToApproval', approvalId, approved),
     onEvent: (listener) => {

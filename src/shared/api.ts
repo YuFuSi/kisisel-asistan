@@ -141,6 +141,14 @@ export interface Conversation {
   id: number
   title: string
   updatedAt: string
+  /** Sabitlenen sohbetler listenin başında durur */
+  pinned: boolean
+}
+
+export interface ConversationSearchResult {
+  conversation: Conversation
+  /** Eşleşme mesaj içindeyse kısa alıntı */
+  snippet: string | null
 }
 
 export type ChatRole = 'user' | 'assistant'
@@ -187,7 +195,7 @@ export type ChatEvent =
 
 // ---- Görevler, hatırlatmalar, notlar, hafıza ----
 
-export type DataScope = 'tasks' | 'reminders' | 'notes' | 'memories' | 'settings'
+export type DataScope = 'tasks' | 'reminders' | 'notes' | 'memories' | 'settings' | 'conversations'
 
 export interface Task {
   id: number
@@ -273,11 +281,21 @@ export interface Api {
     create(): Promise<Conversation>
     remove(id: number): Promise<void>
     messages(id: number): Promise<ChatMessage[]>
+    rename(id: number, title: string): Promise<Conversation>
+    pin(id: number, pinned: boolean): Promise<Conversation>
+    /** Başlıklarda ve mesaj içeriklerinde arar */
+    search(query: string): Promise<ConversationSearchResult[]>
+    /** Sohbeti Markdown dosyası olarak kaydeder; kullanıcı vazgeçerse null döner */
+    exportMarkdown(id: number): Promise<string | null>
   }
   chat: {
     /** Kullanıcı mesajını kaydeder ve cevabı başlatır; cevap chat.onEvent ile parça parça gelir */
     send(conversationId: number, text: string): Promise<ChatMessage>
     stop(conversationId: number): Promise<void>
+    /** Son cevabı silip yeniden üretir */
+    regenerate(conversationId: number): Promise<void>
+    /** Bir kullanıcı mesajını düzenleyip o noktadan sonrasını yeniden yazdırır */
+    editAndResend(conversationId: number, messageId: number, text: string): Promise<ChatMessage>
     /** Onay kartındaki cevabı ana sürece iletir */
     respondToApproval(approvalId: string, approved: boolean): Promise<void>
     onEvent(listener: (event: ChatEvent) => void): () => void

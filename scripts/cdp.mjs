@@ -84,17 +84,31 @@ try {
       await send('Input.insertText', { text: args[1] })
       console.log('yazıldı')
       break
-    case 'key':
-      for (const type of ['rawKeyDown', 'keyUp']) {
-        await send('Input.dispatchKeyEvent', {
-          type,
-          key: args[0],
-          code: args[0],
-          windowsVirtualKeyCode: args[0] === 'Enter' ? 13 : 0
-        })
-      }
+    case 'key': {
+      // "Enter", "Escape" veya "Ctrl+N" gibi yazılır
+      const parts = args[0].split('+')
+      const name = parts.pop()
+      const flags = { alt: 1, ctrl: 2, meta: 4, shift: 8 }
+      const modifiers = parts.reduce((sum, p) => sum | (flags[p.toLowerCase()] ?? 0), 0)
+      const single = name.length === 1
+      const codes = { Enter: 13, Escape: 27, Tab: 9, Backspace: 8 }
+      await send('Input.dispatchKeyEvent', {
+        type: 'rawKeyDown',
+        key: name,
+        code: single ? `Key${name.toUpperCase()}` : name,
+        windowsVirtualKeyCode: single ? name.toUpperCase().charCodeAt(0) : (codes[name] ?? 0),
+        modifiers
+      })
+      await send('Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        key: name,
+        code: single ? `Key${name.toUpperCase()}` : name,
+        windowsVirtualKeyCode: single ? name.toUpperCase().charCodeAt(0) : (codes[name] ?? 0),
+        modifiers
+      })
       console.log('tuş gönderildi')
       break
+    }
     case 'shot': {
       const r = await send('Page.captureScreenshot', { format: 'png' })
       writeFileSync(args[0], Buffer.from(r.data, 'base64'))

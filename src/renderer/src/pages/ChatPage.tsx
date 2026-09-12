@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Settings, Sparkles } from 'lucide-react'
+import { Download, Settings, Sparkles } from 'lucide-react'
 import {
   PROVIDERS,
   type ChatMessage,
   type Conversation,
+  type ConversationSearchResult,
   type SettingsView,
   type ToolActivity,
   type ToolApproval
@@ -13,6 +14,10 @@ import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
 import ApprovalCard from '../components/chat/ApprovalCard'
 import { errorMessage } from '../lib/errors'
+import { focusConversationSearch } from '../lib/dom'
+import { quietIconButtonClass } from '../lib/styles'
+import { useToast } from '../lib/toast'
+import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
 
 const SUGGESTIONS = [
@@ -20,6 +25,11 @@ const SUGGESTIONS = [
   'Yarın saat 9’da spor yapmamı hatırlat',
   'Listeme market alışverişi ekle'
 ]
+
+// Arama kutusuna yazarken her tuşta sorgu göndermemek için beklenen süre
+const SEARCH_DELAY = 150
+
+const loadConversations = (): Promise<Conversation[]> => window.api.conversations.list()
 
 interface ChatPageProps {
   active: boolean
@@ -40,8 +50,11 @@ function upsertTool(list: ToolActivity[], activity: ToolActivity): ToolActivity[
 }
 
 function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element {
+  const toast = useToast()
   const [settings, setSettings] = useState<SettingsView | null>(null)
-  const [conversations, setConversations] = useState<Conversation[]>([])
+  const { data: conversations, error: listError } = useLiveData(loadConversations, 'conversations')
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<ConversationSearchResult[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streaming, setStreaming] = useState<Streaming | null>(null)
@@ -57,10 +70,6 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const settingsRef = useRef<SettingsView | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const refreshConversations = useCallback(async (): Promise<void> => {
-    setConversations(await window.api.conversations.list())
-  }, [])
-
   // Sayfa her görünür olduğunda ayarları tazele (Ayarlar'da model değişmiş olabilir)
   useEffect(() => {
     if (!active) return
@@ -73,12 +82,29 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       .catch((err) => setError(errorMessage(err)))
   }, [active])
 
+  // Arama kutusu boşken tüm sohbetler, doluyken eşleşenler listelenir
   useEffect(() => {
-    window.api.conversations
-      .list()
-      .then(setConversations)
-      .catch((err) => setError(errorMessage(err)))
-  }, [])
+    const list = conversations ?? []
+    let alive = true
+    const timer = setTimeout(
+      () => {
+        const found = query.trim()
+          ? window.api.conversations.search(query)
+          : Promise.resolve(list.map((conversation) => ({ conversation, snippet: null })))
+        found.then(
+          (value) => {
+            if (alive) setResults(value)
+          },
+          () => {}
+        )
+      },
+      query.trim() ? SEARCH_DELAY : 0
+    )
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [conversations, query])
 
   // Ana süreçten parça parça gelen cevabı ve araç kullanımlarını dinle
   useEffect(() => {
@@ -118,9 +144,8 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
           speakText(message.content, settingsRef.current.voiceUri)
         }
       }
-      refreshConversations().catch(() => {})
     })
-  }, [refreshConversations])
+  }, [])
 
   const streamingView = streaming && streaming.conversationId === activeId ? streaming : null
   const approvalView = approval && approval.conversationId === activeId ? approval.approval : null
@@ -144,6 +169,28 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     })
   }, [openConversation])
 
+  // Klavye kısayolları: Ctrl+N yeni sohbet, Ctrl+F arama, Esc cevabı durdur
+  useEffect(() => {
+    if (!active) return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+        event.preventDefault()
+        openConversation(null)
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        focusConversationSearch()
+        return
+      }
+      if (event.key === 'Escape' && activeIdRef.current !== null) {
+        void window.api.chat.stop(activeIdRef.current)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [active, openConversation])
+
   async function selectConversation(id: number): Promise<void> {
     openConversation(id)
     try {
@@ -158,9 +205,34 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     try {
       await window.api.conversations.remove(id)
       if (activeIdRef.current === id) openConversation(null)
-      await refreshConversations()
     } catch (err) {
-      setError(errorMessage(err))
+      toast.error(errorMessage(err))
+    }
+  }
+
+  async function renameConversation(id: number, title: string): Promise<void> {
+    try {
+      await window.api.conversations.rename(id, title)
+    } catch (err) {
+      toast.error(errorMessage(err))
+    }
+  }
+
+  async function pinConversation(id: number, pinned: boolean): Promise<void> {
+    try {
+      await window.api.conversations.pin(id, pinned)
+    } catch (err) {
+      toast.error(errorMessage(err))
+    }
+  }
+
+  async function exportConversation(id: number): Promise<void> {
+    try {
+      const path = await window.api.conversations.exportMarkdown(id)
+      // Kullanıcı vazgeçtiyse path boş gelir
+      if (path) toast.success(`Kaydedildi: ${path.split(/[\\/]/).pop()}`)
+    } catch (err) {
+      toast.error(errorMessage(err))
     }
   }
 
@@ -176,9 +248,45 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       setStreaming({ conversationId: id, text: '', tools: [] })
       const userMessage = await window.api.chat.send(id, text)
       setMessages((list) => [...list, userMessage])
-      await refreshConversations()
     } catch (err) {
       setStreaming(null)
+      setError(errorMessage(err))
+    }
+  }
+
+  // Son cevabı sil ve aynı soruyu modele yeniden sordur
+  async function regenerate(): Promise<void> {
+    const id = activeIdRef.current
+    if (id === null) return
+    setError(null)
+    stopSpeaking()
+    const previous = messages
+    setMessages((list) => list.slice(0, -1))
+    setStreaming({ conversationId: id, text: '', tools: [] })
+    try {
+      await window.api.chat.regenerate(id)
+    } catch (err) {
+      setStreaming(null)
+      setMessages(previous)
+      setError(errorMessage(err))
+    }
+  }
+
+  // Bir kullanıcı mesajını değiştir; o noktadan sonrası silinip sohbet yeniden yazılır
+  async function editMessage(messageId: number, text: string): Promise<void> {
+    const id = activeIdRef.current
+    if (id === null) return
+    setError(null)
+    stopSpeaking()
+    const previous = messages
+    setMessages((list) => list.filter((m) => m.id < messageId))
+    setStreaming({ conversationId: id, text: '', tools: [] })
+    try {
+      const userMessage = await window.api.chat.editAndResend(id, messageId, text)
+      setMessages((list) => [...list, userMessage])
+    } catch (err) {
+      setStreaming(null)
+      setMessages(previous)
       setError(errorMessage(err))
     }
   }
@@ -188,36 +296,56 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     !!settings &&
     modelName !== '' &&
     (settings.provider === 'ollama' || settings.hasSecret[settings.provider])
-  const activeTitle = conversations.find((c) => c.id === activeId)?.title || 'Yeni sohbet'
+  const activeConversation = (conversations ?? []).find((c) => c.id === activeId)
+  const activeTitle = activeConversation?.title || 'Yeni sohbet'
   const showEmptyState = messages.length === 0 && streamingView === null
+  const lastMessage = messages[messages.length - 1]
+  const canRegenerate = !streamingView && lastMessage?.role === 'assistant'
 
   return (
     <div className="flex h-full">
       <ConversationList
-        conversations={conversations}
+        results={results}
         activeId={activeId}
+        query={query}
+        onQueryChange={setQuery}
         onSelect={(id) => void selectConversation(id)}
         onNew={() => openConversation(null)}
         onDelete={(id) => void deleteConversation(id)}
+        onRename={(id, title) => void renameConversation(id, title)}
+        onPin={(id, pinned) => void pinConversation(id, pinned)}
+        onExport={(id) => void exportConversation(id)}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line px-4">
           <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
-          {settings &&
-            (modelReady ? (
-              <span className="shrink-0 rounded-full border border-line px-2.5 py-1 text-xs text-muted">
-                {PROVIDERS[settings.provider].label} · {modelName}
-              </span>
-            ) : (
+          <div className="flex shrink-0 items-center gap-2">
+            {activeConversation && (
               <button
-                onClick={onOpenSettings}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-caution/10 px-3 py-1 text-xs text-caution transition-colors hover:bg-caution/20"
+                onClick={() => void exportConversation(activeConversation.id)}
+                aria-label="Sohbeti dışa aktar"
+                title="Markdown olarak kaydet"
+                className={quietIconButtonClass}
               >
-                <Settings className="h-3.5 w-3.5" />
-                Model seçilmedi, Ayarlar&apos;a git
+                <Download className="h-4 w-4" />
               </button>
-            ))}
+            )}
+            {settings &&
+              (modelReady ? (
+                <span className="rounded-full border border-line px-2.5 py-1 text-xs text-muted">
+                  {PROVIDERS[settings.provider].label} · {modelName}
+                </span>
+              ) : (
+                <button
+                  onClick={onOpenSettings}
+                  className="flex items-center gap-1.5 rounded-full bg-caution/10 px-3 py-1 text-xs text-caution transition-colors hover:bg-caution/20"
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  Model seçilmedi, Ayarlar&apos;a git
+                </button>
+              ))}
+          </div>
         </header>
 
         <div className="flex flex-1 flex-col overflow-y-auto">
@@ -251,13 +379,23 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
             </div>
           ) : (
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-5 py-6">
-              {messages.map((message) => (
+              {messages.map((message, index) => (
                 <MessageBubble
                   key={message.id}
                   role={message.role}
                   content={message.content}
                   tools={message.tools}
                   voiceUri={settings?.voiceUri ?? ''}
+                  onEdit={
+                    message.role === 'user' && !streamingView
+                      ? (text) => void editMessage(message.id, text)
+                      : undefined
+                  }
+                  onRegenerate={
+                    canRegenerate && index === messages.length - 1
+                      ? () => void regenerate()
+                      : undefined
+                  }
                 />
               ))}
               {streamingView && (
@@ -282,10 +420,10 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
             </div>
           )}
 
-          {error && (
+          {(error || listError) && (
             <div className="mx-auto w-full max-w-3xl px-5 pb-4">
               <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative select-text">
-                {error}
+                {error ?? listError}
               </div>
             </div>
           )}
