@@ -6,8 +6,10 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-12
-- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A (arayüz)**, **Tur B (sohbet deneyimi)** ve **Tur C (yeni yetenekler)** bitti.
-- **Sıradaki adım:** Tur D (asistanın zekası). Kullanıcı isterse D ve E'den önce Tur F'ye (kurulum) geçilebilir; bu seçenek kendisine sunuldu.
+- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A, B, C, D ve F** bitti. **v1.0.0-beta** kurulum dosyası çıktı ve kullanıcının bilgisayarına kuruldu (`git tag v1.0.0-beta`).
+- **Sıradaki adım:** Tur E (güvenilirlik): hata günlüğü dosyası, veritabanı güvenliği (WAL aktarma, düzgün kapanış) ve otomatik yedek. Veritabanı olayı yüzünden öncelikli. Sonra Google hesabı yeniden bağlanınca Gmail/Takvim testi.
+- **Kullanıcının yapması gerekenler:** Ayarlar > Google'a istemci kimliği ve gizli anahtarı yeniden girip "Bağla" (eski kayıtlar çözülemiyor), Ayarlar > Servisler'e Tavily anahtarını yeniden girmek. Google Cloud'da Gmail API ve Google Calendar API etkin olmalı.
+- **Yeni sürüm çıkarma:** `package.json` sürümünü artır → uygulamayı kapat → `out` ve `dist` sil → `npm run build:win` (sırada başka iş yok) → kurulum dosyasını dene. Kurulu uygulama aynı veri klasörünü kullanır.
 - Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim (Tur C'deki yanıtlama, arşivleme, etkinlik güncelleme/silme dahil), Groq anahtarı girilince mikrofonla yazma.
 - **Google bağlantı denemesi:** Kullanıcı 2026-09-12'de hesabı bağlamayı denedi, "Gmail hesabı bilgisi alınamadı" hatası aldı (Gmail profil isteği başarısız). Olası nedenler: Cloud projesinde Gmail API etkin değil veya giriş ekranında izin kutucukları işaretlenmedi. Hata mesajları artık bu iki durumu Türkçe açıklıyor (`src/main/google/errors.ts`); profil alınamazsa yarım bağlantı kaydedilmiyor.
 - **Veritabanı ve gizli anahtar olayı (2026-09-12/13):** Uygulamanın gördüğü veritabanı içeriği iki kez beklenmedik şekilde değişti.
@@ -120,7 +122,16 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - **Test ipucu:** `location.reload()` sonrası `cdp.mjs key Enter` gönderimi tetiklemedi (metin kutuda kaldı); mesajı "Gönder" düğmesine tıklayarak göndermek güvenilir.
   - **Çözülemeyen gizli anahtar:** `getSecret` artık `safeStorage.decryptString` hatasında çökmez, anahtarı yok sayar (`getSecretStatus` de sadece çözülebilenleri kayıtlı sayar). Kullanıcının Google yenileme anahtarı 2026-09-13'te bu hatayı verdi; hesabı yeniden bağlaması gerekiyor.
 - [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri.
-- [ ] **Tur F (eski Aşama 7): Paketleme ve otomatik güncelleme.**
+- [x] **Tur F (eski Aşama 7): Paketleme — v1.0.0-beta.** Kullanıcı Tur E'den önce kuruluma geçmek istedi (Tur E hâlâ yapılacak).
+  - Sürüm `package.json` → `1.0.0-beta`; kurulum dosyası `dist/kisisel-asistan-1.0.0-beta-setup.exe` (`npm run build:win`).
+  - **Veri klasörü sabitlendi:** `src/main/index.ts` en başta `app.setPath('userData', %APPDATA%\kisisel-asistan)`. Neden: `electron-builder.yml`'deki `productName: Kişisel Asistan` yüzünden kurulu uygulama `%APPDATA%\Kişisel Asistan` klasörünü kullanacaktı; geliştirme ve kurulu uygulama farklı veritabanı ve farklı şifreleme anahtarı (Local State) görürdü. Tek kopya kilidi de bu klasöre bağlı.
+  - **Simge:** uygulamadaki logo (mor yuvarlak kare + beyaz sparkles). Electron'da SVG çizilip PNG'ye çevrildi, ICO dosyası PNG gömülü olarak elle yazıldı (16-256 px). `build/icon.ico`, `build/icon.png` (512), `resources/icon.png` (256, tepsi ve bildirim).
+  - `electron-builder.yml`: kullanıcı başına tek tık kurulum (yönetici izni yok, `%LOCALAPPDATA%\Programs`), kaldırınca veri silinmez, `publish: null` (sahte güncelleme adresi kaldırıldı), `scripts/`, `CLAUDE.md`, `.claude/` paketten çıkarıldı.
+  - **Otomatik güncelleme yok:** GitHub deposu kurulunca `electron-updater` eklenecek.
+  - **Kurulum testi (2026-09-12):** `dist\kisisel-asistan-1.0.0-beta-setup.exe /S` 14 saniyede kuruldu → `%LOCALAPPDATA%\Programs\kisisel-asistan\kisisel-asistan.exe`, masaüstü ve Başlat menüsünde "Kişisel Asistan" kısayolu. Kurulu uygulama `--remote-debugging-port=9223` ile açılıp CDP ile denendi: sürüm etiketi `v1.0.0-beta`, geliştirmedeki sohbet görünüyor (aynı veri klasörü), PDF okuma (pdfjs asar içinden), Ollama sohbeti ve `gorev_ekle` aracı (ai, @ai-sdk, undici asar içinden) çalıştı, "Windows ile başlat" etkin. Test verisi silindi, uygulama kapatıldı.
+  - Paketlemede `better-sqlite3` prebuild'leri `app.asar.unpacked` altına açılıyor; `scripts/`, `CLAUDE.md` pakete girmiyor.
+  - **İmzasız:** Kod imzalama sertifikası yok; Windows SmartScreen ilk açılışta "Tanınmayan uygulama" uyarısı gösterebilir ("Ek bilgi → Yine de çalıştır").
+  - **Kaldırma:** Ayarlar > Uygulamalar > Kişisel Asistan veya `Uninstall kisisel-asistan.exe`. Veriler `%APPDATA%\kisisel-asistan` içinde kalır.
 
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
   - Aşama 3'te `npm run build:unpack` ile paketli uygulama denendi. Uygulama açılıyor; "Windows ile başlat" kaydı ekleniyor ve siliniyor.

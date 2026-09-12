@@ -37,6 +37,12 @@ function quitApp(): void {
   app.quit()
 }
 
+// Veri klasörü sabit: geliştirme (npm run dev / npm start) ve kurulu uygulama aynı veritabanını ve
+// şifreleme anahtarını kullansın. Kurulu uygulamanın adı "Kişisel Asistan" olduğu için aksi halde
+// %APPDATA%\Kişisel Asistan klasörüne yazar ve orada kayıtlı API anahtarları geliştirmede çözülemez.
+// Tek kopya kilidi de bu klasöre bağlı olduğundan her şeyden önce ayarlanır.
+app.setPath('userData', join(app.getPath('appData'), 'kisisel-asistan'))
+
 // Aynı anda tek kopya çalışsın; ikinci kez açılmaya çalışılırsa mevcut pencere öne gelir
 if (!app.requestSingleInstanceLock()) {
   app.quit()

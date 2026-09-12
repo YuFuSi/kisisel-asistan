@@ -9,15 +9,24 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{CLAUDE.md,vitest.config.ts}'
+  - '!scripts/*'
+  - '!.claude/*'
 asarUnpack:
   - resources/**
 win:
   executableName: kisisel-asistan
+copyright: Copyright © 2026 ysfll
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  # Kullanıcı başına kurulum: yönetici izni istemez, %LOCALAPPDATA%\Programs altına kurar
+  oneClick: true
+  perMachine: false
+  # Kaldırınca sohbetler, görevler ve ayarlar silinmez (%APPDATA%\kisisel-asistan)
+  deleteAppDataOnUninstall: false
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
@@ -38,6 +47,5 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates
+# Otomatik güncelleme henüz yok (GitHub deposu kurulunca electron-updater eklenecek)
+publish: null
