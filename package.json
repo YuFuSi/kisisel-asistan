@@ -32,6 +32,7 @@
     "ollama-ai-provider-v2": "^4.0.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "systeminformation": "^5.33.10",
     "zod": "^4.6.2"
   },
   "devDependencies": {

@@ -3,12 +3,12 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOllama } from 'ollama-ai-provider-v2'
-import { getApiKey, getSettings } from '../settings'
+import { getSecret, getSettings } from '../settings'
 import { describeError } from './errors'
 import { PROVIDERS, type CloudProviderId, type ConnectionResult } from '../../shared/api'
 
 function requireApiKey(provider: CloudProviderId): string {
-  const key = getApiKey(provider)
+  const key = getSecret(provider)
   if (!key) {
     throw new Error(
       `${PROVIDERS[provider].label} için API anahtarı girilmemiş. Ayarlar'dan ekleyebilirsin.`

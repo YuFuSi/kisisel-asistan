@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { sendMessage, stopChat } from './ai/chat'
+import { respondToApproval } from './tools/approval'
 import { listOllamaModels, testConnection } from './ai/providers'
 import {
   createConversation,
@@ -12,13 +13,13 @@ import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import { createReminder, deleteReminder, listPendingReminders } from './data/reminders'
 import { createTask, deleteTask, listTasks, updateTask } from './data/tasks'
 import { notifyDataChanged } from './events'
-import { setApiKey } from './settings'
+import { setSecret } from './settings'
 import { applySettingsPatch, getSettingsView } from './system/appSettings'
 import { suspendGlobalShortcut } from './system/shortcut'
 import type {
-  CloudProviderId,
   DataScope,
   NotePatch,
+  SecretId,
   SettingsPatch,
   TaskInput,
   TaskPatch
@@ -37,9 +38,9 @@ export function registerIpcHandlers(): void {
   // Ayarlar
   ipcMain.handle('settings:get', () => getSettingsView())
   ipcMain.handle('settings:update', (_event, patch: SettingsPatch) => applySettingsPatch(patch))
-  ipcMain.handle('settings:setApiKey', (_event, provider: CloudProviderId, key: string) =>
+  ipcMain.handle('settings:setSecret', (_event, id: SecretId, key: string) =>
     changing('settings', () => {
-      setApiKey(provider, key)
+      setSecret(id, key)
       return getSettingsView()
     })
   )
@@ -61,6 +62,9 @@ export function registerIpcHandlers(): void {
     sendMessage(event.sender, conversationId, text)
   )
   ipcMain.handle('chat:stop', (_event, conversationId: number) => stopChat(conversationId))
+  ipcMain.handle('chat:respondToApproval', (_event, approvalId: string, approved: boolean) =>
+    respondToApproval(approvalId, approved)
+  )
 
   // Görevler
   ipcMain.handle('tasks:list', () => listTasks())

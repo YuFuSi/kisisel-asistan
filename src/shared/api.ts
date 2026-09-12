@@ -40,6 +40,11 @@ export const PROVIDERS: Record<ProviderId, ProviderInfo> = {
 
 export const isCloudProvider = (id: ProviderId): id is CloudProviderId => id !== 'ollama'
 
+// Şifreli saklanan anahtarlar: bulut sağlayıcıları + diğer servisler
+export type SecretId = CloudProviderId | 'tavily'
+
+export const SECRET_IDS: SecretId[] = ['openai', 'google', 'anthropic', 'tavily']
+
 export interface AppSettings {
   provider: ProviderId
   ollamaBaseUrl: string
@@ -63,7 +68,8 @@ export interface SettingsPatch {
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
 export interface SettingsView extends AppSettings {
-  hasApiKey: Record<CloudProviderId, boolean>
+  /** Hangi servisin anahtarı kayıtlı (anahtarın kendisi arayüze gönderilmez) */
+  hasSecret: Record<SecretId, boolean>
   /** Windows ile başlama bu çalıştırmada kullanılabilir mi (geliştirme modunda değil) */
   loginItemSupported: boolean
   /** Global kısayol şu an gerçekten kayıtlı mı (başka uygulama almış olabilir) */
@@ -104,9 +110,23 @@ export interface ChatMessage {
   createdAt: string
 }
 
+// Riskli bir araç çalışmadan önce kullanıcıdan onay ister
+export interface ToolApproval {
+  id: string
+  toolName: string
+  /** Kartın başlığı, ör. "Uygulama açılsın mı?" */
+  label: string
+  /** Ne yapılacağı, ör. "Not Defteri" */
+  summary: string
+  /** Varsa ayrıntı, ör. tam dosya yolu */
+  details?: string
+}
+
 export type ChatEvent =
   | { conversationId: number; type: 'delta'; text: string }
   | { conversationId: number; type: 'tool'; activity: ToolActivity }
+  | { conversationId: number; type: 'approval'; approval: ToolApproval }
+  | { conversationId: number; type: 'approval-resolved'; approvalId: string; approved: boolean }
   | { conversationId: number; type: 'done'; message: ChatMessage }
   | { conversationId: number; type: 'stopped'; message: ChatMessage | null }
   | { conversationId: number; type: 'error'; error: string; message: ChatMessage | null }
@@ -175,7 +195,8 @@ export interface Api {
   settings: {
     get(): Promise<SettingsView>
     update(patch: SettingsPatch): Promise<SettingsView>
-    setApiKey(provider: CloudProviderId, key: string): Promise<SettingsView>
+    /** Boş anahtar gönderilirse kayıtlı anahtar silinir */
+    setSecret(id: SecretId, key: string): Promise<SettingsView>
     testConnection(): Promise<ConnectionResult>
     /** Kısayol kaydedilirken mevcut global kısayolu geçici olarak devre dışı bırakır */
     suspendShortcut(suspended: boolean): Promise<void>
@@ -193,6 +214,8 @@ export interface Api {
     /** Kullanıcı mesajını kaydeder ve cevabı başlatır; cevap chat.onEvent ile parça parça gelir */
     send(conversationId: number, text: string): Promise<ChatMessage>
     stop(conversationId: number): Promise<void>
+    /** Onay kartındaki cevabı ana sürece iletir */
+    respondToApproval(approvalId: string, approved: boolean): Promise<void>
     onEvent(listener: (event: ChatEvent) => void): () => void
   }
   tasks: {

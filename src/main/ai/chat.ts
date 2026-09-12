@@ -4,6 +4,8 @@ import { addMessage, listMessages, setTitleIfEmpty } from '../data/conversations
 import { listMemories } from '../data/memories'
 import { toLocalIso } from '../lib/datetime'
 import { assistantTools, toolLabel } from '../tools'
+import { cancelApprovals } from '../tools/approval'
+import { runWithToolContext } from '../tools/context'
 import { getModel } from './providers'
 import { describeError } from './errors'
 import type { ChatEvent, ChatMessage, ToolActivity, ToolStatus } from '../../shared/api'
@@ -35,6 +37,9 @@ function buildInstructions(): string {
     '- Görev, hatırlatma, not ve hafıza işlemlerini gerçekten araç çağırarak yap; araç çağırmadan yapmış gibi davranma.',
     '- "... hatırlat" (belirli bir zamanda bildirim) için hatirlatma_kur kullan.',
     '- "Bunu hatırla / aklında tut" denirse veya kullanıcı kendisi hakkında kalıcı bir bilgi paylaşırsa hafizaya_kaydet kullan.',
+    '- Hava durumu, internette arama, sistem bilgisi, dosya arama ve uygulama açma araçların da var.',
+    '- Uygulama veya dosya açmadan önce kullanıcıya onay kartı gösterilir; onaylamazsa işlem yapılmaz.',
+    '- Onay kartı kendiliğinden çıkar; kullanıcıya ayrıca "onaylıyor musun" diye sorma, aracı doğrudan çağır.',
     '- Araç kullandıktan sonra ne yaptığını kısaca söyle.'
   ]
 
@@ -73,6 +78,8 @@ export function sendMessage(
 }
 
 export function stopChat(conversationId: number): void {
+  // Bekleyen onay kartı varsa iptal edilir, yoksa araç cevabı beklemeye devam eder
+  cancelApprovals(conversationId)
   activeChats.get(conversationId)?.abort()
 }
 
@@ -110,41 +117,44 @@ async function streamReply(
           : { role: 'assistant', content: m.content }
       )
 
-    const result = streamText({
-      model: getModel(),
-      instructions: buildInstructions(),
-      messages,
-      tools: assistantTools,
-      stopWhen: isStepCount(MAX_STEPS),
-      abortSignal: controller.signal
-    })
+    // Araçlar hangi sohbette çalıştıklarını bu bağlamdan öğrenir (onay kartı göndermek için gerekli)
+    await runWithToolContext({ conversationId, sender }, async () => {
+      const result = streamText({
+        model: getModel(),
+        instructions: buildInstructions(),
+        messages,
+        tools: assistantTools,
+        stopWhen: isStepCount(MAX_STEPS),
+        abortSignal: controller.signal
+      })
 
-    for await (const part of result.stream) {
-      switch (part.type) {
-        case 'text-delta': {
-          // Araç adımından önce ve sonra yazılan metinler birbirine yapışmasın
-          const text = needsSeparator && answer ? `\n\n${part.text}` : part.text
-          needsSeparator = false
-          answer += text
-          emit({ conversationId, type: 'delta', text })
-          break
+      for await (const part of result.stream) {
+        switch (part.type) {
+          case 'text-delta': {
+            // Araç adımından önce ve sonra yazılan metinler birbirine yapışmasın
+            const text = needsSeparator && answer ? `\n\n${part.text}` : part.text
+            needsSeparator = false
+            answer += text
+            emit({ conversationId, type: 'delta', text })
+            break
+          }
+          case 'finish-step':
+            needsSeparator = true
+            break
+          case 'tool-call':
+            trackTool(part.toolCallId, part.toolName, 'running')
+            break
+          case 'tool-result':
+            trackTool(part.toolCallId, part.toolName, 'done')
+            break
+          case 'tool-error':
+            trackTool(part.toolCallId, part.toolName, 'error')
+            break
+          case 'error':
+            throw part.error
         }
-        case 'finish-step':
-          needsSeparator = true
-          break
-        case 'tool-call':
-          trackTool(part.toolCallId, part.toolName, 'running')
-          break
-        case 'tool-result':
-          trackTool(part.toolCallId, part.toolName, 'done')
-          break
-        case 'tool-error':
-          trackTool(part.toolCallId, part.toolName, 'error')
-          break
-        case 'error':
-          throw part.error
       }
-    }
+    })
 
     const finalTools = settleTools(tools)
     if (controller.signal.aborted) {

@@ -1,4 +1,4 @@
-import { getApiKeyStatus, getSettings, updateSettings } from '../settings'
+import { getSecretStatus, getSettings, updateSettings } from '../settings'
 import { notifyDataChanged } from '../events'
 import { changeGlobalShortcut, isShortcutActive } from './shortcut'
 import { applyOpenAtLogin, isLoginItemSupported } from './startup'
@@ -8,7 +8,7 @@ import type { SettingsPatch, SettingsView } from '../../shared/api'
 export function getSettingsView(): SettingsView {
   return {
     ...getSettings(),
-    hasApiKey: getApiKeyStatus(),
+    hasSecret: getSecretStatus(),
     loginItemSupported: isLoginItemSupported(),
     shortcutActive: isShortcutActive()
   }

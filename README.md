@@ -8,7 +8,7 @@ Yapay zeka destekli Windows masaüstü kişisel asistanı. Electron, React, Type
 - [x] **Aşama 1:** AI sohbet ve Ayarlar (OpenAI / Gemini / Claude / Ollama)
 - [x] **Aşama 2:** Görevler, hatırlatmalar, notlar, hafıza
 - [x] **Aşama 3:** Sistem tepsisi, kısayol tuşu, Windows ile başlama
-- [ ] **Aşama 4:** Hava durumu, web arama, bilgisayar kontrolü
+- [x] **Aşama 4:** Hava durumu, web arama, bilgisayar kontrolü
 - [ ] **Aşama 5:** Gmail ve Google Takvim
 - [ ] **Aşama 6:** Sesli komut ve sesli yanıt
 - [ ] **Aşama 7:** Kurulum dosyası (.exe)

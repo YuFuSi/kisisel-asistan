@@ -5,14 +5,15 @@
 
 ## Nerede kaldık
 
-- **Son güncelleme:** 2026-09-11
-- **Tamamlanan:** Aşama 0, 1, 2 ve 3. Son commit "Aşama 3: Sistem tepsisi, global kısayol, Windows ile başlama".
-- **Sıradaki adım:** Aşama 4 (hava durumu, web arama, bilgisayar kontrolü). Web arama için kullanıcıdan Tavily API anahtarı istenecek.
+- **Son güncelleme:** 2026-09-12
+- **Tamamlanan:** Aşama 0, 1, 2, 3 ve 4. Son commit "Aşama 4: Hava durumu, internette arama, bilgisayar kontrolü".
+- **Sıradaki adım:** Aşama 5 (Gmail ve Google Takvim). Kullanıcıdan Google Cloud OAuth istemcisi istenecek.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
+  - **Tavily anahtarı girilmedi.** İnternette arama, kullanıcı Ayarlar > Servisler bölümünden anahtar ekleyene kadar Türkçe bir hata döndürür.
   - `dist/win-unpacked` içinde Aşama 3'ün test paketi duruyor (git'e girmez).
   - Tepsi simgesi ve sağ tık menüsü otomatik test edilemedi; kullanıcının gözle kontrol etmesi istendi.
-  - Aşama 1'den kalan 2 örnek sohbet duruyor, kullanıcı isterse silebilir.
+  - Sohbet listesinde kullanıcının kendi başlattığı bir sohbet var; test sohbetleri silindi.
 
 ## Proje özeti
 
@@ -45,9 +46,13 @@ Windows için yapay zeka destekli kişisel masaüstü asistanı. Asistan sohbet 
   - **Tek kopya** (`index.ts`): `requestSingleInstanceLock`. İkinci açılışta mevcut pencere öne gelir.
   - **Ayar uygulama** (`appSettings.ts`): `applySettingsPatch` ayarı kaydedip sisteme uygular ve `data:changed('settings')` gönderir. Tepsi menüsünden yapılan değişiklik Ayarlar sayfasına da yansır.
   - **Arayüz komutları:** `app:command` kanalıyla `focus-chat` ve `new-chat` gider (`AppCommand`).
-- [ ] **Aşama 4: İnternet ve bilgisayar kontrolü.**
-  - Hava durumu (Open-Meteo, anahtarsız), web arama (Tavily), sistem bilgisi (`systeminformation`), uygulama/URL açma, dosya bulma.
-  - Riskli araçlar onay kartı ister (AI SDK v7'nin `toolApproval`/`needsApproval` desteğine bakılacak). Rastgele shell komutu çalıştırılmaz.
+- [x] **Aşama 4: İnternet ve bilgisayar kontrolü.**
+  - Araçlar: `hava_durumu` (Open-Meteo, anahtarsız), `web_ara` (Tavily, anahtar gerekir), `sistem_bilgisi` (`systeminformation`), `url_ac`, `uygulama_ac` (onaylı), `dosya_bul`, `dosya_ac` (onaylı).
+  - **Onay akışı:** riskli araç, `requireApproval` ile arayüze onay kartı gönderip cevabı bekler (`src/main/tools/approval.ts`). Kullanıcı reddederse veya 2 dakika cevap gelmezse araç hata fırlatır ve işlem yapılmaz. Sohbet durdurulunca bekleyen onaylar iptal edilir.
+  - **Neden AI SDK'nın kendi onayı değil:** v7'de `needsApproval` var ama akışı onay cevabıyla yeniden kurmayı gerektiriyor. Araç içinde beklemek daha basit ve sağlayıcıdan bağımsız.
+  - Araç hangi sohbette çalıştığını `AsyncLocalStorage` ile öğrenir (`src/main/tools/context.ts`); böylece aynı anda birden fazla sohbet cevap yazsa da onay kartı doğru pencereye gider.
+  - **Uygulama açma:** Windows 11'de Not Defteri gibi Mağaza uygulamalarının Başlat menüsünde `.lnk` dosyası yok. Bu yüzden uygulamalar `Get-StartApps` listesinden bulunur ve `explorer.exe shell:AppsFolder\<AppID>` ile açılır (`src/main/lib/apps.ts`). Çalıştırılan komut sabittir, modelin yazdığı metin komuta girmez; kimlik listeden gelir ve karakter kontrolünden geçer.
+  - Gizli anahtarlar artık sadece AI sağlayıcıları için değil: `SecretId` (`openai`, `google`, `anthropic`, `tavily`) ve `settings.setSecret` kullanılıyor. Ayarlar'daki "Servisler" bölümü Tavily anahtarını alır.
 - [ ] **Aşama 5: Gmail ve Google Takvim.** OAuth (Desktop app, loopback). Mail özetleme/arama/taslak, gönderme (onaylı), takvim listeleme/ekleme (onaylı).
 - [ ] **Aşama 6: Ses.** Mikrofon, Whisper (OpenAI/Groq) ile yazıya çevirme; `speechSynthesis` veya OpenAI TTS ile sesli okuma.
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
@@ -116,9 +121,15 @@ src/
 │  ├─ tools/                AI araçları (her yetenek bir modül)
 │  │  ├─ types.ts           ToolModule = { tools, labels }
 │  │  ├─ index.ts           Modül listesi, assistantTools, toolLabel
-│  │  └─ tasks.ts, reminders.ts, notes.ts, memory.ts
+│  │  ├─ context.ts         Aracın hangi sohbette çalıştığını taşıyan bağlam (AsyncLocalStorage)
+│  │  ├─ approval.ts        requireApproval: onay kartı gönderir ve cevabı bekler (+ testi)
+│  │  └─ tasks.ts, reminders.ts, notes.ts, memory.ts, weather.ts, websearch.ts, system.ts, computer.ts
 │  ├─ scheduler/reminders.ts  Zamanı gelen hatırlatmaları Windows bildirimi olarak gösterir
-│  ├─ lib/datetime.ts       Yerel tarih/saat okuma ve biçimlendirme (+ testi)
+│  ├─ lib/                  Elektron'a bağlı olmayan, test edilebilir yardımcılar
+│  │  ├─ datetime.ts        Yerel tarih/saat okuma ve biçimlendirme (+ testi)
+│  │  ├─ weather.ts         Open-Meteo sorguları ve WMO kodları (+ testi)
+│  │  ├─ files.ts           Dosya arama (+ testi)
+│  │  └─ apps.ts            Başlat menüsü uygulama listesi, eşleştirme ve açma (+ testi)
 │  └─ ai/                   providers.ts (model seçimi, Ollama listesi, bağlantı testi),
 │                           chat.ts (sistem talimatı, akışlı cevap, araç takibi), errors.ts (Türkçe hatalar)
 ├─ preload/index.ts         window.api köprüsü (sadece tanımlı işlemler)
@@ -145,6 +156,8 @@ vitest.config.ts            Test ayarları
   2. `src/main/tools/index.ts` içindeki `modules` listesine ekle.
   3. Veri gerekiyorsa `src/main/data/<ad>.ts` ekle, `db/index.ts` migration listesine yeni eleman koy, gerekiyorsa `DataScope`'a yeni değer ekle. Veriyi değiştiren araç `notifyDataChanged(scope)` çağırır.
   4. Araç açıklamaları ve alan açıklamaları Türkçe ve net olmalı. Küçük yerel modeller boş bırakılması gereken isteğe bağlı alanları doldurmaya meyilli, bu yüzden "SADECE kullanıcı söylediyse doldur" gibi yazılır.
+- **Riskli araç eklerken:** aracın `execute` fonksiyonunda işi yapmadan önce `await requireApproval({ toolName, label, summary, details })` çağrılır. Onay verilmezse fonksiyon hata fırlatır ve iş yapılmaz.
+- **Komut çalıştırma:** rastgele shell komutu çalıştırılmaz. Gerekirse sabit komut + sabit argümanlar kullanılır (`execFile`), modelden gelen metin doğrudan komuta girmez.
 - **Veri değişim olayı:** IPC'deki değiştirici işlemler `changing(scope, ...)` ile sarılır. Sayfalar veriyi `useLiveData(load, scope)` ile alır ve kendiliğinden yenilenir.
 - **`data/` klasörü** `electron` import etmez. Electron'a bağlı işler `events.ts`, `scheduler/`, `settings.ts`, `ai/` içinde durur.
 - **Renderer**, Node/Electron'a doğrudan erişmez, sadece `window.api` kullanır. Ham `ipcRenderer` açılmaz.
@@ -198,6 +211,8 @@ vitest.config.ts            Test ayarları
    - `window.confirm` gerekiyorsa önce `window.confirm = () => true` yapılır.
    - PowerShell 5.1, programlara giden argümanlardaki çift tırnakları bozar. JS ifadelerinde tek tırnak kullanılır, gerekirse `\'` ile kaçırılır.
    - React kontrollü `<input type="date">` değeri, native value setter ve ardından `input` olayıyla değiştirilir.
+   - **Onay kartı testi:** `document.body.innerText.includes('açılsın mı')` ile kart beklenir, sonra metni "Onayla" veya "İptal" olan butona tıklanır. Uygulamanın gerçekten açıldığı `tasklist` ile doğrulanır ve test sonunda kapatılır.
+   - **Ters bölü tuzağı:** Bash heredoc veya python ile dosya yazarken `\` işaretleri teke iniyor. Ters bölü içeren içerik (Windows yolları, regex) Write aracıyla yazılmalı.
    - Test için oluşturulan veriler (görev, hatırlatma, hafıza vb.) test sonunda **silinir**. Gerçek hatırlatmalar bildirim gösterir, sahte hafıza kayıtları asistanı yanıltır.
    - **Tepsiye gizleme:** sayfada `window.close()` çalıştırılır.
    - **Görünürlük ölçümü:** hiç gösterilmemiş pencerede (`--hidden`) `document.visibilityState` yanıltıcı biçimde `visible` olabilir. Gerçek görünürlük `Get-Process kisisel-asistan | Where-Object MainWindowHandle -ne 0` ile kontrol edilir.

@@ -4,6 +4,7 @@ import OllamaSettings from '../components/settings/OllamaSettings'
 import CloudSettings from '../components/settings/CloudSettings'
 import ConnectionTest from '../components/settings/ConnectionTest'
 import AppBehaviorSettings from '../components/settings/AppBehaviorSettings'
+import SecretField from '../components/settings/SecretField'
 import { errorMessage } from '../lib/errors'
 import { sectionTitleClass } from '../lib/styles'
 
@@ -97,6 +98,17 @@ function SettingsPage(): React.JSX.Element {
 
       <Section title="Bağlantı testi">
         <ConnectionTest key={`${provider}:${settings.models[provider]}`} />
+      </Section>
+
+      <Section title="Servisler">
+        <SecretField
+          id="tavily"
+          label="Tavily API anahtarı"
+          saved={settings.hasSecret.tavily}
+          description="Asistanın internette arama yapabilmesi için gerekir. tavily.com ücretsiz anahtar veriyor."
+          helpUrl="https://app.tavily.com/home"
+          onSaved={setSettings}
+        />
       </Section>
 
       <Section title="Uygulama">

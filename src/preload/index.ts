@@ -7,7 +7,7 @@ const api: Api = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     update: (patch) => ipcRenderer.invoke('settings:update', patch),
-    setApiKey: (provider, key) => ipcRenderer.invoke('settings:setApiKey', provider, key),
+    setSecret: (id, key) => ipcRenderer.invoke('settings:setSecret', id, key),
     testConnection: () => ipcRenderer.invoke('settings:testConnection'),
     suspendShortcut: (suspended) => ipcRenderer.invoke('settings:suspendShortcut', suspended)
   },
@@ -23,6 +23,8 @@ const api: Api = {
   chat: {
     send: (conversationId, text) => ipcRenderer.invoke('chat:send', conversationId, text),
     stop: (conversationId) => ipcRenderer.invoke('chat:stop', conversationId),
+    respondToApproval: (approvalId, approved) =>
+      ipcRenderer.invoke('chat:respondToApproval', approvalId, approved),
     onEvent: (listener) => {
       const handler = (_event: IpcRendererEvent, chatEvent: ChatEvent): void => listener(chatEvent)
       ipcRenderer.on('chat:event', handler)

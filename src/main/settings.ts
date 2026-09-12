@@ -4,8 +4,9 @@ import { DEFAULT_SHORTCUT } from '../shared/shortcut'
 import {
   PROVIDER_IDS,
   PROVIDERS,
+  SECRET_IDS,
   type AppSettings,
-  type CloudProviderId,
+  type SecretId,
   type SettingsPatch
 } from '../shared/api'
 
@@ -75,28 +76,34 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
 }
 
 // API anahtarları Windows'un kullanıcı hesabına bağlı şifreleme (DPAPI) ile saklanır
-const secretKey = (provider: CloudProviderId): string => `secret:${provider}`
+const secretKey = (id: SecretId): string => `secret:${id}`
 
-export function setApiKey(provider: CloudProviderId, key: string): void {
+export function setSecret(id: SecretId, key: string): void {
+  if (!SECRET_IDS.includes(id)) throw new Error('Bilinmeyen servis.')
   const value = key.trim()
   if (!value) {
-    getDb().prepare('DELETE FROM settings WHERE key = ?').run(secretKey(provider))
+    getDb().prepare('DELETE FROM settings WHERE key = ?').run(secretKey(id))
     return
   }
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error('Bu bilgisayarda şifreli saklama kullanılamıyor.')
   }
-  writeValue(secretKey(provider), safeStorage.encryptString(value).toString('base64'))
+  writeValue(secretKey(id), safeStorage.encryptString(value).toString('base64'))
 }
 
-export function getApiKey(provider: CloudProviderId): string | undefined {
-  const raw = readValue(secretKey(provider))
+export function getSecret(id: SecretId): string | undefined {
+  const raw = readValue(secretKey(id))
   return raw ? safeStorage.decryptString(Buffer.from(raw, 'base64')) : undefined
 }
 
-export function getApiKeyStatus(): Record<CloudProviderId, boolean> {
-  const has = (provider: CloudProviderId): boolean => readValue(secretKey(provider)) !== undefined
-  return { openai: has('openai'), google: has('google'), anthropic: has('anthropic') }
+export function getSecretStatus(): Record<SecretId, boolean> {
+  const has = (id: SecretId): boolean => readValue(secretKey(id)) !== undefined
+  return {
+    openai: has('openai'),
+    google: has('google'),
+    anthropic: has('anthropic'),
+    tavily: has('tavily')
+  }
 }
 
 // Kullanıcıya gösterilmeyen tek seferlik bayraklar (ör. "tepsi bilgisi gösterildi")

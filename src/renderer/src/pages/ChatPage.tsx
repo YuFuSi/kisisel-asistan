@@ -5,11 +5,13 @@ import {
   type ChatMessage,
   type Conversation,
   type SettingsView,
-  type ToolActivity
+  type ToolActivity,
+  type ToolApproval
 } from '@shared/api'
 import ConversationList from '../components/chat/ConversationList'
 import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
+import ApprovalCard from '../components/chat/ApprovalCard'
 import { errorMessage } from '../lib/errors'
 
 const SUGGESTIONS = [
@@ -43,6 +45,11 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streaming, setStreaming] = useState<Streaming | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Asistanın beklediği onay (uygulama/dosya açma gibi riskli işlemler için)
+  const [approval, setApproval] = useState<{
+    conversationId: number
+    approval: ToolApproval
+  } | null>(null)
   // Olay dinleyicisi içinde her zaman güncel sohbet kimliğini okumak için
   const activeIdRef = useRef<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -76,6 +83,14 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         )
         return
       }
+      if (event.type === 'approval') {
+        setApproval({ conversationId: event.conversationId, approval: event.approval })
+        return
+      }
+      if (event.type === 'approval-resolved') {
+        setApproval((current) => (current?.approval.id === event.approvalId ? null : current))
+        return
+      }
       if (event.type === 'tool') {
         setStreaming((s) =>
           s && s.conversationId === event.conversationId
@@ -87,6 +102,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
       // Cevap bitti, durduruldu veya hata oldu
       setStreaming((s) => (s?.conversationId === event.conversationId ? null : s))
+      setApproval((current) => (current?.conversationId === event.conversationId ? null : current))
       if (event.conversationId === activeIdRef.current) {
         const message = event.message
         if (message) setMessages((list) => [...list, message])
@@ -97,11 +113,12 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   }, [refreshConversations])
 
   const streamingView = streaming && streaming.conversationId === activeId ? streaming : null
+  const approvalView = approval && approval.conversationId === activeId ? approval.approval : null
 
   // Yeni mesaj veya yeni cevap parçası gelince en alta kaydır
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages, streamingView])
+  }, [messages, streamingView, approvalView])
 
   const openConversation = useCallback((id: number | null): void => {
     activeIdRef.current = id
@@ -159,7 +176,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const modelReady =
     !!settings &&
     modelName !== '' &&
-    (settings.provider === 'ollama' || settings.hasApiKey[settings.provider])
+    (settings.provider === 'ollama' || settings.hasSecret[settings.provider])
   const activeTitle = conversations.find((c) => c.id === activeId)?.title || 'Yeni sohbet'
   const showEmptyState = messages.length === 0 && streamingView === null
 
@@ -237,6 +254,15 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   content={streamingView.text}
                   tools={streamingView.tools}
                   pending
+                />
+              )}
+              {approvalView && (
+                <ApprovalCard
+                  approval={approvalView}
+                  onRespond={(approved) => {
+                    setApproval(null)
+                    void window.api.chat.respondToApproval(approvalView.id, approved)
+                  }}
                 />
               )}
               <div ref={bottomRef} />
