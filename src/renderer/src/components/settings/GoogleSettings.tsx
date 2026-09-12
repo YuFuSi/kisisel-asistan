@@ -80,6 +80,7 @@ function GoogleSettings({
         label="İstemci kimliği (Client ID)"
         saved={settings.hasSecret['google-client-id']}
         description="Google Cloud'da oluşturduğun OAuth istemcisinin kimliği."
+        placeholder="Örn. 1234567890-abc123.apps.googleusercontent.com"
         onSaved={onSettings}
       />
       <SecretField
@@ -87,6 +88,7 @@ function GoogleSettings({
         label="İstemci gizli anahtarı (Client secret)"
         saved={settings.hasSecret['google-client-secret']}
         description="Aynı ekranda verilen gizli anahtar."
+        placeholder="Örn. GOCSPX-..."
         onSaved={onSettings}
       />
 

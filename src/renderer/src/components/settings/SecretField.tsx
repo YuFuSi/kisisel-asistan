@@ -11,6 +11,8 @@ interface SecretFieldProps {
   /** Anahtar kayıtlı mı */
   saved: boolean
   description?: string
+  /** Boş alanda görünecek örnek metin */
+  placeholder?: string
   helpUrl?: string
   onSaved: (settings: SettingsView) => void
 }
@@ -21,6 +23,7 @@ function SecretField({
   label,
   saved,
   description,
+  placeholder,
   helpUrl,
   onSaved
 }: SecretFieldProps): React.JSX.Element {
@@ -67,7 +70,9 @@ function SecretField({
               if (e.key === 'Enter' && value.trim()) void save(value)
             }}
             placeholder={
-              saved ? 'Değiştirmek için yeni anahtarı yapıştır' : 'API anahtarını yapıştır'
+              saved
+                ? 'Değiştirmek için yenisini yapıştır'
+                : (placeholder ?? 'API anahtarını yapıştır')
             }
             autoComplete="off"
             spellCheck={false}
