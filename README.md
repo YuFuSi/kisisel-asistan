@@ -10,7 +10,7 @@ Yapay zeka destekli Windows masaüstü kişisel asistanı. Electron, React, Type
 - [x] **Aşama 3:** Sistem tepsisi, kısayol tuşu, Windows ile başlama
 - [x] **Aşama 4:** Hava durumu, web arama, bilgisayar kontrolü
 - [ ] **Aşama 5:** Gmail ve Google Takvim
-- [ ] **Aşama 6:** Sesli komut ve sesli yanıt
+- [x] **Aşama 6:** Sesli komut ve sesli yanıt
 - [ ] **Aşama 7:** Kurulum dosyası (.exe)
 
 ## Komutlar

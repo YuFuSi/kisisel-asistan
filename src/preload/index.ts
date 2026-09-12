@@ -53,6 +53,9 @@ const api: Api = {
     create: (content) => ipcRenderer.invoke('memories:create', content),
     remove: (id) => ipcRenderer.invoke('memories:remove', id)
   },
+  speech: {
+    transcribe: (audio, mimeType) => ipcRenderer.invoke('speech:transcribe', audio, mimeType)
+  },
   google: {
     status: () => ipcRenderer.invoke('google:status'),
     connect: () => ipcRenderer.invoke('google:connect'),

@@ -24,7 +24,10 @@ const defaults: AppSettings = {
   closeToTray: true,
   openAtLogin: false,
   globalShortcut: DEFAULT_SHORTCUT,
-  googleAccount: null
+  googleAccount: null,
+  sttProvider: 'groq',
+  speakReplies: false,
+  voiceUri: ''
 }
 
 function readValue(key: string): string | undefined {
@@ -72,6 +75,11 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.openAtLogin === 'boolean') next.openAtLogin = patch.openAtLogin
   if (typeof patch.globalShortcut === 'string') next.globalShortcut = patch.globalShortcut.trim()
   if (patch.googleAccount !== undefined) next.googleAccount = patch.googleAccount
+  if (patch.sttProvider === 'groq' || patch.sttProvider === 'openai') {
+    next.sttProvider = patch.sttProvider
+  }
+  if (typeof patch.speakReplies === 'boolean') next.speakReplies = patch.speakReplies
+  if (typeof patch.voiceUri === 'string') next.voiceUri = patch.voiceUri
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))
   return next

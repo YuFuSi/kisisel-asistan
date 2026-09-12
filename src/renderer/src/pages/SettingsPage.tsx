@@ -12,6 +12,7 @@ import ConnectionTest from '../components/settings/ConnectionTest'
 import AppBehaviorSettings from '../components/settings/AppBehaviorSettings'
 import SecretField from '../components/settings/SecretField'
 import GoogleSettings from '../components/settings/GoogleSettings'
+import SpeechSettings from '../components/settings/SpeechSettings'
 import { errorMessage } from '../lib/errors'
 import { sectionTitleClass } from '../lib/styles'
 
@@ -110,6 +111,10 @@ function SettingsPage(): React.JSX.Element {
 
       <Section title="Bağlantı testi">
         <ConnectionTest key={`${provider}:${settings.models[provider]}`} />
+      </Section>
+
+      <Section title="Ses">
+        <SpeechSettings settings={settings} onSettings={setSettings} onUpdate={update} />
       </Section>
 
       <Section title="Servisler">

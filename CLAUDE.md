@@ -6,11 +6,12 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-12
-- **Tamamlanan:** Aşama 0-4. Aşama 5'in (Gmail ve Takvim) kodu yazıldı ve commit'lendi, ama kullanıcı Google hesabını bağlayana kadar uçtan uca test edilemedi.
-- **Sıradaki adım:** Kullanıcı Google Cloud'da OAuth istemcisi oluşturup Ayarlar'a girecek, hesabı bağlayacak. Sonra Gmail ve Takvim uçtan uca test edilip Aşama 6'ya (ses) geçilecek.
+- **Tamamlanan:** Aşama 0-4 ve 6 (ses). Aşama 5'in (Gmail ve Takvim) kodu yazıldı ama kullanıcı Google hesabını bağlayana kadar test edilemedi.
+- **Sıradaki adım:** Aşama 7 (paketleme). Ayrıca bekleyen iki test var: kullanıcı Google hesabını bağlayınca Gmail/Takvim, Groq anahtarı girince mikrofonla yazma.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
-  - **Tavily anahtarı girilmedi.** Kullanıcı anahtarı sohbete yazdı; kimlik bilgilerini ben uygulamaya girmiyorum, kullanıcı Ayarlar > Servisler bölümünden kendisi girecek. O zamana kadar internette arama Türkçe bir hata döndürür.
+  - **Tavily anahtarı girildi**, internette arama çalışıyor (kullanıcı kendi girdi; kimlik bilgilerini ben girmiyorum).
+  - **Groq anahtarı girilmedi**, mikrofonla yazma o zamana kadar Türkçe hata veriyor. Sesli okuma anahtarsız çalışıyor ama varsayılan olarak kapalı.
   - **Google hesabı bağlı değil.** Gmail ve Takvim araçları kullanıcıyı Ayarlar'a yönlendiren hata veriyor.
   - `dist/win-unpacked` içinde Aşama 3'ün test paketi duruyor (git'e girmez).
   - Tepsi simgesi ve sağ tık menüsü otomatik test edilemedi; kullanıcının gözle kontrol etmesi istendi.
@@ -63,7 +64,13 @@ Windows için yapay zeka destekli kişisel masaüstü asistanı. Asistan sohbet 
   - E-posta metni `src/main/lib/mime.ts` ile kurulur: Türkçe başlıklar encoded-word, gövde base64, tamamı base64url. Başlıklardaki satır sonları temizlenir (başlık enjeksiyonu önlenir).
   - Ayarlar'daki "Google hesabı" bölümü istemci kimliği ile gizli anahtarı alır, bağla/bağlantıyı kes düğmelerini gösterir.
   - **Kullanıcının yapması gerekenler:** Google Cloud'da proje, Gmail + Calendar API etkinleştirme, OAuth izin ekranı (Harici + kendi adresi test kullanıcısı), "Masaüstü uygulaması" türünde OAuth istemcisi.
-- [ ] **Aşama 6: Ses.** Mikrofon, Whisper (OpenAI/Groq) ile yazıya çevirme; `speechSynthesis` veya OpenAI TTS ile sesli okuma.
+- [x] **Aşama 6: Ses.**
+  - **Mikrofon:** Sohbet kutusundaki mikrofon butonu `MediaRecorder` ile kayıt alır (webm/opus), ses `ArrayBuffer` olarak ana sürece gider ve `src/main/ai/speech.ts` ile yazıya çevrilir. Çıkan metin kutuya eklenir, gönderilmez.
+  - Servisler OpenAI uyumlu `audio/transcriptions` arayüzünü kullanır: Groq (`whisper-large-v3-turbo`, ücretsiz kotalı) veya OpenAI (`whisper-1`). Dil `tr` olarak gönderilir.
+  - **Mikrofon izni:** `session.setPermissionRequestHandler` sadece `media` iznini verir, diğerlerini reddeder (`src/main/system/window.ts`).
+  - **Sesli okuma:** `speechSynthesis` ile Windows sesleri kullanılır, ek anahtar ve internet gerekmez. Markdown işaretleri okunmadan önce temizlenir (`src/renderer/src/lib/voice.ts`).
+  - **Ayarlar > Ses:** servis seçimi, API anahtarı, "cevapları sesli oku" anahtarı, ses seçimi ve "Dene" düğmesi.
+  - Doğrulandı: mikrofon izni ve cihaz erişimi, cevabın okunması (`speechSynthesis.speaking`), anahtar yokken Türkçe hata. Gerçek konuşma-metin dönüşümü Groq anahtarı girilince test edilecek.
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
   - Aşama 3'te `npm run build:unpack` ile paketli uygulama denendi. Uygulama açılıyor; "Windows ile başlat" kaydı ekleniyor ve siliniyor.
   - **Dikkat 1, bozuk asar:** İlk paketleme, geliştirme sunucusu ve testler çalışırken arka planda yapıldı. Çıkan `app.asar` bozuktu: dosya konumları 1011 bayt kaymıştı ve uygulama 0,3 saniyede kod 1 ile, hiç log yazmadan kapanıyordu. Temiz derlemede sorun çıkmadı, ama kesin neden kanıtlanmadı. **Kural:** paketlemeden önce uygulamayı kapat, `out` ve `dist` klasörlerini sil, paketleme sürerken başka derleme veya test çalıştırma.
@@ -239,11 +246,13 @@ vitest.config.ts            Test ayarları
   - `qwen3:14b`: genel amaçlı, **seçili**. Araç çağırma iyi; cevap yaklaşık 2-15 saniye.
   - `qwen2.5-coder:14b`: kodlama modeli.
   - `qwen3-coder:30b`: 12 GB'a sığmıyor, ilk yükleme yaklaşık 1 dakika sürüyor.
+- Windows'ta yüklü tek konuşma sesi: "Microsoft Tolga - Turkish (Turkey)" (tr-TR). Sesli okuma bunu kullanıyor.
+- Mikrofon: Intel Smart Sound dijital mikrofon dizisi; Electron izni verildi.
 - Uygulama verisi: `%APPDATA%\kisisel-asistan\asistan.db`
 
 ## Kullanıcıdan gerekecekler (zamanı gelince)
 
 - Aşama 4: Tavily API anahtarı (web arama)
 - Aşama 5: Google Cloud OAuth istemcisi (Desktop app). Ekran ekran rehber verilecek.
-- Aşama 6: Ses tanıma için OpenAI veya Groq API anahtarı
+- Aşama 6: Mikrofonla yazmak için Groq (ücretsiz) veya OpenAI API anahtarı. Sesli okuma için gerekmiyor.
 - İsteğe bağlı: OpenAI, Gemini veya Claude API anahtarı (bulut modelleri için)

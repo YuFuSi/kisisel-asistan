@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
-import { SendHorizontal, Square } from 'lucide-react'
+import { Loader2, Mic, SendHorizontal, Square } from 'lucide-react'
 import { COMPOSER_INPUT_ID } from '../../lib/dom'
+import { errorMessage } from '../../lib/errors'
+import { startRecording, type Recording } from '../../lib/recorder'
 
 interface ComposerProps {
   busy: boolean
@@ -13,6 +15,9 @@ const MAX_HEIGHT = 200
 
 function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.Element {
   const [text, setText] = useState('')
+  const [recording, setRecording] = useState<Recording | null>(null)
+  const [transcribing, setTranscribing] = useState(false)
+  const [micError, setMicError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Yazı uzadıkça kutu büyüsün (en fazla MAX_HEIGHT)
@@ -29,6 +34,36 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
     onSend(value)
     setText('')
     requestAnimationFrame(resize)
+  }
+
+  // Mikrofon butonu: ilk basışta kayda başlar, ikincide kaydı yazıya çevirip kutuya ekler
+  async function toggleMicrophone(): Promise<void> {
+    setMicError(null)
+    if (!recording) {
+      try {
+        setRecording(await startRecording())
+      } catch (err) {
+        setMicError(errorMessage(err))
+      }
+      return
+    }
+
+    const current = recording
+    setRecording(null)
+    setTranscribing(true)
+    try {
+      const { audio, mimeType } = await current.stop()
+      const spoken = await window.api.speech.transcribe(audio, mimeType)
+      setText((previous) => (previous ? `${previous} ${spoken}` : spoken))
+      requestAnimationFrame(() => {
+        resize()
+        textareaRef.current?.focus()
+      })
+    } catch (err) {
+      setMicError(errorMessage(err))
+    } finally {
+      setTranscribing(false)
+    }
   }
 
   return (
@@ -58,6 +93,23 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
           style={{ maxHeight: MAX_HEIGHT }}
           className="flex-1 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-zinc-600 disabled:cursor-not-allowed"
         />
+        <button
+          onClick={() => void toggleMicrophone()}
+          disabled={disabled || transcribing}
+          aria-label={recording ? 'Kaydı bitir' : 'Sesli yaz'}
+          title={recording ? 'Kaydı bitir ve yazıya çevir' : 'Mikrofonla yaz'}
+          className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:text-zinc-700 ${
+            recording
+              ? 'bg-red-600 text-white hover:bg-red-500'
+              : 'text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          {transcribing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Mic className={`h-4 w-4 ${recording ? 'animate-pulse' : ''}`} />
+          )}
+        </button>
         {busy ? (
           <button
             onClick={onStop}
@@ -79,6 +131,15 @@ function Composer({ busy, disabled, onSend, onStop }: ComposerProps): React.JSX.
           </button>
         )}
       </div>
+      {(recording || transcribing || micError) && (
+        <div className="mx-auto mt-2 max-w-3xl text-xs">
+          {recording && (
+            <span className="text-red-400">Dinliyorum... Bitirmek için mikrofona tekrar bas.</span>
+          )}
+          {transcribing && <span className="text-zinc-400">Yazıya çevriliyor...</span>}
+          {micError && <span className="text-red-400 select-text">{micError}</span>}
+        </div>
+      )}
     </div>
   )
 }

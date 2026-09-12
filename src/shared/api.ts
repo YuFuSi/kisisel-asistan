@@ -42,17 +42,50 @@ export const isCloudProvider = (id: ProviderId): id is CloudProviderId => id !==
 
 // Şifreli saklanan anahtarlar: bulut sağlayıcıları + diğer servisler
 export type SecretId =
-  CloudProviderId | 'tavily' | 'google-client-id' | 'google-client-secret' | 'google-refresh-token'
+  | CloudProviderId
+  | 'tavily'
+  | 'groq'
+  | 'google-client-id'
+  | 'google-client-secret'
+  | 'google-refresh-token'
 
 export const SECRET_IDS: SecretId[] = [
   'openai',
   'google',
   'anthropic',
   'tavily',
+  'groq',
   'google-client-id',
   'google-client-secret',
   'google-refresh-token'
 ]
+
+// ---- Ses ----
+
+/** Konuşmayı yazıya çeviren servis */
+export type SpeechProvider = 'groq' | 'openai'
+
+export interface SpeechProviderInfo {
+  label: string
+  description: string
+  secret: SecretId
+  apiKeyUrl: string
+}
+
+export const SPEECH_PROVIDERS: Record<SpeechProvider, SpeechProviderInfo> = {
+  groq: {
+    label: 'Groq',
+    description: 'Ücretsiz kotası var ve hızlı',
+    secret: 'groq',
+    apiKeyUrl: 'https://console.groq.com/keys'
+  },
+  openai: {
+    label: 'OpenAI',
+    description: 'Ücretli, OpenAI anahtarını kullanır',
+    secret: 'openai',
+    apiKeyUrl: 'https://platform.openai.com/api-keys'
+  }
+}
 
 export interface AppSettings {
   provider: ProviderId
@@ -66,6 +99,12 @@ export interface AppSettings {
   globalShortcut: string
   /** Bağlı Google hesabının e-posta adresi; bağlı değilse null */
   googleAccount: string | null
+  /** Konuşmayı yazıya çevirmek için kullanılacak servis */
+  sttProvider: SpeechProvider
+  /** Asistanın cevapları sesli okunsun mu */
+  speakReplies: boolean
+  /** Seçili Windows sesi; boşsa Türkçe ses otomatik seçilir */
+  voiceUri: string
 }
 
 export interface SettingsPatch {
@@ -76,6 +115,9 @@ export interface SettingsPatch {
   openAtLogin?: boolean
   globalShortcut?: string
   googleAccount?: string | null
+  sttProvider?: SpeechProvider
+  speakReplies?: boolean
+  voiceUri?: string
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -262,6 +304,10 @@ export interface Api {
     list(): Promise<Memory[]>
     create(content: string): Promise<Memory>
     remove(id: number): Promise<void>
+  }
+  speech: {
+    /** Ses kaydını yazıya çevirir */
+    transcribe(audio: ArrayBuffer, mimeType: string): Promise<string>
   }
   google: {
     status(): Promise<GoogleStatus>

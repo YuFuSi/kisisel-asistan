@@ -1,4 +1,4 @@
-import { BrowserWindow, Notification, shell } from 'electron'
+import { BrowserWindow, Notification, session, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import icon from '../../../resources/icon.png?asset'
@@ -32,7 +32,16 @@ function showTrayHintOnce(): void {
   }).show()
 }
 
+// Sesli komut için mikrofon izni; başka izinler (kamera, konum vb.) reddedilir
+function allowMicrophoneOnly(): void {
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
+    callback(permission === 'media')
+  })
+}
+
 export function createMainWindow(options: { startHidden: boolean }): BrowserWindow {
+  allowMicrophoneOnly()
+
   const window = new BrowserWindow({
     width: 1100,
     height: 750,

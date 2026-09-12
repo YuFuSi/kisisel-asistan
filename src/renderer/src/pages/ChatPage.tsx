@@ -13,6 +13,7 @@ import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
 import ApprovalCard from '../components/chat/ApprovalCard'
 import { errorMessage } from '../lib/errors'
+import { speakText, stopSpeaking } from '../lib/voice'
 
 const SUGGESTIONS = [
   'Bugünümü planlamama yardım et',
@@ -52,6 +53,8 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   } | null>(null)
   // Olay dinleyicisi içinde her zaman güncel sohbet kimliğini okumak için
   const activeIdRef = useRef<number | null>(null)
+  // Olay dinleyicisi içinden güncel ayarları okumak için
+  const settingsRef = useRef<SettingsView | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const refreshConversations = useCallback(async (): Promise<void> => {
@@ -63,7 +66,10 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     if (!active) return
     window.api.settings
       .get()
-      .then(setSettings)
+      .then((loaded) => {
+        settingsRef.current = loaded
+        setSettings(loaded)
+      })
       .catch((err) => setError(errorMessage(err)))
   }, [active])
 
@@ -107,6 +113,10 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         const message = event.message
         if (message) setMessages((list) => [...list, message])
         if (event.type === 'error') setError(event.error)
+        // Ayar açıksa cevabı sesli oku
+        if (event.type === 'done' && settingsRef.current?.speakReplies && message?.content) {
+          speakText(message.content, settingsRef.current.voiceUri)
+        }
       }
       refreshConversations().catch(() => {})
     })
@@ -156,6 +166,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
   async function send(text: string): Promise<void> {
     setError(null)
+    stopSpeaking()
     try {
       let id = activeIdRef.current
       if (id === null) {

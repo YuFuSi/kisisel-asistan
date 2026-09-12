@@ -3,6 +3,7 @@ import { sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
 import { connectGoogle, disconnectGoogle, getGoogleStatus } from './google/auth'
 import { listOllamaModels, testConnection } from './ai/providers'
+import { transcribeAudio } from './ai/speech'
 import {
   createConversation,
   deleteConversation,
@@ -50,6 +51,11 @@ export function registerIpcHandlers(): void {
     suspendGlobalShortcut(suspended)
   )
   ipcMain.handle('ollama:listModels', () => listOllamaModels())
+
+  // Ses
+  ipcMain.handle('speech:transcribe', (_event, audio: ArrayBuffer, mimeType: string) =>
+    transcribeAudio(audio, mimeType)
+  )
 
   // Google hesabı (Gmail ve Takvim)
   ipcMain.handle('google:status', () => getGoogleStatus())
