@@ -13,6 +13,7 @@ import AppBehaviorSettings from '../components/settings/AppBehaviorSettings'
 import GoogleSettings from '../components/settings/GoogleSettings'
 import SpeechSettings from '../components/settings/SpeechSettings'
 import SecretField from '../components/settings/SecretField'
+import BriefSettings from '../components/settings/BriefSettings'
 import Skeleton from '../components/ui/Skeleton'
 import { errorMessage } from '../lib/errors'
 import { sectionTitleClass, tabClass } from '../lib/styles'
@@ -181,9 +182,14 @@ function SettingsPage(): React.JSX.Element {
         )}
 
         {tab === 'uygulama' && (
-          <Section title="Pencere ve kısayollar">
-            <AppBehaviorSettings settings={settings} onUpdate={update} />
-          </Section>
+          <>
+            <Section title="Pencere ve kısayollar">
+              <AppBehaviorSettings settings={settings} onUpdate={update} />
+            </Section>
+            <Section title="Sabah özeti">
+              <BriefSettings settings={settings} onUpdate={update} />
+            </Section>
+          </>
         )}
       </div>
     </div>

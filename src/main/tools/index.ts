@@ -9,6 +9,9 @@ import systemTools from './system'
 import computerTools from './computer'
 import gmailTools from './gmail'
 import calendarTools from './calendar'
+import clipboardTools from './clipboard'
+import documentTools from './documents'
+import briefTools from './brief'
 import type { ToolModule } from './types'
 
 // Asistanın kullanabildiği tüm yetenekler. Yeni bir modül eklemek için buraya eklemek yeterli.
@@ -22,7 +25,10 @@ const modules: ToolModule[] = [
   systemTools,
   computerTools,
   gmailTools,
-  calendarTools
+  calendarTools,
+  clipboardTools,
+  documentTools,
+  briefTools
 ]
 
 export const assistantTools: ToolSet = Object.assign({}, ...modules.map((m) => m.tools))

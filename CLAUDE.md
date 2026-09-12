@@ -6,9 +6,11 @@
 ## Nerede kaldık
 
 - **Son güncelleme:** 2026-09-12
-- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A (arayüz)** ve **Tur B (sohbet deneyimi)** bitti.
-- **Sıradaki adım:** Tur C (yeni yetenekler). Kurulum (Tur F) en sona kaldı.
-- Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim, Groq anahtarı girilince mikrofonla yazma.
+- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A (arayüz)**, **Tur B (sohbet deneyimi)** ve **Tur C (yeni yetenekler)** bitti.
+- **Sıradaki adım:** Tur D (asistanın zekası). Kullanıcı isterse D ve E'den önce Tur F'ye (kurulum) geçilebilir; bu seçenek kendisine sunuldu.
+- Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim (Tur C'deki yanıtlama, arşivleme, etkinlik güncelleme/silme dahil), Groq anahtarı girilince mikrofonla yazma.
+- **Google bağlantı denemesi:** Kullanıcı 2026-09-12'de hesabı bağlamayı denedi, "Gmail hesabı bilgisi alınamadı" hatası aldı (Gmail profil isteği başarısız). Olası nedenler: Cloud projesinde Gmail API etkin değil veya giriş ekranında izin kutucukları işaretlenmedi. Hata mesajları artık bu iki durumu Türkçe açıklıyor (`src/main/google/errors.ts`); profil alınamazsa yarım bağlantı kaydedilmiyor.
+- **npm audit:** Electron'un bağımlılığı `extract-zip` için 2 yüksek uyarı var; düzeltmesi Electron 44'e geçmek (büyük sürüm). Tur F'de değerlendirilecek.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
   - **Tavily anahtarı girildi**, internette arama çalışıyor (kullanıcı kendi girdi; kimlik bilgilerini ben girmiyorum).
@@ -91,7 +93,17 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - **Modelin başlık üretmesi:** ilk soru-cevap bitince `generateText` ile kısa başlık istenir (`lib/title.ts` → `cleanTitle`, `<think>` bloğunu ve tırnakları atar). `conversations.title_auto` sütunu başlığı kullanıcının mı modelin mi verdiğini tutar; kullanıcı adlandırdıysa model bir daha dokunmaz.
   - **Klavye kısayolları:** `Ctrl+N` yeni sohbet, `Ctrl+F` arama kutusu, `Esc` cevabı durdur.
   - **Markdown dışa aktarma** (`conversations:export`): `lib/markdownExport.ts` metni üretir, `dialog.showSaveDialog` yeri sorar, arayüzde toast çıkar.
-- [ ] **Tur C: Yeni yetenekler.** Belge okuma (PDF/docx), sabah özeti, tekrarlayan hatırlatmalar, pano araçları, Gmail/Takvim genişletme.
+- [x] **Tur C: Yeni yetenekler.**
+  - **Belge okuma** (`lib/documents.ts`): `.pdf` (`pdfjs-dist` legacy build, `verbosity: 0`), `.docx` (`mammoth`), `.txt/.md/.csv/.json/.log`. Metin 8000 karakterlik parçalara bölünür (`splitIntoParts`, satır sonundan keser). Taranmış (resim) PDF okunamaz, Türkçe hata verir.
+  - **Sohbete belge ekleme:** ataş düğmesi veya sürükle-bırak. Dosya yolu preload'da `webUtils.getPathForFile` ile alınır (Electron'da `File.path` yok). `documents:read` ilk parçayı okur ve dosyayı o sohbet için onaylı sayar (`allowDocument`).
+  - **Mesajda belge biçimi** (`src/shared/attachments.ts`): kullanıcı mesajına `[[BELGE ad=".." parca="1/N"]] ... [[/BELGE]]` bloğu olarak kaydedilir; arayüz bunu kart olarak gösterir (`splitAttachments`). **Modele giderken** `toModelContent` ile "önce `<belge>` etiketli metin, en sonda Kullanıcının isteği" düzenine çevrilir. Neden: blok mesajın sonunda kalınca `qwen3:14b` soruyu cevaplamak yerine bloğu aynen tekrar yazdı.
+  - **`belge_oku` aracı:** modelin kendisi bir dosya okumak isterse onay kartı çıkar; aynı sohbette aynı dosyanın sonraki parçaları (`bolum: 2, 3...`) yeniden onay sormaz.
+  - **Tekrarlayan hatırlatmalar:** `reminders.repeat` (`none/daily/weekdays/weekly`, migration 5). Çalınca tek seferlik olan "gösterildi" işaretlenir, tekrarlayan `lib/repeat.ts` → `nextReminderTime` ile sonraki zamana atılır (kapalıyken kaçanlar atlanır, `setDate` ile yaz saati güvenli). Görevler sayfasında tekrar seçimi, "Her gün" rozeti ve **Ertele** (10 dk / 1 saat / yarın). `hatirlatma_kur` sadece saat ("09:00") da kabul eder (`resolveReminderTime`: saatin bir sonraki geleceği an); `qwen3:14b` "her gün 9'da" isteğinde tam tarih yerine sadece saati gönderiyordu. Takvim araçlarının açıklamasına "hatırlat isteklerinde kullanma" eklendi; öncesinde model hatırlatma yerine `etkinlik_ekle` seçti. Model ayrıca alan adlarını Türkçeleştirip `{"saat":"09:00","metin":"...","tekrar":"her_gun"}` gönderdi; bu yüzden `hatirlatma_kur` şeması `z.looseObject` ile esnek, `metin`/`saat` gibi takma adlar ve Türkçe tekrar değerleri (`parseRepeatInput`) kabul ediliyor.
+  - **Pano araçları:** `pano_oku` (en fazla 8000 karakter), `pano_yaz`.
+  - **Sabah özeti:** `ai/brief.ts` → `collectDailyBrief` (hava, bugünkü/geciken görevler, bugünkü hatırlatmalar, takvim, okunmamış e-posta; bir bölüm hata verirse diğerleri gelir, nedeni `uyarilar`da). `gunluk_ozet` aracı. `scheduler/brief.ts` her dakika `isBriefDue` kontrol eder, günde bir bildirim gösterir; son gösterim günü `settings` tablosunda `state:briefLastShown`. Bildirime tıklanınca `daily-brief` komutu yeni sohbette "Günlük özetimi hazırla" gönderir. Ayarlar > Uygulama > Sabah özeti: aç/kapa, saat, şehir, "Şimdi dene" (`brief:preview`).
+  - **Gmail genişletme:** `eposta_yanitla` (onaylı; `In-Reply-To`/`References` + `threadId`, Message-ID sadece `<...>` biçimindeyse kullanılır), `eposta_isaretle`, `eposta_arsivle` (onaylı). Bunlar için `gmail.modify` izni eklendi; daha önce bağlanmış hesap yeniden bağlanmalı.
+  - **Takvim genişletme:** `etkinlik_guncelle` (onaylı; sadece başlangıç değişirse süre korunur), `etkinlik_sil` (onaylı). `googleRequest` artık `PATCH`/`DELETE` ve boş (204) cevabı destekliyor.
+  - Yan menüdeki sürüm etiketi `app.getVersion()` ile `package.json`dan geliyor (`app:version`).
 - [ ] **Tur D: Asistanın zekası.** Araç sonuçlarının geçmişe eklenmesi, uzun sohbet özeti, kişiselleştirme, hafıza yönetimi, model ayarları.
 - [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri.
 - [ ] **Tur F (eski Aşama 7): Paketleme ve otomatik güncelleme.**
@@ -112,6 +124,9 @@ Ayrıntılı ilk plan: `C:\Users\ysfll\.claude\plans\imdi-bana-bir-ki-isel-memoi
 - Görevlerde sadece gün var, saat yok. Saatli işler için hatırlatma kullanılıyor.
 - Hatırlatmalar 15 saniyelik kontrol aralığı yüzünden en fazla bu kadar gecikebilir.
 - `qwen3:14b` Türkçede ara sıra küçük dil bilgisi hataları yapıyor.
+- **Uzun belgede otomatik devam okuma güvenilmez:** Ekli uzun belgenin sonu sorulunca `qwen3:14b` bazen `belge_oku` aracını çağırmak yerine "belge_oku 132" gibi düz metin yazıyor veya "okumam gerekiyor" deyip duruyor. Açıkça "10. bölümü belge_oku ile oku" denince aracı doğru çağırıyor (onay kartı dahil test edildi). Bulut modellerinde veya Tur D'deki iyileştirmelerle yeniden denenmeli.
+- **Sohbetten tekrarlayan hatırlatma:** Esnek şemadan sonra "Her gün sabah 9'da vitamin almamı hatırlat" isteğiyle hatırlatma hatasız kuruluyor, ama `qwen3:14b` `tekrar` alanını boş bırakıp tek seferlik kurdu. Tekrar, Görevler sayfasındaki seçimle elle ayarlanabilir; bulut modellerinde yeniden denenmeli.
+- Araç hataları terminale `Araç hatası (araç_adı): mesaj, girdi` olarak yazılır (`chat.ts` → `tool-error`); modelin araca yanlış girdi gönderdiği durumlar buradan görülür.
 
 ## Teknoloji
 
@@ -166,12 +181,17 @@ src/
 │  │  ├─ approval.ts        requireApproval: onay kartı gönderir ve cevabı bekler (+ testi)
 │  │  └─ tasks.ts, reminders.ts, notes.ts, memory.ts, weather.ts, websearch.ts, system.ts, computer.ts
 │  ├─ scheduler/reminders.ts  Zamanı gelen hatırlatmaları Windows bildirimi olarak gösterir
+│  ├─ scheduler/brief.ts   Sabah özeti bildirimi (her dakika kontrol, günde bir kez)
+│  ├─ google/errors.ts     Google 403 hatalarını Türkçe yol gösteren mesaja çevirir (+ testi)
 │  ├─ lib/                  Elektron'a bağlı olmayan, test edilebilir yardımcılar
 │  │  ├─ datetime.ts        Yerel tarih/saat okuma ve biçimlendirme (+ testi)
 │  │  ├─ weather.ts         Open-Meteo sorguları ve WMO kodları (+ testi)
 │  │  ├─ files.ts           Dosya arama (+ testi)
 │  │  ├─ apps.ts            Başlat menüsü uygulama listesi, eşleştirme ve açma (+ testi)
 │  │  ├─ markdownExport.ts  Sohbeti Markdown metnine çevirme ve dosya adı önerisi (+ testi)
+│  │  ├─ documents.ts       PDF/Word/metin okuma ve parçalara bölme (+ testi)
+│  │  ├─ repeat.ts          Tekrarlayan hatırlatmanın sonraki zamanı (+ testi)
+│  │  ├─ brief.ts           Sabah özeti saati ve bildirim metni (+ testi)
 │  │  └─ title.ts           Modelin ürettiği başlığı temizleme (+ testi)
 │  └─ ai/                   providers.ts (model seçimi, Ollama listesi, bağlantı testi),
 │                           chat.ts (sistem talimatı, akışlı cevap, araç takibi), errors.ts (Türkçe hatalar)
@@ -204,7 +224,7 @@ vitest.config.ts            Test ayarları
 - **Veri değişim olayı:** IPC'deki değiştirici işlemler `changing(scope, ...)` ile sarılır. Sayfalar veriyi `useLiveData(load, scope)` ile alır ve kendiliğinden yenilenir.
 - **`data/` klasörü** `electron` import etmez. Electron'a bağlı işler `events.ts`, `scheduler/`, `settings.ts`, `ai/` içinde durur.
 - **Renderer**, Node/Electron'a doğrudan erişmez, sadece `window.api` kullanır. Ham `ipcRenderer` açılmaz.
-- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 4.
+- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 5.
 - **Zaman:** Hatırlatma zamanı epoch ms (INTEGER), görev son tarihi yerel `YYYY-MM-DD`. Modele ve modelden gelen zamanlar yerel `YYYY-MM-DDTHH:mm` biçimindedir (`lib/datetime.ts`).
 - **API anahtarları** sadece main süreçte, `safeStorage` ile şifreli tutulur. Renderer'a sadece `hasApiKey` gider.
 - **Dış linkler:** sadece `http(s)` adresler `shell.openExternal` ile açılır. `will-navigate` engellenir.
@@ -251,6 +271,7 @@ vitest.config.ts            Test ayarları
    node scripts/cdp.mjs type "<seçici>" "<metin>"
    node scripts/cdp.mjs key Enter                # "Escape", "Ctrl+N" gibi birleşimler de olur
    node scripts/cdp.mjs shot cikti.png        # ekran görüntüsü
+   node scripts/cdp.mjs upload "input[type=file]" C:/yol/belge.pdf   # dosya seçme kutusuna gerçek dosya ver
    ```
    - Browser pane'de `window.api` yok (preload yüklenmez), bu yüzden gerçek test CDP ile yapılır.
    - `window.confirm` gerekiyorsa önce `window.confirm = () => true` yapılır.

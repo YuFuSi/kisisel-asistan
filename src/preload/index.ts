@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import type { Api, AppCommand, ChatEvent, DataScope } from '../shared/api'
 
 // Arayüze sadece bu listedeki işlemler açılır; ham ipcRenderer erişimi verilmez.
@@ -13,6 +13,16 @@ const api: Api = {
   },
   ollama: {
     listModels: () => ipcRenderer.invoke('ollama:listModels')
+  },
+  app: {
+    version: () => ipcRenderer.invoke('app:version')
+  },
+  documents: {
+    pathForFile: (file) => webUtils.getPathForFile(file),
+    read: (conversationId, path) => ipcRenderer.invoke('documents:read', conversationId, path)
+  },
+  brief: {
+    preview: () => ipcRenderer.invoke('brief:preview')
   },
   conversations: {
     list: () => ipcRenderer.invoke('conversations:list'),
@@ -46,8 +56,10 @@ const api: Api = {
   },
   reminders: {
     list: () => ipcRenderer.invoke('reminders:list'),
-    create: (message, remindAt) => ipcRenderer.invoke('reminders:create', message, remindAt),
-    remove: (id) => ipcRenderer.invoke('reminders:remove', id)
+    create: (message, remindAt, repeat) =>
+      ipcRenderer.invoke('reminders:create', message, remindAt, repeat),
+    remove: (id) => ipcRenderer.invoke('reminders:remove', id),
+    snooze: (id, minutes) => ipcRenderer.invoke('reminders:snooze', id, minutes)
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),

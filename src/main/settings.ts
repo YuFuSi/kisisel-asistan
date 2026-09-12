@@ -27,7 +27,10 @@ const defaults: AppSettings = {
   googleAccount: null,
   sttProvider: 'groq',
   speakReplies: false,
-  voiceUri: ''
+  voiceUri: '',
+  briefEnabled: false,
+  briefTime: '08:00',
+  briefCity: ''
 }
 
 function readValue(key: string): string | undefined {
@@ -80,6 +83,14 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   }
   if (typeof patch.speakReplies === 'boolean') next.speakReplies = patch.speakReplies
   if (typeof patch.voiceUri === 'string') next.voiceUri = patch.voiceUri
+  if (typeof patch.briefEnabled === 'boolean') next.briefEnabled = patch.briefEnabled
+  if (typeof patch.briefTime === 'string') {
+    if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(patch.briefTime.trim())) {
+      throw new Error('Özet saati SS:DD biçiminde olmalı, ör. 08:00.')
+    }
+    next.briefTime = patch.briefTime.trim()
+  }
+  if (typeof patch.briefCity === 'string') next.briefCity = patch.briefCity.trim()
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))
   return next
@@ -119,4 +130,13 @@ export function hasFlag(name: string): boolean {
 
 export function setFlag(name: string): void {
   writeValue(`flag:${name}`, '1')
+}
+
+// Uygulamanın kendi tuttuğu küçük durum bilgileri (ör. sabah özetinin en son gösterildiği gün)
+export function getStoredValue(name: string): string | undefined {
+  return readValue(`state:${name}`)
+}
+
+export function setStoredValue(name: string, value: string): void {
+  writeValue(`state:${name}`, value)
 }

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { closeDb, initDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
+import { startBriefScheduler } from './scheduler/brief'
 import { startReminderScheduler } from './scheduler/reminders'
 import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
@@ -18,6 +19,7 @@ import {
 } from './system/window'
 
 let stopReminderScheduler: (() => void) | null = null
+let stopBriefScheduler: (() => void) | null = null
 
 // Global kısayol: pencere öndeyse gizle, değilse göster ve sohbet kutusuna odaklan
 function toggleFromShortcut(): void {
@@ -69,6 +71,7 @@ if (!app.requestSingleInstanceLock()) {
     initGlobalShortcut(settings.globalShortcut, toggleFromShortcut)
     applyOpenAtLogin(settings.openAtLogin)
     stopReminderScheduler = startReminderScheduler()
+    stopBriefScheduler = startBriefScheduler()
   })
 
   app.on('before-quit', markQuitting)
@@ -80,6 +83,7 @@ if (!app.requestSingleInstanceLock()) {
     disposeGlobalShortcut()
     destroyTray()
     stopReminderScheduler?.()
+    stopBriefScheduler?.()
     closeDb()
   })
 }

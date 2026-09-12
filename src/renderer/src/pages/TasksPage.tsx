@@ -97,8 +97,11 @@ function TasksPage(): React.JSX.Element {
 
       <ReminderSection
         reminders={reminders.data}
-        onCreate={(message, remindAt) => run(() => window.api.reminders.create(message, remindAt))}
+        onCreate={(message, remindAt, repeat) =>
+          run(() => window.api.reminders.create(message, remindAt, repeat))
+        }
         onDelete={(id) => void run(() => window.api.reminders.remove(id))}
+        onSnooze={(id, minutes) => void run(() => window.api.reminders.snooze(id, minutes))}
       />
 
       {error && <p className="text-sm text-negative select-text">{error}</p>}

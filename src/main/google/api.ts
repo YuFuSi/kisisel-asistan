@@ -1,9 +1,10 @@
 import { getAccessToken } from './auth'
+import { describeGooglePermissionError } from './errors'
 
 const REQUEST_TIMEOUT_MS = 20_000
 
 export interface GoogleRequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   query?: Record<string, string | number | boolean | undefined>
   body?: unknown
 }
@@ -42,7 +43,8 @@ export async function googleRequest<T>(
     }
     if (response.status === 403) {
       throw new Error(
-        'Google bu işlem için izin vermedi. Hesabı bağlarken istenen izinlerin hepsini onayladığından emin ol.'
+        describeGooglePermissionError(text) ??
+          'Google bu işlem için izin vermedi. Hesabı bağlarken istenen izinlerin hepsini onayladığından emin ol.'
       )
     }
     if (response.status === 429) {
@@ -52,5 +54,7 @@ export async function googleRequest<T>(
     throw new Error(`Google servisi hata verdi (HTTP ${response.status}). ${text.slice(0, 200)}`)
   }
 
-  return (await response.json()) as T
+  // Silme gibi işlemler boş cevap (204) döndürür
+  const text = await response.text()
+  return (text ? JSON.parse(text) : {}) as T
 }

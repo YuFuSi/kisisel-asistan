@@ -41,6 +41,30 @@ describe('buildRawMessage', () => {
   })
 })
 
+describe('yanıt başlıkları', () => {
+  it('geçerli Message-ID ile In-Reply-To ve References ekler', () => {
+    const text = buildMimeMessage({
+      to: 'a@ornek.com',
+      subject: 'Re: Toplantı',
+      body: 'Tamam',
+      inReplyTo: '<abc123@mail.gmail.com>'
+    })
+    expect(text).toContain('In-Reply-To: <abc123@mail.gmail.com>')
+    expect(text).toContain('References: <abc123@mail.gmail.com>')
+  })
+
+  it('bozuk veya satır sonu içeren kimliği yok sayar', () => {
+    const text = buildMimeMessage({
+      to: 'a@ornek.com',
+      subject: 'Re: x',
+      body: 'y',
+      inReplyTo: 'abc\r\nBcc: kotu@ornek.com'
+    })
+    expect(text).not.toContain('In-Reply-To')
+    expect(text).not.toContain('Bcc')
+  })
+})
+
 describe('isValidEmail', () => {
   it('geçerli ve geçersiz adresleri ayırır', () => {
     expect(isValidEmail('ornek@example.com')).toBe(true)

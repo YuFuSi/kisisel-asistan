@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { shell } from 'electron'
 import { getSecret, getSettings, setSecret, updateSettings } from '../settings'
+import { describeGooglePermissionError } from './errors'
 import type { GoogleStatus } from '../../shared/api'
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -10,9 +11,11 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const REVOKE_URL = 'https://oauth2.googleapis.com/revoke'
 const PROFILE_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/profile'
 
-// Gmail okuma, taslak/gönderme ve takvim etkinlikleri
+// Gmail okuma, okundu işaretleme/arşivleme (modify), taslak/gönderme ve takvim etkinlikleri.
+// Yeni izin eklenirse daha önce bağlanmış hesabın yeniden bağlanması gerekir.
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.compose',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/calendar.events'
@@ -157,11 +160,25 @@ async function requestAuthorizationCode(
 }
 
 async function fetchAccountEmail(token: string): Promise<string> {
-  const response = await fetch(PROFILE_URL, {
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
-  })
-  if (!response.ok) throw new Error('Gmail hesabı bilgisi alınamadı.')
+  let response: Response
+  try {
+    response = await fetch(PROFILE_URL, {
+      headers: { authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
+  } catch {
+    throw new Error('Google sunucusuna bağlanılamadı. İnternet bağlantını kontrol et.')
+  }
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    const known = describeGooglePermissionError(body)
+    if (known) throw new Error(known)
+    // Bilinmeyen hatada Google'ın kendi açıklamasının başı da gösterilir (sorunu bulmayı kolaylaştırır)
+    const detail = /"message"\s*:\s*"([^"]{1,200})/.exec(body)?.[1]
+    throw new Error(
+      `Gmail hesabı bilgisi alınamadı (HTTP ${response.status}).${detail ? ` Google: ${detail}` : ''}`
+    )
+  }
   const profile = (await response.json()) as { emailAddress?: string }
   return profile.emailAddress ?? ''
 }
@@ -187,10 +204,16 @@ export async function connectGoogle(): Promise<GoogleStatus> {
       'Google kalıcı bir yenileme anahtarı vermedi. Google hesap ayarlarından uygulamanın erişimini kaldırıp tekrar dene.'
     )
   }
-  setSecret('google-refresh-token', tokens.refresh_token)
   const token = rememberAccessToken(tokens)
-
-  const email = await fetchAccountEmail(token)
+  // Önce hesaba gerçekten erişilebildiği doğrulanır; hata olursa yarım kalmış bağlantı kaydedilmez
+  let email: string
+  try {
+    email = await fetchAccountEmail(token)
+  } catch (err) {
+    accessToken = null
+    throw err
+  }
+  setSecret('google-refresh-token', tokens.refresh_token)
   updateSettings({ googleAccount: email })
   return getGoogleStatus()
 }
@@ -220,6 +243,12 @@ export async function getAccessToken(): Promise<string> {
       "Google hesabı bağlı değil. Ayarlar'daki Google hesabı bölümünden bağlayabilirsin."
     )
   }
+  // Eski sürümde yarım kalan bağlantı: anahtar kaydedilmiş ama hesap bilgisi alınamamış
+  if (!getSettings().googleAccount) {
+    throw new Error(
+      "Google bağlantısı tamamlanmamış. Ayarlar'daki Google hesabı bölümünden hesabı yeniden bağla."
+    )
+  }
   const { clientId, clientSecret } = requireClient()
   const tokens = await postForm(TOKEN_URL, {
     client_id: clientId,
@@ -233,7 +262,8 @@ export async function getAccessToken(): Promise<string> {
 export function getGoogleStatus(): GoogleStatus {
   return {
     hasClient: Boolean(getSecret('google-client-id') && getSecret('google-client-secret')),
-    connected: Boolean(getSecret('google-refresh-token')),
+    // Bağlı sayılması için hem anahtar hem de doğrulanmış hesap adresi gerekir
+    connected: Boolean(getSecret('google-refresh-token') && getSettings().googleAccount),
     email: getSettings().googleAccount
   }
 }

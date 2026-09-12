@@ -72,6 +72,10 @@ const migrations: string[] = [
   // 4: Başlığı model mi verdi (1) yoksa kullanıcı mı adlandırdı (0)
   `
   ALTER TABLE conversations ADD COLUMN title_auto INTEGER NOT NULL DEFAULT 1;
+  `,
+  // 5: Tekrarlayan hatırlatmalar (none / daily / weekdays / weekly)
+  `
+  ALTER TABLE reminders ADD COLUMN repeat TEXT NOT NULL DEFAULT 'none';
   `
 ]
 

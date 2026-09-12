@@ -105,6 +105,12 @@ export interface AppSettings {
   speakReplies: boolean
   /** Seçili Windows sesi; boşsa Türkçe ses otomatik seçilir */
   voiceUri: string
+  /** Her gün belirlenen saatte sabah özeti bildirimi gösterilsin */
+  briefEnabled: boolean
+  /** Sabah özeti saati, "08:00" */
+  briefTime: string
+  /** Özetteki hava durumu için şehir; boşsa hava durumu eklenmez */
+  briefCity: string
 }
 
 export interface SettingsPatch {
@@ -118,6 +124,9 @@ export interface SettingsPatch {
   sttProvider?: SpeechProvider
   speakReplies?: boolean
   voiceUri?: string
+  briefEnabled?: boolean
+  briefTime?: string
+  briefCity?: string
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -221,12 +230,23 @@ export interface TaskPatch {
   done?: boolean
 }
 
+/** Hatırlatmanın tekrar kuralı */
+export type RepeatRule = 'none' | 'daily' | 'weekdays' | 'weekly'
+
+export const REPEAT_LABELS: Record<RepeatRule, string> = {
+  none: 'Tek seferlik',
+  daily: 'Her gün',
+  weekdays: 'Hafta içi',
+  weekly: 'Her hafta'
+}
+
 export interface Reminder {
   id: number
   message: string
   /** Epoch milisaniye */
   remindAt: number
   sentAt: number | null
+  repeat: RepeatRule
 }
 
 export interface Note {
@@ -260,10 +280,37 @@ export interface GoogleStatus {
 
 // ---- Uygulama komutları (tepsi menüsü ve global kısayoldan arayüze) ----
 
-export type AppCommand = 'focus-chat' | 'new-chat'
+// daily-brief: sabah özeti bildirimine tıklanınca yeni sohbette özet istenir
+export type AppCommand = 'focus-chat' | 'new-chat' | 'daily-brief'
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
+/** Sohbete eklenen belgenin okunan ilk parçası */
+export interface AttachedDocument {
+  name: string
+  path: string
+  text: string
+  partCount: number
+  charCount: number
+}
+
 export interface Api {
+  app: {
+    /** package.json'daki sürüm (arayüzün altında gösterilir) */
+    version(): Promise<string>
+  }
+  documents: {
+    /** Sürükle-bırak ile gelen dosyanın diskteki yolu (Electron'da File.path artık yok) */
+    pathForFile(file: File): string
+    /**
+     * Kullanıcının seçtiği belgenin ilk parçasını okur. Belge bu sohbet için onaylanmış sayılır;
+     * asistan devamını belge_oku ile onay sormadan okuyabilir.
+     */
+    read(conversationId: number, path: string): Promise<AttachedDocument>
+  }
+  brief: {
+    /** Sabah özeti bildirimini hemen gösterir (Ayarlar'daki "Şimdi dene") */
+    preview(): Promise<void>
+  }
   settings: {
     get(): Promise<SettingsView>
     update(patch: SettingsPatch): Promise<SettingsView>
@@ -309,8 +356,10 @@ export interface Api {
   reminders: {
     /** Henüz gösterilmemiş hatırlatmalar */
     list(): Promise<Reminder[]>
-    create(message: string, remindAt: number): Promise<Reminder>
+    create(message: string, remindAt: number, repeat?: RepeatRule): Promise<Reminder>
     remove(id: number): Promise<void>
+    /** Hatırlatmayı verilen dakika kadar ileri atar */
+    snooze(id: number, minutes: number): Promise<Reminder>
   }
   notes: {
     list(): Promise<Note[]>

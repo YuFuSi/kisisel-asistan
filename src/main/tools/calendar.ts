@@ -22,6 +22,17 @@ interface CalendarEvent {
   end?: EventTime
 }
 
+const eventUrl = (id: string): string => `${CALENDAR}/${encodeURIComponent(id)}`
+
+const readableTime = (date: Date): string =>
+  date.toLocaleString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+
 const formatEventTime = (time?: EventTime): string => {
   if (time?.date)
     return new Date(`${time.date}T12:00:00`).toLocaleDateString('tr-TR', {
@@ -30,19 +41,15 @@ const formatEventTime = (time?: EventTime): string => {
       weekday: 'long'
     })
   if (!time?.dateTime) return ''
-  return new Date(time.dateTime).toLocaleString('tr-TR', {
-    day: 'numeric',
-    month: 'long',
-    weekday: 'long',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  return readableTime(new Date(time.dateTime))
 }
 
 const calendarTools: ToolModule = {
   labels: {
     takvim_listele: 'Takvime bakma',
-    etkinlik_ekle: 'Etkinlik ekleme'
+    etkinlik_ekle: 'Etkinlik ekleme',
+    etkinlik_guncelle: 'Etkinlik güncelleme',
+    etkinlik_sil: 'Etkinlik silme'
   },
   tools: {
     takvim_listele: tool({
@@ -86,7 +93,7 @@ const calendarTools: ToolModule = {
 
     etkinlik_ekle: tool({
       description:
-        'Google Takvim’e yeni etkinlik ekler. Kullanıcıdan onay istenir. Göreli zamanları şu anki zamana göre hesapla.',
+        'Google Takvim’e yeni etkinlik ekler; SADECE kullanıcı takvim, toplantı, randevu veya etkinlik derse kullan. "... hatırlat" isteklerinde bunu değil hatirlatma_kur aracını kullan. Kullanıcıdan onay istenir. Göreli zamanları şu anki zamana göre hesapla.',
       inputSchema: z.object({
         baslik: z.string().describe('Etkinliğin adı'),
         baslangic: z.string().describe('Başlangıç, yerel saat, YYYY-MM-DDTHH:mm biçiminde'),
@@ -105,13 +112,7 @@ const calendarTools: ToolModule = {
         const endTime = end ?? new Date(start.getTime() + DEFAULT_DURATION_MS)
         if (endTime <= start) throw new Error('Bitiş zamanı başlangıçtan sonra olmalı.')
 
-        const readable = start.toLocaleString('tr-TR', {
-          day: 'numeric',
-          month: 'long',
-          weekday: 'long',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
+        const readable = readableTime(start)
         await requireApproval({
           toolName: 'etkinlik_ekle',
           label: 'Takvime etkinlik eklensin mi?',
@@ -130,6 +131,87 @@ const calendarTools: ToolModule = {
           }
         })
         return { eklendi: true, id: created.id, baslik: input.baslik, baslangic: readable }
+      }
+    }),
+
+    etkinlik_guncelle: tool({
+      description:
+        'Var olan bir takvim etkinliğini değiştirir (başlık, zaman, yer, açıklama). Sadece değişecek alanları doldur. id değerini takvim_listele sonucundan al. Kullanıcıdan onay istenir.',
+      inputSchema: z.object({
+        id: z.string().describe('Etkinlik kimliği'),
+        baslik: z.string().optional().describe('SADECE değişecekse yeni başlık'),
+        baslangic: z
+          .string()
+          .optional()
+          .describe('SADECE değişecekse yeni başlangıç, YYYY-MM-DDTHH:mm'),
+        bitis: z.string().optional().describe('SADECE değişecekse yeni bitiş, YYYY-MM-DDTHH:mm'),
+        konum: z.string().optional().describe('SADECE değişecekse yeni yer'),
+        aciklama: z.string().optional().describe('SADECE değişecekse yeni açıklama')
+      }),
+      execute: async (input) => {
+        const current = await googleRequest<CalendarEvent>(eventUrl(input.id))
+        const patch: Record<string, unknown> = {}
+        const changes: string[] = []
+
+        if (input.baslik) {
+          patch.summary = input.baslik
+          changes.push(`Başlık: ${input.baslik}`)
+        }
+        if (input.konum !== undefined) {
+          patch.location = input.konum
+          changes.push(`Yer: ${input.konum}`)
+        }
+        if (input.aciklama !== undefined) {
+          patch.description = input.aciklama
+          changes.push('Açıklama')
+        }
+
+        if (input.baslangic || input.bitis) {
+          const oldStart = current.start?.dateTime ? new Date(current.start.dateTime) : null
+          const oldEnd = current.end?.dateTime ? new Date(current.end.dateTime) : null
+          const start = input.baslangic ? parseLocalDateTime(input.baslangic) : oldStart
+          if (!start) throw new Error('Başlangıç zamanı YYYY-MM-DDTHH:mm biçiminde olmalı.')
+          // Sadece başlangıç değişirse etkinliğin süresi korunur
+          const duration =
+            oldStart && oldEnd ? oldEnd.getTime() - oldStart.getTime() : DEFAULT_DURATION_MS
+          const end = input.bitis
+            ? parseLocalDateTime(input.bitis)
+            : new Date(start.getTime() + duration)
+          if (!end) throw new Error('Bitiş zamanı YYYY-MM-DDTHH:mm biçiminde olmalı.')
+          if (end <= start) throw new Error('Bitiş zamanı başlangıçtan sonra olmalı.')
+          patch.start = { dateTime: start.toISOString(), timeZone }
+          patch.end = { dateTime: end.toISOString(), timeZone }
+          changes.push(`Zaman: ${readableTime(start)}`)
+        }
+
+        if (changes.length === 0) throw new Error('Değiştirilecek bir alan verilmedi.')
+
+        await requireApproval({
+          toolName: 'etkinlik_guncelle',
+          label: 'Etkinlik güncellensin mi?',
+          summary: current.summary ?? '(başlıksız)',
+          details: changes.join(' · ')
+        })
+
+        await googleRequest(eventUrl(input.id), { method: 'PATCH', body: patch })
+        return { guncellendi: true, id: input.id, degisiklikler: changes }
+      }
+    }),
+
+    etkinlik_sil: tool({
+      description:
+        'Bir takvim etkinliğini siler. id değerini takvim_listele sonucundan al. Kullanıcıdan onay istenir.',
+      inputSchema: z.object({ id: z.string().describe('Etkinlik kimliği') }),
+      execute: async (input) => {
+        const current = await googleRequest<CalendarEvent>(eventUrl(input.id))
+        await requireApproval({
+          toolName: 'etkinlik_sil',
+          label: 'Etkinlik silinsin mi?',
+          summary: current.summary ?? '(başlıksız)',
+          details: formatEventTime(current.start)
+        })
+        await googleRequest(eventUrl(input.id), { method: 'DELETE' })
+        return { silindi: true, id: input.id, baslik: current.summary ?? '(başlıksız)' }
       }
     })
   }

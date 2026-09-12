@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, Settings, Sparkles } from 'lucide-react'
+import { Download, FileUp, Settings, Sparkles } from 'lucide-react'
+import { composeMessage } from '@shared/attachments'
 import {
   PROVIDERS,
+  type AttachedDocument,
   type ChatMessage,
   type Conversation,
   type ConversationSearchResult,
@@ -25,6 +27,11 @@ const SUGGESTIONS = [
   'Yarın saat 9’da spor yapmamı hatırlat',
   'Listeme market alışverişi ekle'
 ]
+
+// Belge eklenip bir şey yazılmadan gönderilirse kullanılan istek
+const DOCUMENT_PROMPT = 'Bu belgeyi incele ve kısaca özetle.'
+// Sabah özeti bildirimine tıklanınca gönderilen istek
+const BRIEF_PROMPT = 'Günlük özetimi hazırla.'
 
 // Arama kutusuna yazarken her tuşta sorgu göndermemek için beklenen süre
 const SEARCH_DELAY = 150
@@ -69,6 +76,14 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   // Olay dinleyicisi içinden güncel ayarları okumak için
   const settingsRef = useRef<SettingsView | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  // Mesaja eklenecek belgeler ve sürükle-bırak durumu
+  const [attachments, setAttachments] = useState<AttachedDocument[]>([])
+  const [attaching, setAttaching] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  // Komut dinleyicisi içinden her zaman güncel send fonksiyonunu çağırmak için
+  const sendRef = useRef<(text: string, documents?: AttachedDocument[]) => Promise<void>>(
+    async () => {}
+  )
 
   // Sayfa her görünür olduğunda ayarları tazele (Ayarlar'da model değişmiş olabilir)
   useEffect(() => {
@@ -160,12 +175,18 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     setActiveId(id)
     setMessages([])
     setError(null)
+    // Belge izni sohbete bağlı; sohbet değişince eklenen belgeler bırakılır
+    setAttachments([])
   }, [])
 
-  // Tepsi menüsündeki "Yeni sohbet" komutu
+  // Tepsi menüsündeki "Yeni sohbet" ve sabah özeti bildirimine tıklama komutları
   useEffect(() => {
     return window.api.events.onCommand((command) => {
       if (command === 'new-chat') openConversation(null)
+      if (command === 'daily-brief') {
+        openConversation(null)
+        void sendRef.current(BRIEF_PROMPT, [])
+      }
     })
   }, [openConversation])
 
@@ -236,7 +257,9 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     }
   }
 
-  async function send(text: string): Promise<void> {
+  async function send(text: string, documents = attachments): Promise<void> {
+    const content = composeMessage(text || (documents.length > 0 ? DOCUMENT_PROMPT : ''), documents)
+    if (!content) return
     setError(null)
     stopSpeaking()
     try {
@@ -245,12 +268,51 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         id = (await window.api.conversations.create()).id
         openConversation(id)
       }
+      setAttachments([])
       setStreaming({ conversationId: id, text: '', tools: [] })
-      const userMessage = await window.api.chat.send(id, text)
+      const userMessage = await window.api.chat.send(id, content)
       setMessages((list) => [...list, userMessage])
     } catch (err) {
       setStreaming(null)
+      // Gönderilemediyse belgeler kaybolmasın
+      setAttachments(documents)
       setError(errorMessage(err))
+    }
+  }
+
+  useEffect(() => {
+    sendRef.current = send
+  })
+
+  // Sürüklenen veya seçilen belgeleri okuyup mesaja eklenmek üzere bekletir
+  async function attachFiles(files: File[]): Promise<void> {
+    if (files.length === 0) return
+    setAttaching(true)
+    try {
+      let id = activeIdRef.current
+      if (id === null) {
+        id = (await window.api.conversations.create()).id
+        openConversation(id)
+      }
+      for (const file of files) {
+        const path = window.api.documents.pathForFile(file)
+        if (!path) {
+          toast.error(`${file.name} okunamadı.`)
+          continue
+        }
+        try {
+          const doc = await window.api.documents.read(id, path)
+          // Bu arada başka sohbete geçildiyse belge oraya eklenmez
+          if (activeIdRef.current !== id) return
+          setAttachments((list) => (list.some((d) => d.path === doc.path) ? list : [...list, doc]))
+        } catch (err) {
+          toast.error(`${file.name}: ${errorMessage(err)}`)
+        }
+      }
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setAttaching(false)
     }
   }
 
@@ -317,7 +379,34 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         onExport={(id) => void exportConversation(id)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div
+        className="relative flex min-w-0 flex-1 flex-col"
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragging(false)
+          if (modelReady) void attachFiles(Array.from(e.dataTransfer.files))
+        }}
+      >
+        {dragging && (
+          <div className="animate-fade pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-card border-2 border-dashed border-accent/60 bg-app/85">
+            <div className="text-center">
+              <FileUp className="mx-auto h-8 w-8 text-accent" />
+              <p className="mt-2 text-sm font-medium text-ink">
+                {modelReady ? 'Belgeyi buraya bırak' : "Önce Ayarlar'dan bir model seç"}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">PDF, Word veya metin dosyası</p>
+            </div>
+          </div>
+        )}
+
         <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line px-4">
           <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
           <div className="flex shrink-0 items-center gap-2">
@@ -432,6 +521,12 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         <Composer
           busy={streaming !== null}
           disabled={!modelReady}
+          attachments={attachments}
+          attaching={attaching}
+          onAttachFiles={(files) => void attachFiles(files)}
+          onRemoveAttachment={(path) =>
+            setAttachments((list) => list.filter((doc) => doc.path !== path))
+          }
           onSend={(text) => void send(text)}
           onStop={() => {
             if (streaming) void window.api.chat.stop(streaming.conversationId)

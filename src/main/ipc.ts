@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { app, dialog, ipcMain } from 'electron'
 import { promises as fs } from 'node:fs'
 import { editAndResend, regenerateReply, sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
@@ -16,17 +16,27 @@ import {
   setConversationPinned
 } from './data/conversations'
 import { conversationToMarkdown, suggestFileName } from './lib/markdownExport'
+import { readDocumentPart } from './lib/documents'
+import { showDailyBrief } from './scheduler/brief'
+import { allowDocument } from './tools/documents'
 import { createMemory, deleteMemory, listMemories } from './data/memories'
 import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
-import { createReminder, deleteReminder, listPendingReminders } from './data/reminders'
+import {
+  createReminder,
+  deleteReminder,
+  listPendingReminders,
+  snoozeReminder
+} from './data/reminders'
 import { createTask, deleteTask, listTasks, updateTask } from './data/tasks'
 import { notifyDataChanged } from './events'
 import { setSecret } from './settings'
 import { applySettingsPatch, getSettingsView } from './system/appSettings'
 import { suspendGlobalShortcut } from './system/shortcut'
 import type {
+  AttachedDocument,
   DataScope,
   NotePatch,
+  RepeatRule,
   SecretId,
   SettingsPatch,
   TaskInput,
@@ -59,6 +69,26 @@ async function exportConversation(id: number): Promise<string | null> {
 // Arayüzün (renderer) çağırabileceği tüm işlemler burada tanımlı.
 // Kanal adları src/preload/index.ts ile birebir aynı olmalı.
 export function registerIpcHandlers(): void {
+  // Uygulama
+  ipcMain.handle('app:version', () => app.getVersion())
+  ipcMain.handle('brief:preview', () => showDailyBrief())
+
+  // Belgeler: kullanıcının sohbete bıraktığı dosya
+  ipcMain.handle(
+    'documents:read',
+    async (_event, conversationId: number, path: string): Promise<AttachedDocument> => {
+      const document = await readDocumentPart(path, 1)
+      allowDocument(conversationId, path)
+      return {
+        name: document.name,
+        path,
+        text: document.text,
+        partCount: document.partCount,
+        charCount: document.charCount
+      }
+    }
+  )
+
   // Ayarlar
   ipcMain.handle('settings:get', () => getSettingsView())
   ipcMain.handle('settings:update', (_event, patch: SettingsPatch) => applySettingsPatch(patch))
@@ -141,11 +171,16 @@ export function registerIpcHandlers(): void {
 
   // Hatırlatmalar
   ipcMain.handle('reminders:list', () => listPendingReminders())
-  ipcMain.handle('reminders:create', (_event, message: string, remindAt: number) =>
-    changing('reminders', () => createReminder(message, remindAt))
+  ipcMain.handle(
+    'reminders:create',
+    (_event, message: string, remindAt: number, repeat: RepeatRule = 'none') =>
+      changing('reminders', () => createReminder(message, remindAt, repeat))
   )
   ipcMain.handle('reminders:remove', (_event, id: number) =>
     changing('reminders', () => deleteReminder(id))
+  )
+  ipcMain.handle('reminders:snooze', (_event, id: number, minutes: number) =>
+    changing('reminders', () => snoozeReminder(id, minutes))
   )
 
   // Notlar

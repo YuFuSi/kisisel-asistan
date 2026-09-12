@@ -4,6 +4,8 @@ export interface MailInput {
   to: string
   subject: string
   body: string
+  /** Yanıtlanan e-postanın Message-ID başlığı (yanıt aynı konuşmada görünsün diye) */
+  inReplyTo?: string
 }
 
 const isAscii = (value: string): boolean => /^[\x20-\x7E]*$/.test(value)
@@ -19,9 +21,17 @@ export function encodeHeaderValue(value: string): string {
 const wrapBase64 = (text: string): string => (text.match(/.{1,76}/g) ?? []).join('\r\n')
 
 export function buildMimeMessage(mail: MailInput): string {
+  // Message-ID yalnızca <...> biçimindeyse kullanılır; satır sonu içeremez (başlık enjeksiyonu)
+  const replyId = mail.inReplyTo?.replace(/[\r\n]+/g, '').trim()
+  const threading =
+    replyId && /^<[^<>\s]+>$/.test(replyId)
+      ? [`In-Reply-To: ${replyId}`, `References: ${replyId}`]
+      : []
+
   return [
     `To: ${encodeHeaderValue(mail.to)}`,
     `Subject: ${encodeHeaderValue(mail.subject)}`,
+    ...threading,
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',

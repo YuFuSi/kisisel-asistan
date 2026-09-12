@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ListTodo,
   MessageSquare,
@@ -27,6 +27,15 @@ function readCollapsed(): boolean {
   }
 }
 
+// package.json'daki sürüm; menünün altında gösterilir
+function useAppVersion(): string {
+  const [version, setVersion] = useState('')
+  useEffect(() => {
+    window.api.app.version().then(setVersion, () => setVersion(''))
+  }, [])
+  return version
+}
+
 interface SidebarProps {
   active: PageId
   onSelect: (page: PageId) => void
@@ -34,6 +43,7 @@ interface SidebarProps {
 
 function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
   const [collapsed, setCollapsed] = useState(readCollapsed)
+  const version = useAppVersion()
 
   function toggle(): void {
     const next = !collapsed
@@ -77,7 +87,7 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
       </nav>
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-        {!collapsed && <span className="px-1 text-xs text-faint">v0.8</span>}
+        {!collapsed && version && <span className="px-1 text-xs text-faint">v{version}</span>}
         <button
           onClick={toggle}
           title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}

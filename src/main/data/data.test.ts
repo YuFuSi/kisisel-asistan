@@ -16,7 +16,7 @@ import {
 } from './conversations'
 import { createMemory, listMemories } from './memories'
 import { createNote, searchNotes, updateNote } from './notes'
-import { createReminder, listPendingReminders, takeDueReminders } from './reminders'
+import { createReminder, listPendingReminders, snoozeReminder, takeDueReminders } from './reminders'
 import { createTask, listTasks, updateTask } from './tasks'
 
 // Her test boş, bellekte çalışan bir veritabanıyla başlar
@@ -173,5 +173,42 @@ describe('sohbet başlığı', () => {
     renameConversation(elle.id, 'Benim sohbetim')
     clearGeneratedTitle(elle.id)
     expect(getConversation(elle.id)?.title).toBe('Benim sohbetim')
+  })
+})
+
+describe('tekrarlayan hatırlatmalar', () => {
+  it('çaldıktan sonra bir sonraki güne atılır, silinmez', () => {
+    const now = Date.now()
+    const gunluk = createReminder('Vitamin al', now - 1000, 'daily')
+    expect(gunluk.repeat).toBe('daily')
+
+    const due = takeDueReminders(now)
+    expect(due.map((r) => r.id)).toEqual([gunluk.id])
+
+    // Hâlâ bekleyenler arasında ve zamanı ileri alınmış
+    const pending = listPendingReminders()
+    expect(pending).toHaveLength(1)
+    expect(pending[0].remindAt).toBeGreaterThan(now)
+    // İkinci kontrolde tekrar çalmaz
+    expect(takeDueReminders(now)).toEqual([])
+  })
+
+  it('tek seferlik hatırlatma çaldıktan sonra listeden çıkar', () => {
+    const now = Date.now()
+    createReminder('Doktoru ara', now - 1000)
+    expect(takeDueReminders(now)).toHaveLength(1)
+    expect(listPendingReminders()).toEqual([])
+  })
+
+  it('erteleme zamanı ileri alır ve hatırlatmayı geri getirir', () => {
+    const now = Date.now()
+    const reminder = createReminder('Çamaşır', now - 1000)
+    takeDueReminders(now)
+    expect(listPendingReminders()).toEqual([])
+
+    const snoozed = snoozeReminder(reminder.id, 10, now)
+    expect(snoozed.remindAt).toBe(now + 10 * 60_000)
+    expect(listPendingReminders().map((r) => r.id)).toEqual([reminder.id])
+    expect(() => snoozeReminder(reminder.id, 0, now)).toThrow()
   })
 })

@@ -109,6 +109,15 @@ try {
       console.log('tuş gönderildi')
       break
     }
+    case 'upload': {
+      // Gizli <input type="file"> kutusuna gerçek dosyalar verir (seçme penceresi açılmadan)
+      const { root } = await send('DOM.getDocument', { depth: 0 })
+      const { nodeId } = await send('DOM.querySelector', { nodeId: root.nodeId, selector: args[0] })
+      if (!nodeId) throw new Error(`Eleman bulunamadı: ${args[0]}`)
+      await send('DOM.setFileInputFiles', { nodeId, files: args.slice(1) })
+      console.log('dosya verildi')
+      break
+    }
     case 'shot': {
       const r = await send('Page.captureScreenshot', { format: 'png' })
       writeFileSync(args[0], Buffer.from(r.data, 'base64'))

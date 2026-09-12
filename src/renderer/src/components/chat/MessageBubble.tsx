@@ -2,8 +2,9 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import { Check, Copy, Loader2, Pencil, RotateCcw, Volume2, X } from 'lucide-react'
+import { Check, Copy, FileText, Loader2, Pencil, RotateCcw, Volume2, X } from 'lucide-react'
 import type { ChatRole, ToolActivity, ToolStatus } from '@shared/api'
+import { splitAttachments } from '@shared/attachments'
 import CodeBlock from './CodeBlock'
 import { speakText } from '../../lib/voice'
 import { primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
@@ -90,10 +91,16 @@ function MessageBubble({
     }
   }
 
+  // Kullanıcı mesajındaki belge blokları kart olarak gösterilir; düzenlerken sadece metin değişir
+  const { text: userText, documents } = splitAttachments(content)
+  const blockStart = content.indexOf('[[BELGE ')
+  const attachmentPart = blockStart === -1 ? '' : content.slice(blockStart)
+
   function saveEdit(): void {
     const text = (draft ?? '').trim()
     setDraft(null)
-    if (text && text !== content) onEdit?.(text)
+    const full = [text, attachmentPart].filter((part) => part !== '').join('\n\n')
+    if (full && full !== content) onEdit?.(full)
   }
 
   if (role === 'user') {
@@ -133,7 +140,7 @@ function MessageBubble({
       <div className="group/message animate-enter flex items-start justify-end gap-1">
         {onEdit && (
           <button
-            onClick={() => setDraft(content)}
+            onClick={() => setDraft(userText)}
             aria-label="Mesajı düzenle"
             title="Düzenle ve yeniden gönder"
             className={`${actionButtonClass} mt-1 opacity-0 group-hover/message:opacity-100 focus:opacity-100`}
@@ -142,7 +149,23 @@ function MessageBubble({
           </button>
         )}
         <div className="max-w-[80%] rounded-2xl rounded-br-md border border-accent/30 bg-accent/15 px-4 py-2.5 text-sm whitespace-pre-wrap text-ink select-text">
-          {content}
+          {documents.length > 0 && (
+            <div className={`flex flex-wrap gap-1.5 ${userText ? 'mb-2' : ''}`}>
+              {documents.map((doc, index) => (
+                <span
+                  key={`${doc.name}-${index}`}
+                  className="inline-flex max-w-64 items-center gap-1.5 rounded-lg border border-accent/30 bg-app/40 px-2 py-1 text-xs"
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-accent" />
+                  <span className="truncate">{doc.name}</span>
+                  {doc.partCount > 1 && (
+                    <span className="shrink-0 text-faint">{doc.partCount} parça</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+          {userText}
         </div>
       </div>
     )
