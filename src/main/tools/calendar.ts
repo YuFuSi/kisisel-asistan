@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { googleRequest } from '../google/api'
+import { getGoogleStatus } from '../google/auth'
 import { parseLocalDate, parseLocalDateTime } from '../lib/datetime'
 import { requireApproval } from './approval'
 import type { ToolModule } from './types'
@@ -45,6 +46,7 @@ const formatEventTime = (time?: EventTime): string => {
 }
 
 const calendarTools: ToolModule = {
+  isAvailable: () => getGoogleStatus().connected,
   labels: {
     takvim_listele: 'Takvime bakma',
     etkinlik_ekle: 'Etkinlik ekleme',

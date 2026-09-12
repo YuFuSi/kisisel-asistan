@@ -152,9 +152,37 @@ export function deleteMessage(id: number): void {
 
 /** Verilen mesaj ve sonrasındaki tüm mesajları siler (mesaj düzenlenip yeniden gönderilirken) */
 export function deleteMessagesFrom(conversationId: number, messageId: number): void {
+  const db = getDb()
+  db.transaction(() => {
+    db.prepare('DELETE FROM messages WHERE conversation_id = ? AND id >= ?').run(
+      conversationId,
+      messageId
+    )
+    // Silinen mesajlar özetin kapsadığı kısımdaysa özet artık doğru değildir
+    db.prepare(
+      "UPDATE conversations SET summary = '', summary_until = 0 WHERE id = ? AND summary_until >= ?"
+    ).run(conversationId, messageId)
+  })()
+}
+
+export interface ConversationSummary {
+  /** Sohbetin modele artık tam gönderilmeyen eski kısmının özeti */
+  summary: string
+  /** Özetin kapsadığı en son mesajın kimliği */
+  until: number
+}
+
+export function getConversationSummary(id: number): ConversationSummary {
+  const row = getDb()
+    .prepare('SELECT summary, summary_until FROM conversations WHERE id = ?')
+    .get(id) as { summary: string; summary_until: number } | undefined
+  return { summary: row?.summary ?? '', until: row?.summary_until ?? 0 }
+}
+
+export function setConversationSummary(id: number, summary: string, until: number): void {
   getDb()
-    .prepare('DELETE FROM messages WHERE conversation_id = ? AND id >= ?')
-    .run(conversationId, messageId)
+    .prepare('UPDATE conversations SET summary = ?, summary_until = ? WHERE id = ?')
+    .run(summary, until, id)
 }
 
 // Aranan kelimeler için taranacak en fazla mesaj sayısı

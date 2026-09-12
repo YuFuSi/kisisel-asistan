@@ -5,12 +5,16 @@ import {
   PROVIDER_IDS,
   PROVIDERS,
   SECRET_IDS,
+  CONTEXT_LENGTHS,
+  TONE_LABELS,
   type AppSettings,
   type SecretId,
   type SettingsPatch
 } from '../shared/api'
 
 const SETTINGS_KEY = 'app'
+// Hakkımda metni her sohbette talimata eklendiği için sınırlı tutulur
+const ABOUT_ME_LIMIT = 1500
 
 const defaults: AppSettings = {
   provider: 'ollama',
@@ -30,7 +34,11 @@ const defaults: AppSettings = {
   voiceUri: '',
   briefEnabled: false,
   briefTime: '08:00',
-  briefCity: ''
+  briefCity: '',
+  aboutMe: '',
+  tone: 'dengeli',
+  temperature: null,
+  contextLength: null
 }
 
 function readValue(key: string): string | undefined {
@@ -91,6 +99,31 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
     next.briefTime = patch.briefTime.trim()
   }
   if (typeof patch.briefCity === 'string') next.briefCity = patch.briefCity.trim()
+  if (typeof patch.aboutMe === 'string') {
+    const about = patch.aboutMe.trim()
+    if (about.length > ABOUT_ME_LIMIT) {
+      throw new Error(`Hakkımda metni en fazla ${ABOUT_ME_LIMIT} karakter olabilir.`)
+    }
+    next.aboutMe = about
+  }
+  if (patch.tone !== undefined) {
+    if (!(patch.tone in TONE_LABELS)) throw new Error('Bilinmeyen konuşma tonu.')
+    next.tone = patch.tone
+  }
+  if (patch.temperature !== undefined) {
+    const value = patch.temperature
+    if (value !== null && !(Number.isFinite(value) && value >= 0 && value <= 1.5)) {
+      throw new Error('Yaratıcılık değeri 0 ile 1,5 arasında olmalı.')
+    }
+    next.temperature = value === null ? null : Math.round(value * 10) / 10
+  }
+  if (patch.contextLength !== undefined) {
+    const value = patch.contextLength
+    if (value !== null && !CONTEXT_LENGTHS.includes(value)) {
+      throw new Error('Geçersiz bağlam uzunluğu.')
+    }
+    next.contextLength = value
+  }
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))
   return next
@@ -114,12 +147,21 @@ export function setSecret(id: SecretId, key: string): void {
 
 export function getSecret(id: SecretId): string | undefined {
   const raw = readValue(secretKey(id))
-  return raw ? safeStorage.decryptString(Buffer.from(raw, 'base64')) : undefined
+  if (!raw) return undefined
+  try {
+    return safeStorage.decryptString(Buffer.from(raw, 'base64'))
+  } catch (err) {
+    // Anahtar başka bir Windows oturumunda/kurulumda şifrelenmiş olabilir; çözülemeyen kayıt yok sayılır.
+    // Kullanıcı anahtarı yeniden girince (veya Google'ı yeniden bağlayınca) üzerine yazılır.
+    console.warn(`Kayıtlı "${id}" anahtarı çözülemedi, yok sayılıyor:`, err)
+    return undefined
+  }
 }
 
 export function getSecretStatus(): Record<SecretId, boolean> {
   const status = {} as Record<SecretId, boolean>
-  for (const id of SECRET_IDS) status[id] = readValue(secretKey(id)) !== undefined
+  // Sadece gerçekten çözülebilen anahtarlar kayıtlı sayılır
+  for (const id of SECRET_IDS) status[id] = getSecret(id) !== undefined
   return status
 }
 

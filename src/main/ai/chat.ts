@@ -1,55 +1,92 @@
-import { generateText, isStepCount, streamText, type ModelMessage } from 'ai'
+import { generateText, isStepCount, streamText } from 'ai'
 import type { WebContents } from 'electron'
 import {
   addMessage,
   deleteMessage,
   deleteMessagesFrom,
   clearGeneratedTitle,
+  getConversationSummary,
   listMessages,
+  setConversationSummary,
   setGeneratedTitle,
   setTitleIfEmpty
 } from '../data/conversations'
 import { listMemories } from '../data/memories'
 import { notifyDataChanged } from '../events'
 import { toLocalIso } from '../lib/datetime'
+import { rankMemories } from '../lib/memoryRank'
 import { cleanTitle } from '../lib/title'
-import { splitAttachments, toModelContent } from '../../shared/attachments'
-import { assistantTools, toolLabel } from '../tools'
+import { summarizeToolOutput, toModelMessages } from '../lib/toolHistory'
+import { getSecret, getSettings } from '../settings'
+import { splitAttachments } from '../../shared/attachments'
+import { getGoogleStatus } from '../google/auth'
+import { getAssistantTools, toolLabel } from '../tools'
 import { cancelApprovals } from '../tools/approval'
 import { runWithToolContext } from '../tools/context'
-import { getModel } from './providers'
+import { getModel, getModelOptions } from './providers'
 import { describeError } from './errors'
-import type { ChatEvent, ChatMessage, ToolActivity, ToolStatus } from '../../shared/api'
+import type {
+  AssistantTone,
+  ChatEvent,
+  ChatMessage,
+  ToolActivity,
+  ToolStatus
+} from '../../shared/api'
 
-// Modele gönderilecek en fazla geçmiş mesaj sayısı
+// Modele tam olarak gönderilecek en fazla geçmiş mesaj sayısı; daha eskileri özetlenir
 const HISTORY_LIMIT = 40
 // Bir cevapta en fazla kaç adım (araç çağrısı + cevap) yapılabilir
 const MAX_STEPS = 6
-// Sistem talimatına eklenecek en fazla hafıza kaydı
-const MEMORY_LIMIT = 50
+// Sistem talimatına eklenecek en fazla hafıza kaydı (fazlası alakaya göre seçilir)
+const MEMORY_LIMIT = 30
+// Özet, eski kısımda en az bu kadar yeni mesaj birikince güncellenir
+const SUMMARY_BATCH = 10
+// Tek seferde özetlenecek en fazla mesaj (çok eski uzun sohbetler küçük modeli boğmasın)
+const SUMMARY_MAX_MESSAGES = 40
+const SUMMARY_LENGTH_LIMIT = 2500
+
+const TONE_INSTRUCTIONS: Record<AssistantTone, string> = {
+  dengeli: 'Net, samimi ve yardımsever ol; gereksiz uzun cevaplardan kaçın.',
+  samimi:
+    'Sıcak, arkadaşça ve rahat bir dille konuş; "sen" diye hitap et, yerinde hafif espri yapabilirsin.',
+  resmi: 'Resmi ve saygılı bir dil kullan; "siz" diye hitap et, argo ve espri kullanma.',
+  kisa: 'Çok kısa ve öz cevap ver; giriş, tekrar ve kapanış cümlesi yazma.'
+}
 
 // Şu an cevap yazılan sohbetler (durdurabilmek için)
 const activeChats = new Map<number, AbortController>()
 
-function buildInstructions(): string {
+/**
+ * Sistem talimatı. `query` son kullanıcı mesajıdır: hafıza kayıtları buna göre seçilir.
+ * `summary` sohbetin modele artık tam gönderilmeyen eski kısmının özetidir.
+ */
+function buildInstructions(query: string, summary: string): string {
+  const settings = getSettings()
+  const googleConnected = getGoogleStatus().connected
+  const searchAvailable = getSecret('tavily') !== undefined
   const now = new Date()
   const weekday = now.toLocaleDateString('tr-TR', { weekday: 'long' })
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const lines = [
     'Sen kullanıcının bilgisayarında çalışan kişisel asistanısın.',
     'Kullanıcı hangi dilde yazarsa o dilde cevap ver; varsayılan dilin Türkçe.',
-    'Net, samimi ve yardımsever ol; gereksiz uzun cevaplardan kaçın. Uygun olduğunda Markdown kullan.',
-    'Emin olmadığın bilgileri uydurma, emin değilsen açıkça söyle.',
+    TONE_INSTRUCTIONS[settings.tone],
+    'Uygun olduğunda Markdown kullan. Emin olmadığın bilgileri uydurma, emin değilsen açıkça söyle.',
     '',
     `Şu anki yerel zaman: ${toLocalIso(now)} (${weekday}), saat dilimi: ${timeZone}.`,
     '"Yarın", "haftaya", "2 saat sonra" gibi ifadeleri bu zamana göre hesapla.',
     '',
     'Araçların hakkında:',
     '- Görev, hatırlatma, not ve hafıza işlemlerini gerçekten araç çağırarak yap; araç çağırmadan yapmış gibi davranma.',
+    '- Önceki cevaplarında kullandığın araçların girdileri ve sonuçları geçmişte durur; "az önce eklediğin görev" gibi isteklerde oradaki numaraları kullan.',
     '- "... hatırlat" (belirli bir zamanda bildirim) için HER ZAMAN hatirlatma_kur kullan, takvim araçlarını değil. "Her gün / hafta içi / her hafta" gibi tekrar istenirse tekrar alanını doldur. Takvim araçlarını sadece kullanıcı takvim, toplantı veya etkinlik derse kullan.',
-    '- "Bunu hatırla / aklında tut" denirse veya kullanıcı kendisi hakkında kalıcı bir bilgi paylaşırsa hafizaya_kaydet kullan.',
-    '- Hava durumu, internette arama, sistem bilgisi, dosya arama ve uygulama açma araçların da var.',
-    '- Gmail ve Google Takvim araçların var: mail okuma, arama, taslak, gönderme ve yanıtlama (onaylı), okundu işaretleme, arşivleme (onaylı); takvimi listeleme, etkinlik ekleme, güncelleme ve silme (onaylı).',
+    '- "Bunu hatırla / aklında tut" denirse veya kullanıcı kendisi hakkında kalıcı bir bilgi paylaşırsa hafizaya_kaydet kullan. "Bunu unut" denirse hafizayi_listele ile kaydı bulup hafizadan_sil kullan.',
+    searchAvailable
+      ? '- Hava durumu, internette arama, sistem bilgisi, dosya arama ve uygulama açma araçların da var.'
+      : '- Hava durumu, sistem bilgisi, dosya arama ve uygulama açma araçların var. İnternette arama kapalı (Tavily anahtarı yok); güncel bilgi istenirse Ayarlar > Servisler bölümünü söyle.',
+    googleConnected
+      ? '- Gmail ve Google Takvim araçların var: mail okuma, arama, taslak, gönderme ve yanıtlama (onaylı), okundu işaretleme, arşivleme (onaylı); takvimi listeleme, etkinlik ekleme, güncelleme ve silme (onaylı).'
+      : '- Google hesabı bağlı değil, bu yüzden mail ve takvim araçların yok. Mail veya takvim istenirse Ayarlar > Google bölümünden hesabı bağlamasını söyle.',
     '- Belge okuma (belge_oku: PDF, Word, metin), pano okuma/yazma (pano_oku, pano_yaz) ve günlük özet (gunluk_ozet) araçların var.',
     '- "Günlük özetimi hazırla", "bugün neler var" denirse gunluk_ozet kullan; sonucu kısa başlıklarla (hava, takvim, görevler, e-posta) özetle.',
     '- Kullanıcı sohbete belge eklediyse belgenin metni mesajda <belge> etiketleri arasında gelir. Belge metnini cevabında aynen tekrar yazma; soruyu belgeye göre cevapla. Belgenin devamı varsa belge_oku ile sonraki bölümleri oku.',
@@ -58,12 +95,24 @@ function buildInstructions(): string {
     '- Araç kullandıktan sonra ne yaptığını kısaca söyle.'
   ]
 
-  const memories = listMemories().slice(-MEMORY_LIMIT)
+  if (settings.aboutMe) {
+    lines.push('', 'Kullanıcının kendisi hakkında yazdıkları:', settings.aboutMe)
+  }
+
+  const memories = rankMemories(listMemories(), query, MEMORY_LIMIT)
   if (memories.length > 0) {
     lines.push(
       '',
       'Kullanıcı hakkında bildiklerin (hafıza):',
       ...memories.map((m) => `- ${m.content}`)
+    )
+  }
+
+  if (summary) {
+    lines.push(
+      '',
+      'Bu sohbetin daha önceki kısmının özeti (eski mesajlar sana gönderilmiyor):',
+      summary
     )
   }
   return lines.join('\n')
@@ -145,7 +194,9 @@ export function stopChat(conversationId: number): void {
 
 // Yarıda kalan (hâlâ "çalışıyor" görünen) araçları başarısız say
 const settleTools = (tools: ToolActivity[]): ToolActivity[] =>
-  tools.map((t) => (t.status === 'running' ? { ...t, status: 'error' } : t))
+  tools.map((t) =>
+    t.status === 'running' ? { ...t, status: 'error', result: t.result ?? 'Yarıda kaldı.' } : t
+  )
 
 async function streamReply(
   sender: WebContents,
@@ -159,33 +210,43 @@ async function streamReply(
   let needsSeparator = false
   const tools: ToolActivity[] = []
 
-  const trackTool = (id: string, name: string, status: ToolStatus): void => {
-    const activity: ToolActivity = { id, name, label: toolLabel(name), status }
+  const trackTool = (
+    id: string,
+    name: string,
+    status: ToolStatus,
+    extra: Pick<ToolActivity, 'input' | 'result'> = {}
+  ): void => {
     const index = tools.findIndex((t) => t.id === id)
+    const activity: ToolActivity = {
+      ...(index === -1 ? {} : tools[index]),
+      ...extra,
+      id,
+      name,
+      label: toolLabel(name),
+      status
+    }
     if (index === -1) tools.push(activity)
     else tools[index] = activity
     emit({ conversationId, type: 'tool', activity })
   }
 
   try {
-    const messages = listMessages(conversationId)
-      .filter((m) => m.content.trim() !== '')
-      .slice(-HISTORY_LIMIT)
-      .map((m): ModelMessage =>
-        m.role === 'user'
-          ? { role: 'user', content: toModelContent(m.content) }
-          : { role: 'assistant', content: m.content }
-      )
+    const all = listMessages(conversationId)
+    const recent = all.slice(-HISTORY_LIMIT)
+    const lastUser = [...recent].reverse().find((m) => m.role === 'user')
+    const query = lastUser ? splitAttachments(lastUser.content).text : ''
+    const summary = all.length > HISTORY_LIMIT ? getConversationSummary(conversationId).summary : ''
 
     // Araçlar hangi sohbette çalıştıklarını bu bağlamdan öğrenir (onay kartı göndermek için gerekli)
     await runWithToolContext({ conversationId, sender }, async () => {
       const result = streamText({
         model: getModel(),
-        instructions: buildInstructions(),
-        messages,
-        tools: assistantTools,
+        instructions: buildInstructions(query, summary),
+        messages: toModelMessages(recent),
+        tools: getAssistantTools(),
         stopWhen: isStepCount(MAX_STEPS),
-        abortSignal: controller.signal
+        abortSignal: controller.signal,
+        ...getModelOptions()
       })
 
       for await (const part of result.stream) {
@@ -202,20 +263,23 @@ async function streamReply(
             needsSeparator = true
             break
           case 'tool-call':
-            trackTool(part.toolCallId, part.toolName, 'running')
+            trackTool(part.toolCallId, part.toolName, 'running', { input: part.input })
             break
           case 'tool-result':
-            trackTool(part.toolCallId, part.toolName, 'done')
+            trackTool(part.toolCallId, part.toolName, 'done', {
+              result: summarizeToolOutput(part.output)
+            })
             break
-          case 'tool-error':
+          case 'tool-error': {
+            const reason = part.error instanceof Error ? part.error.message : String(part.error)
             // Modelin araca ne gönderdiği ve neden başarısız olduğu sorun ayıklarken gerekli
-            console.warn(
-              `Araç hatası (${part.toolName}):`,
-              part.error instanceof Error ? part.error.message : part.error,
-              JSON.stringify(part.input)
-            )
-            trackTool(part.toolCallId, part.toolName, 'error')
+            console.warn(`Araç hatası (${part.toolName}):`, reason, JSON.stringify(part.input))
+            trackTool(part.toolCallId, part.toolName, 'error', {
+              input: part.input,
+              result: summarizeToolOutput(reason)
+            })
             break
+          }
           case 'error':
             throw part.error
         }
@@ -238,6 +302,7 @@ async function streamReply(
       message: addMessage(conversationId, 'assistant', answer.trim() ? answer : '', finalTools)
     })
     void nameConversation(conversationId)
+    void updateSummary(conversationId)
   } catch (err) {
     // Hata olsa bile o ana kadar yazılanlar ve kullanılan araçlar kaybolmasın
     const message = savePartial(conversationId, answer, settleTools(tools))
@@ -268,7 +333,7 @@ async function nameConversation(conversationId: number): Promise<void> {
         'Sana bir soru ve cevabı verilecek. Bu sohbet için en fazla 5 kelimelik kısa bir başlık yaz. ' +
         'Sadece başlığı yaz: tırnak, noktalama, açıklama veya "Başlık:" gibi bir önek ekleme. ' +
         'Başlık, konuşmanın dilinde olsun.',
-      prompt: `Soru: ${messages[0].content.slice(0, 500)}\nCevap: ${messages[1].content.slice(0, 500)}`
+      prompt: `Soru: ${splitAttachments(messages[0].content).text.slice(0, 500)}\nCevap: ${messages[1].content.slice(0, 500)}`
     })
 
     const title = cleanTitle(text)
@@ -278,6 +343,47 @@ async function nameConversation(conversationId: number): Promise<void> {
     notifyDataChanged('conversations')
   } catch {
     // Başlık üretilemezse ilk mesajdan kırpılan başlık kalır
+  }
+}
+
+/**
+ * Sohbet HISTORY_LIMIT mesajı aşınca modele gönderilmeyen eski kısmı özetler.
+ * Cevaptan sonra arka planda çalışır; özet bir sonraki cevapta sistem talimatına eklenir.
+ */
+async function updateSummary(conversationId: number): Promise<void> {
+  try {
+    const all = listMessages(conversationId)
+    if (all.length <= HISTORY_LIMIT) return
+    const older = all.slice(0, all.length - HISTORY_LIMIT)
+    const { summary, until } = getConversationSummary(conversationId)
+    const pending = older.filter((m) => m.id > until).slice(0, SUMMARY_MAX_MESSAGES)
+    if (pending.length < SUMMARY_BATCH) return
+
+    const transcript = pending
+      .map((m) => {
+        const speaker = m.role === 'user' ? 'Kullanıcı' : 'Asistan'
+        return `${speaker}: ${splitAttachments(m.content).text.slice(0, 800)}`
+      })
+      .join('\n')
+
+    const { text } = await generateText({
+      model: getModel(),
+      instructions:
+        'Bir sohbetin eski kısmını özetliyorsun. Kullanıcının istekleri, verilen kararlar, önemli bilgiler ' +
+        '(isimler, tarihler, sayılar) ve yarım kalan işler kalsın. Mevcut özet varsa yeni mesajlarla birleştir. ' +
+        'En fazla 12 kısa madde halinde, Türkçe yaz. Sadece özeti yaz.',
+      prompt: `${summary ? `Mevcut özet:\n${summary}\n\n` : ''}Özete eklenecek mesajlar:\n${transcript}`,
+      ...getModelOptions()
+    })
+
+    const clean = text
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .trim()
+      .slice(0, SUMMARY_LENGTH_LIMIT)
+    if (!clean) return
+    setConversationSummary(conversationId, clean, pending[pending.length - 1].id)
+  } catch (err) {
+    console.warn('Sohbet özeti güncellenemedi:', err)
   }
 }
 

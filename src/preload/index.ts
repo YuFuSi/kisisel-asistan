@@ -70,6 +70,7 @@ const api: Api = {
   memories: {
     list: () => ipcRenderer.invoke('memories:list'),
     create: (content) => ipcRenderer.invoke('memories:create', content),
+    update: (id, content) => ipcRenderer.invoke('memories:update', id, content),
     remove: (id) => ipcRenderer.invoke('memories:remove', id)
   },
   speech: {

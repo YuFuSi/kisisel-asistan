@@ -76,6 +76,10 @@ const migrations: string[] = [
   // 5: Tekrarlayan hatırlatmalar (none / daily / weekdays / weekly)
   `
   ALTER TABLE reminders ADD COLUMN repeat TEXT NOT NULL DEFAULT 'none';
+  `,
+  // 6: Uzun sohbet özetinin hangi mesaja kadar olan kısmı kapsadığı
+  `
+  ALTER TABLE conversations ADD COLUMN summary_until INTEGER NOT NULL DEFAULT 0;
   `
 ]
 

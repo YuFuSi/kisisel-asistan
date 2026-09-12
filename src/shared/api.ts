@@ -65,6 +65,19 @@ export const SECRET_IDS: SecretId[] = [
 /** Konuşmayı yazıya çeviren servis */
 export type SpeechProvider = 'groq' | 'openai'
 
+/** Asistanın konuşma tonu */
+export type AssistantTone = 'dengeli' | 'samimi' | 'resmi' | 'kisa'
+
+export const TONE_LABELS: Record<AssistantTone, string> = {
+  dengeli: 'Dengeli',
+  samimi: 'Samimi',
+  resmi: 'Resmi',
+  kisa: 'Kısa ve öz'
+}
+
+/** Ollama bağlam uzunluğu seçenekleri (token) */
+export const CONTEXT_LENGTHS = [4096, 8192, 16384, 32768]
+
 export interface SpeechProviderInfo {
   label: string
   description: string
@@ -111,6 +124,13 @@ export interface AppSettings {
   briefTime: string
   /** Özetteki hava durumu için şehir; boşsa hava durumu eklenmez */
   briefCity: string
+  /** Kullanıcının kendini anlattığı metin; her sohbette asistana verilir */
+  aboutMe: string
+  tone: AssistantTone
+  /** Yaratıcılık (0-1.5); null ise modelin varsayılanı */
+  temperature: number | null
+  /** Ollama bağlam uzunluğu (num_ctx); null ise Ollama varsayılanı */
+  contextLength: number | null
 }
 
 export interface SettingsPatch {
@@ -127,6 +147,10 @@ export interface SettingsPatch {
   briefEnabled?: boolean
   briefTime?: string
   briefCity?: string
+  aboutMe?: string
+  tone?: AssistantTone
+  temperature?: number | null
+  contextLength?: number | null
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -170,6 +194,10 @@ export interface ToolActivity {
   name: string
   label: string
   status: ToolStatus
+  /** Modelin araca gönderdiği girdi (sonraki cevaplarda geçmiş olarak modele verilir) */
+  input?: unknown
+  /** Aracın kısaltılmış sonucu veya hata metni */
+  result?: string
 }
 
 export interface ChatMessage {
@@ -370,6 +398,7 @@ export interface Api {
   memories: {
     list(): Promise<Memory[]>
     create(content: string): Promise<Memory>
+    update(id: number, content: string): Promise<Memory>
     remove(id: number): Promise<void>
   }
   speech: {

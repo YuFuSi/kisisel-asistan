@@ -10,6 +10,11 @@
 - **Sıradaki adım:** Tur D (asistanın zekası). Kullanıcı isterse D ve E'den önce Tur F'ye (kurulum) geçilebilir; bu seçenek kendisine sunuldu.
 - Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim (Tur C'deki yanıtlama, arşivleme, etkinlik güncelleme/silme dahil), Groq anahtarı girilince mikrofonla yazma.
 - **Google bağlantı denemesi:** Kullanıcı 2026-09-12'de hesabı bağlamayı denedi, "Gmail hesabı bilgisi alınamadı" hatası aldı (Gmail profil isteği başarısız). Olası nedenler: Cloud projesinde Gmail API etkin değil veya giriş ekranında izin kutucukları işaretlenmedi. Hata mesajları artık bu iki durumu Türkçe açıklıyor (`src/main/google/errors.ts`); profil alınamazsa yarım bağlantı kaydedilmiyor.
+- **Veritabanı ve gizli anahtar olayı (2026-09-12/13):** Uygulamanın gördüğü veritabanı içeriği iki kez beklenmedik şekilde değişti.
+  - Tur C sonunda (22:33) sohbetler, görevler, notlar ve hafıza boştu ama sayaçlar yüksekti (satırlar silinmiş). O sırada `asistan.db` 4 KB, `-wal` 3,1 MB idi; yani veri hiç ana dosyaya aktarılmamış, tamamı WAL'deydi. Geliştirme sunucusu her seferinde süreç ağacı öldürülerek kapatıldığı için `closeDb` hiç çalışmamış olabilir.
+  - 23:11'de geliştirme sunucusu açılınca bambaşka bir geçmiş göründü: sayaçlar 1-3, 19:59'da açılmış bir "Merhaba sohbeti", `googleAccount` dolu, gizli anahtarlar yeniden kayıtlı. Önceki 22:33 okumasında bu kayıtlar yoktu. Kesin neden bulunamadı.
+  - Bu yeni kayıttaki Google istemci bilgileri, yenileme anahtarı ve Tavily anahtarı çözülemiyor (`safeStorage.decryptString` hatası). Aynı uygulamada yeni yazılan geçici bir değer yazılıp okunabildi; yani şifreleme çalışıyor, eski anahtarlar farklı bir şifreleme kimliğiyle yazılmış. Kullanıcı Google istemci bilgilerini, Tavily anahtarını yeniden girmeli ve Google'ı yeniden bağlamalı.
+  - **Yapılacak (Tur E):** WAL'i düzenli aktarmak (`PRAGMA wal_checkpoint`), kapanışta temiz kapatma, otomatik yedek. Test sırasında süreç öldürmeden önce uygulamayı düzgün kapatmayı araştır.
 - **npm audit:** Electron'un bağımlılığı `extract-zip` için 2 yüksek uyarı var; düzeltmesi Electron 44'e geçmek (büyük sürüm). Tur F'de değerlendirilecek.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
@@ -104,7 +109,16 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - **Gmail genişletme:** `eposta_yanitla` (onaylı; `In-Reply-To`/`References` + `threadId`, Message-ID sadece `<...>` biçimindeyse kullanılır), `eposta_isaretle`, `eposta_arsivle` (onaylı). Bunlar için `gmail.modify` izni eklendi; daha önce bağlanmış hesap yeniden bağlanmalı.
   - **Takvim genişletme:** `etkinlik_guncelle` (onaylı; sadece başlangıç değişirse süre korunur), `etkinlik_sil` (onaylı). `googleRequest` artık `PATCH`/`DELETE` ve boş (204) cevabı destekliyor.
   - Yan menüdeki sürüm etiketi `app.getVersion()` ile `package.json`dan geliyor (`app:version`).
-- [ ] **Tur D: Asistanın zekası.** Araç sonuçlarının geçmişe eklenmesi, uzun sohbet özeti, kişiselleştirme, hafıza yönetimi, model ayarları.
+- [x] **Tur D: Asistanın zekası.**
+  - **Araç sonuçları geçmişte:** `ToolActivity` artık `input` ve kısaltılmış `result` (en fazla 1500 karakter, `summarizeToolOutput`) saklıyor (mevcut `messages.tools` JSON sütununda, migration gerekmedi). `lib/toolHistory.ts` → `toModelMessages`: son 6 asistan cevabının araçları "araç çağrısı → araç sonucu → cevap metni" olarak modele verilir. Sonucu olmayan eski kayıtlar sadece metin gider.
+  - **Uzun sohbet özeti:** modele son 40 mesaj tam gider. Cevaptan sonra arka planda `updateSummary`, eski kısımda en az 10 yeni mesaj birikmişse (tek seferde en fazla 40) özeti günceller; özet `conversations.summary`, kapsadığı son mesaj `summary_until` (migration 6). Özet bir sonraki cevapta sistem talimatına eklenir. Mesaj düzenlenip özetin kapsadığı kısım silinirse özet sıfırlanır (`deleteMessagesFrom`).
+  - **Kişiselleştirme** (Ayarlar > Asistan): "Hakkımda" metni (en fazla 1500 karakter) ve konuşma tonu (`dengeli/samimi/resmi/kisa`, `TONE_INSTRUCTIONS`) sistem talimatına eklenir.
+  - **Model ayarları:** yaratıcılık (`temperature`, null = model varsayılanı) ve Ollama bağlam uzunluğu (`contextLength` → `providerOptions.ollama.options.num_ctx`). `providers.ts` → `getModelOptions()` hem sohbette hem özette kullanılır.
+  - **Hafıza yönetimi:** `lib/memoryRank.ts`. Kaydederken çok benzer kayıt (5 harflik kök benzerliği ≥ 0,6) varsa yeni kayıt açılmaz, mevcut kayıt güncellenir ("Kızının adı Elif" ile "Oğlunun adı Elif" birleşmez). 30'dan fazla kayıt varsa son kullanıcı mesajıyla ortak kelimesi olanlar öne alınır (`rankMemories`). Notlar > Asistanın hafızası'nda kayıtlar tıklanıp düzenlenebilir (`memories:update`). Yeni araçlar: `hafizayi_listele`, `hafizadan_sil`.
+  - **Kullanılamayan araçlar gizlenir:** `ToolModule.isAvailable`. Google bağlı değilse Gmail/Takvim, Tavily anahtarı yoksa `web_ara` modele hiç verilmez (`getAssistantTools()` her cevapta hesaplanır) ve talimat buna göre değişir. Neden: `qwen3:14b` "listeme görev ekle" isteğinde `etkinlik_ekle` seçti.
+  - **Uçtan uca doğrulandı:** "Listeme TEST süt al ekle" → `gorev_ekle` (Google araçları gizlenince doğru araç), ardından "az önce eklediğin görevin numarası" → listeye bakmadan doğru numara (1). 52 mesajlık sohbette cevaptan sonra özet oluştu (14 eski mesaj, "turkuaz" bilgisi dahil), sonra "en sevdiğim renk neydi?" → "turkuazdı" (bilgi son 40 mesajın dışındaydı). Hafıza birleştirme/düzenleme/silme ve ayar doğrulamaları IPC ile denendi.
+  - **Test ipucu:** `location.reload()` sonrası `cdp.mjs key Enter` gönderimi tetiklemedi (metin kutuda kaldı); mesajı "Gönder" düğmesine tıklayarak göndermek güvenilir.
+  - **Çözülemeyen gizli anahtar:** `getSecret` artık `safeStorage.decryptString` hatasında çökmez, anahtarı yok sayar (`getSecretStatus` de sadece çözülebilenleri kayıtlı sayar). Kullanıcının Google yenileme anahtarı 2026-09-13'te bu hatayı verdi; hesabı yeniden bağlaması gerekiyor.
 - [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri.
 - [ ] **Tur F (eski Aşama 7): Paketleme ve otomatik güncelleme.**
 
@@ -192,6 +206,8 @@ src/
 │  │  ├─ documents.ts       PDF/Word/metin okuma ve parçalara bölme (+ testi)
 │  │  ├─ repeat.ts          Tekrarlayan hatırlatmanın sonraki zamanı (+ testi)
 │  │  ├─ brief.ts           Sabah özeti saati ve bildirim metni (+ testi)
+│  │  ├─ toolHistory.ts     Mesajları araç çağrıları ve sonuçlarıyla model geçmişine çevirme (+ testi)
+│  │  ├─ memoryRank.ts      Hafıza benzerliği ve alakaya göre sıralama (+ testi)
 │  │  └─ title.ts           Modelin ürettiği başlığı temizleme (+ testi)
 │  └─ ai/                   providers.ts (model seçimi, Ollama listesi, bağlantı testi),
 │                           chat.ts (sistem talimatı, akışlı cevap, araç takibi), errors.ts (Türkçe hatalar)
@@ -224,7 +240,7 @@ vitest.config.ts            Test ayarları
 - **Veri değişim olayı:** IPC'deki değiştirici işlemler `changing(scope, ...)` ile sarılır. Sayfalar veriyi `useLiveData(load, scope)` ile alır ve kendiliğinden yenilenir.
 - **`data/` klasörü** `electron` import etmez. Electron'a bağlı işler `events.ts`, `scheduler/`, `settings.ts`, `ai/` içinde durur.
 - **Renderer**, Node/Electron'a doğrudan erişmez, sadece `window.api` kullanır. Ham `ipcRenderer` açılmaz.
-- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 5.
+- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 6.
 - **Zaman:** Hatırlatma zamanı epoch ms (INTEGER), görev son tarihi yerel `YYYY-MM-DD`. Modele ve modelden gelen zamanlar yerel `YYYY-MM-DDTHH:mm` biçimindedir (`lib/datetime.ts`).
 - **API anahtarları** sadece main süreçte, `safeStorage` ile şifreli tutulur. Renderer'a sadece `hasApiKey` gider.
 - **Dış linkler:** sadece `http(s)` adresler `shell.openExternal` ile açılır. `will-navigate` engellenir.

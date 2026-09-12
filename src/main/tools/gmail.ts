@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { googleRequest } from '../google/api'
+import { getGoogleStatus } from '../google/auth'
 import { buildRawMessage, isValidEmail } from '../lib/mime'
 import { requireApproval } from './approval'
 import type { ToolModule } from './types'
@@ -87,6 +88,7 @@ function requireAddress(address: string): string {
 }
 
 const gmailTools: ToolModule = {
+  isAvailable: () => getGoogleStatus().connected,
   labels: {
     epostalari_ozetle: 'E-postalara bakma',
     eposta_ara: 'E-posta arama',

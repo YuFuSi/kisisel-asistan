@@ -5,4 +5,9 @@ import type { ToolSet } from 'ai'
 export interface ToolModule {
   tools: ToolSet
   labels: Record<string, string>
+  /**
+   * Verilirse ve false dönerse modülün araçları modele hiç verilmez (ör. Google hesabı bağlı değilken).
+   * Çalışamayacak araçları gizlemek küçük modellerin yanlış araç seçmesini azaltır.
+   */
+  isAvailable?: () => boolean
 }

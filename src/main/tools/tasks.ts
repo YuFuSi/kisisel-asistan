@@ -13,7 +13,8 @@ const taskTools: ToolModule = {
   },
   tools: {
     gorev_ekle: tool({
-      description: 'Kullanıcının yapılacaklar listesine yeni bir görev ekler.',
+      description:
+        'Kullanıcının yapılacaklar listesine yeni bir görev ekler. "Listeme ekle", "görev ekle", "yapılacaklara yaz" gibi isteklerde bunu kullan; takvim etkinliği değildir.',
       inputSchema: z.object({
         baslik: z.string().describe('Görevin kısa başlığı, ör. "Market alışverişi"'),
         sonTarih: z

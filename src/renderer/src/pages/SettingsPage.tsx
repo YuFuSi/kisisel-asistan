@@ -14,15 +14,17 @@ import GoogleSettings from '../components/settings/GoogleSettings'
 import SpeechSettings from '../components/settings/SpeechSettings'
 import SecretField from '../components/settings/SecretField'
 import BriefSettings from '../components/settings/BriefSettings'
+import AssistantSettings from '../components/settings/AssistantSettings'
 import Skeleton from '../components/ui/Skeleton'
 import { errorMessage } from '../lib/errors'
 import { sectionTitleClass, tabClass } from '../lib/styles'
 import { useToast } from '../lib/toast'
 
-type Tab = 'model' | 'ses' | 'servisler' | 'google' | 'uygulama'
+type Tab = 'model' | 'asistan' | 'ses' | 'servisler' | 'google' | 'uygulama'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'model', label: 'Model' },
+  { id: 'asistan', label: 'Asistan' },
   { id: 'ses', label: 'Ses' },
   { id: 'servisler', label: 'Servisler' },
   { id: 'google', label: 'Google' },
@@ -148,6 +150,12 @@ function SettingsPage(): React.JSX.Element {
               <ConnectionTest key={`${provider}:${settings.models[provider]}`} />
             </Section>
           </>
+        )}
+
+        {tab === 'asistan' && (
+          <Section title="Kişiselleştirme ve model ayarları">
+            <AssistantSettings settings={settings} onUpdate={update} />
+          </Section>
         )}
 
         {tab === 'ses' && (

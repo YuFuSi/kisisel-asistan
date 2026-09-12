@@ -31,7 +31,11 @@ const modules: ToolModule[] = [
   briefTools
 ]
 
-export const assistantTools: ToolSet = Object.assign({}, ...modules.map((m) => m.tools))
+/** Şu an kullanılabilen araçlar; her cevapta yeniden hesaplanır (ör. Google sonradan bağlanabilir) */
+export function getAssistantTools(): ToolSet {
+  const available = modules.filter((m) => m.isAvailable?.() ?? true)
+  return Object.assign({}, ...available.map((m) => m.tools))
+}
 
 export function toolLabel(name: string): string {
   for (const module of modules) {

@@ -13,6 +13,7 @@ interface TavilyResponse {
 }
 
 const searchTools: ToolModule = {
+  isAvailable: () => getSecret('tavily') !== undefined,
   labels: { web_ara: 'İnternette arama' },
   tools: {
     web_ara: tool({

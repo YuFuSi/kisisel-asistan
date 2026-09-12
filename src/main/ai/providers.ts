@@ -36,6 +36,20 @@ export function getModel(): LanguageModel {
   }
 }
 
+type ModelCallOptions = Pick<Parameters<typeof generateText>[0], 'temperature' | 'providerOptions'>
+
+/** Ayarlardaki yaratıcılık ve (Ollama için) bağlam uzunluğu; model çağrılarına eklenir */
+export function getModelOptions(): ModelCallOptions {
+  const { provider, temperature, contextLength } = getSettings()
+  return {
+    temperature: temperature ?? undefined,
+    providerOptions:
+      provider === 'ollama' && contextLength
+        ? { ollama: { options: { num_ctx: contextLength } } }
+        : undefined
+  }
+}
+
 export async function listOllamaModels(): Promise<string[]> {
   const { ollamaBaseUrl } = getSettings()
   let response: Response

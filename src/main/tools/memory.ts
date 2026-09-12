@@ -1,17 +1,19 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import { createMemory } from '../data/memories'
+import { createMemory, deleteMemory, listMemories } from '../data/memories'
 import { notifyDataChanged } from '../events'
 import type { ToolModule } from './types'
 
 const memoryTools: ToolModule = {
   labels: {
-    hafizaya_kaydet: 'Hafızaya kaydetme'
+    hafizaya_kaydet: 'Hafızaya kaydetme',
+    hafizayi_listele: 'Hafızaya bakma',
+    hafizadan_sil: 'Hafızadan silme'
   },
   tools: {
     hafizaya_kaydet: tool({
       description:
-        'Kullanıcı hakkında kalıcı olarak hatırlanması gereken kısa bir bilgiyi kaydeder: tercihler, alışkanlıklar, önemli kişiler veya tarihler. Kaydedilen bilgiler sonraki tüm sohbetlerde sana verilir.',
+        'Kullanıcı hakkında kalıcı olarak hatırlanması gereken kısa bir bilgiyi kaydeder: tercihler, alışkanlıklar, önemli kişiler veya tarihler. Kaydedilen bilgiler sonraki tüm sohbetlerde sana verilir. Çok benzer bir bilgi zaten varsa yenisiyle güncellenir.',
       inputSchema: z.object({
         bilgi: z
           .string()
@@ -19,10 +21,40 @@ const memoryTools: ToolModule = {
             'Kullanıcı hakkında kısa bilgi, üçüncü şahıs ağzıyla, ör. "Kahvesini şekersiz içer"'
           )
       }),
-      execute: async ({ bilgi }) => {
-        const memory = createMemory(bilgi)
+      execute: async (input) => {
+        const before = listMemories().length
+        const memory = createMemory(input.bilgi)
         notifyDataChanged('memories')
-        return { kaydedildi: true, bilgi: memory.content }
+        return {
+          kaydedildi: true,
+          bilgi: memory.content,
+          // Sayı artmadıysa benzer kayıt güncellenmiştir
+          mevcutKayitGuncellendi: listMemories().length === before
+        }
+      }
+    }),
+
+    hafizayi_listele: tool({
+      description:
+        'Kullanıcı hakkında hafızada kayıtlı bilgileri numaralarıyla listeler. Silmeden önce doğru kaydı bulmak için kullan.',
+      inputSchema: z.object({}),
+      execute: async () => ({
+        kayitlar: listMemories().map((memory) => ({ id: memory.id, bilgi: memory.content }))
+      })
+    }),
+
+    hafizadan_sil: tool({
+      description:
+        'Kullanıcı "bunu unut", "artık doğru değil" derse ilgili hafıza kaydını siler. id numarasını bilmiyorsan önce hafizayi_listele kullan.',
+      inputSchema: z.object({
+        id: z.number().int().describe('Silinecek hafıza kaydının numarası')
+      }),
+      execute: async (input) => {
+        const memory = listMemories().find((m) => m.id === input.id)
+        if (!memory) throw new Error(`${input.id} numaralı hafıza kaydı yok.`)
+        deleteMemory(input.id)
+        notifyDataChanged('memories')
+        return { silindi: true, bilgi: memory.content }
       }
     })
   }

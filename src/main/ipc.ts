@@ -19,7 +19,7 @@ import { conversationToMarkdown, suggestFileName } from './lib/markdownExport'
 import { readDocumentPart } from './lib/documents'
 import { showDailyBrief } from './scheduler/brief'
 import { allowDocument } from './tools/documents'
-import { createMemory, deleteMemory, listMemories } from './data/memories'
+import { createMemory, deleteMemory, listMemories, updateMemory } from './data/memories'
 import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import {
   createReminder,
@@ -197,6 +197,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('memories:list', () => listMemories())
   ipcMain.handle('memories:create', (_event, content: string) =>
     changing('memories', () => createMemory(content))
+  )
+  ipcMain.handle('memories:update', (_event, id: number, content: string) =>
+    changing('memories', () => updateMemory(id, content))
   )
   ipcMain.handle('memories:remove', (_event, id: number) =>
     changing('memories', () => deleteMemory(id))
