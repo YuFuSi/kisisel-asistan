@@ -5,9 +5,9 @@
 
 ## Nerede kaldık
 
-- **Son güncelleme:** 2026-09-12
+- **Son güncelleme:** 2026-09-13
 - **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A, B, C, D ve F** bitti. **v1.0.0-beta** kurulum dosyası çıktı ve kullanıcının bilgisayarına kuruldu (`git tag v1.0.0-beta`).
-- **Sıradaki adım:** Tur E (güvenilirlik): hata günlüğü dosyası, veritabanı güvenliği (WAL aktarma, düzgün kapanış) ve otomatik yedek. Veritabanı olayı yüzünden öncelikli. Sonra Google hesabı yeniden bağlanınca Gmail/Takvim testi.
+- **Sıradaki adım:** Kullanıcı 2026-09-13'te **Tur E'yi atlamaya** karar verdi; v1.0.0-beta kurulum dosyası (`dist/kisisel-asistan-1.0.0-beta-setup.exe`, commit b882b0d ile güncel) teslim edildi. Yeni istek gelene kadar bekleniyor. Tur E (hata günlüğü, WAL aktarma, otomatik yedek) ileride yapılmak üzere listede duruyor; veritabanı olayı yüzünden hâlâ önerilir. Google yeniden bağlanınca Gmail/Takvim testi.
 - **Kullanıcının yapması gerekenler:** Ayarlar > Google'a istemci kimliği ve gizli anahtarı yeniden girip "Bağla" (eski kayıtlar çözülemiyor), Ayarlar > Servisler'e Tavily anahtarını yeniden girmek. Google Cloud'da Gmail API ve Google Calendar API etkin olmalı.
 - **Yeni sürüm çıkarma:** `package.json` sürümünü artır → uygulamayı kapat → `out` ve `dist` sil → `npm run build:win` (sırada başka iş yok) → kurulum dosyasını dene. Kurulu uygulama aynı veri klasörünü kullanır.
 - Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim (Tur C'deki yanıtlama, arşivleme, etkinlik güncelleme/silme dahil), Groq anahtarı girilince mikrofonla yazma.
@@ -121,7 +121,7 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - **Uçtan uca doğrulandı:** "Listeme TEST süt al ekle" → `gorev_ekle` (Google araçları gizlenince doğru araç), ardından "az önce eklediğin görevin numarası" → listeye bakmadan doğru numara (1). 52 mesajlık sohbette cevaptan sonra özet oluştu (14 eski mesaj, "turkuaz" bilgisi dahil), sonra "en sevdiğim renk neydi?" → "turkuazdı" (bilgi son 40 mesajın dışındaydı). Hafıza birleştirme/düzenleme/silme ve ayar doğrulamaları IPC ile denendi.
   - **Test ipucu:** `location.reload()` sonrası `cdp.mjs key Enter` gönderimi tetiklemedi (metin kutuda kaldı); mesajı "Gönder" düğmesine tıklayarak göndermek güvenilir.
   - **Çözülemeyen gizli anahtar:** `getSecret` artık `safeStorage.decryptString` hatasında çökmez, anahtarı yok sayar (`getSecretStatus` de sadece çözülebilenleri kayıtlı sayar). Kullanıcının Google yenileme anahtarı 2026-09-13'te bu hatayı verdi; hesabı yeniden bağlaması gerekiyor.
-- [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri.
+- [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri. **Kullanıcı kararıyla atlandı (2026-09-13)**, ileride yapılabilir.
 - [x] **Tur F (eski Aşama 7): Paketleme — v1.0.0-beta.** Kullanıcı Tur E'den önce kuruluma geçmek istedi (Tur E hâlâ yapılacak).
   - Sürüm `package.json` → `1.0.0-beta`; kurulum dosyası `dist/kisisel-asistan-1.0.0-beta-setup.exe` (`npm run build:win`).
   - **Veri klasörü sabitlendi:** `src/main/index.ts` en başta `app.setPath('userData', %APPDATA%\kisisel-asistan)`. Neden: `electron-builder.yml`'deki `productName: Kişisel Asistan` yüzünden kurulu uygulama `%APPDATA%\Kişisel Asistan` klasörünü kullanacaktı; geliştirme ve kurulu uygulama farklı veritabanı ve farklı şifreleme anahtarı (Local State) görürdü. Tek kopya kilidi de bu klasöre bağlı.
