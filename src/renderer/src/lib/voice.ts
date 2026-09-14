@@ -1,5 +1,8 @@
-// Cevapları sesli okuma. Windows'un kendi sesleri kullanılır; internet veya anahtar gerekmez.
-import { setSpeaking } from './assistantState'
+// Sesli okuma yardımcıları. Seslendirmeyi ana süreç yönetir (Piper veya Windows sesi);
+// arayüz sesi voiceClient.ts içinde sırayla çalar.
+import { plainForSpeech } from '../../../shared/speechText'
+
+export { plainForSpeech }
 
 export interface VoiceOption {
   uri: string
@@ -32,47 +35,11 @@ export function pickVoice(
   return voices.find((voice) => isTurkish(voice.lang)) ?? voices[0]
 }
 
-/** Markdown işaretleri sesli okumada "yıldız yıldız" gibi duyulmasın */
-export function plainForSpeech(markdown: string): string {
-  return markdown
-    .replace(/```[\s\S]*?```/g, ' kod bloğu ')
-    .replace(/`([^`]*)`/g, '$1')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
-    .replace(/^\s{0,3}[-*+]\s+/gm, '')
-    .replace(/(\*\*|__|\*|_|~~)/g, '')
-    .replace(/\|/g, ' ')
-    .replace(/\n{2,}/g, '. ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-const MAX_SPEECH_LENGTH = 3000
-
-export function speakText(text: string, preferredUri: string): void {
-  const synth = window.speechSynthesis
-  if (!synth) return
-  const content = plainForSpeech(text).slice(0, MAX_SPEECH_LENGTH)
-  if (!content) return
-
-  synth.cancel()
-  const utterance = new SpeechSynthesisUtterance(content)
-  const voice = pickVoice(synth.getVoices(), preferredUri)
-  if (voice) {
-    utterance.voice = voice
-    utterance.lang = voice.lang
-  } else {
-    utterance.lang = 'tr-TR'
-  }
-  // Jarvis küresi konuşurken "konuşuyor" durumuna geçsin
-  utterance.onstart = () => setSpeaking(true)
-  utterance.onend = () => setSpeaking(false)
-  utterance.onerror = () => setSpeaking(false)
-  synth.speak(utterance)
+/** Metni Ayarlar'da seçili sesle okur (Jarvis sesi veya Windows sesi) */
+export function speakText(text: string): void {
+  if (text.trim()) void window.api.voice.speak(text)
 }
 
 export function stopSpeaking(): void {
-  window.speechSynthesis?.cancel()
-  setSpeaking(false)
+  void window.api.voice.stopSpeaking()
 }

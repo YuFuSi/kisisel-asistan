@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { STATE_LABELS, type AssistantState } from '../../lib/assistantState'
-import { getInputLevel } from '../../lib/recorder'
+import { getAudioLevel } from '../../lib/audioLevel'
 
 interface OrbProps {
   state: AssistantState
@@ -90,7 +90,13 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       phase += dt * motion.speed
 
       const t = reduced ? 0 : phase
-      const level = stateRef.current === 'listening' ? getInputLevel() : 0
+      // Dinlerken mikrofonun, konuşurken Jarvis'in sesinin seviyesi
+      const level =
+        stateRef.current === 'listening'
+          ? getAudioLevel('input')
+          : stateRef.current === 'speaking'
+            ? getAudioLevel('output') * 0.6
+            : 0
       const light = motion.intensity
       const cx = width / 2
       const cy = height / 2

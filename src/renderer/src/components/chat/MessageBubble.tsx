@@ -14,8 +14,6 @@ interface MessageBubbleProps {
   content: string
   tools?: ToolActivity[]
   pending?: boolean
-  /** Sesli okuma için seçili Windows sesi */
-  voiceUri?: string
   /** Verilirse asistan cevabının altında "yeniden üret" düğmesi çıkar */
   onRegenerate?: () => void
   /** Verilirse kullanıcı mesajı düzenlenebilir */
@@ -74,7 +72,6 @@ function MessageBubble({
   content,
   tools = [],
   pending = false,
-  voiceUri = '',
   onRegenerate,
   onEdit
 }: MessageBubbleProps): React.JSX.Element {
@@ -212,7 +209,7 @@ function MessageBubble({
               )}
             </button>
             <button
-              onClick={() => speakText(content, voiceUri)}
+              onClick={() => speakText(content)}
               aria-label="Cevabı sesli oku"
               title="Sesli oku"
               className={actionButtonClass}

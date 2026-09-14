@@ -13,6 +13,7 @@ import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
 import { applyOpenAtLogin, wasStartedHidden } from './system/startup'
 import { createTray, destroyTray } from './system/tray'
+import { disposeVoiceSession, initVoiceSession } from './voice/session'
 import {
   createMainWindow,
   getMainWindow,
@@ -95,6 +96,8 @@ if (!app.requestSingleInstanceLock()) {
     stopReminderScheduler = startReminderScheduler()
     stopBriefScheduler = startBriefScheduler()
     stopMaintenance = startMaintenance()
+    // "Hey Jarvis" açıksa modeller yüklenir ve arayüz mikrofonu dinlemeye başlar
+    initVoiceSession()
   })
 
   // Çöken süreçler günlüğe yazılsın (normal kapanışlar hariç)
@@ -124,6 +127,8 @@ if (!app.requestSingleInstanceLock()) {
     stopReminderScheduler?.()
     stopBriefScheduler?.()
     stopMaintenance?.()
+    // Arka plandaki whisper ve Piper programları da kapansın
+    disposeVoiceSession()
     closeDb()
   })
 }

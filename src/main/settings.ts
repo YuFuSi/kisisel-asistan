@@ -38,7 +38,14 @@ const defaults: AppSettings = {
   aboutMe: '',
   tone: 'dengeli',
   temperature: null,
-  contextLength: null
+  contextLength: null,
+  ttsEngine: 'windows',
+  wakeWordEnabled: false,
+  wakeWordThreshold: 0.5,
+  voiceBargeIn: false,
+  // Test edildi (2026-09-14): length_scale 0,75-0,80 arası gerçek hızı ~1,24x yapıyor, doğallık bozulmuyor
+  speechRate: 1.3,
+  speechVolume: 1
 }
 
 function readValue(key: string): string | undefined {
@@ -86,7 +93,11 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.openAtLogin === 'boolean') next.openAtLogin = patch.openAtLogin
   if (typeof patch.globalShortcut === 'string') next.globalShortcut = patch.globalShortcut.trim()
   if (patch.googleAccount !== undefined) next.googleAccount = patch.googleAccount
-  if (patch.sttProvider === 'groq' || patch.sttProvider === 'openai') {
+  if (
+    patch.sttProvider === 'local' ||
+    patch.sttProvider === 'groq' ||
+    patch.sttProvider === 'openai'
+  ) {
     next.sttProvider = patch.sttProvider
   }
   if (typeof patch.speakReplies === 'boolean') next.speakReplies = patch.speakReplies
@@ -123,6 +134,30 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
       throw new Error('Geçersiz bağlam uzunluğu.')
     }
     next.contextLength = value
+  }
+  if (patch.ttsEngine === 'windows' || patch.ttsEngine === 'piper') next.ttsEngine = patch.ttsEngine
+  if (typeof patch.wakeWordEnabled === 'boolean') next.wakeWordEnabled = patch.wakeWordEnabled
+  if (typeof patch.voiceBargeIn === 'boolean') next.voiceBargeIn = patch.voiceBargeIn
+  if (patch.wakeWordThreshold !== undefined) {
+    const value = patch.wakeWordThreshold
+    if (!(Number.isFinite(value) && value >= 0.2 && value <= 0.9)) {
+      throw new Error('Uyandırma hassasiyeti 0,2 ile 0,9 arasında olmalı.')
+    }
+    next.wakeWordThreshold = Math.round(value * 100) / 100
+  }
+  if (patch.speechRate !== undefined) {
+    const value = patch.speechRate
+    if (!(Number.isFinite(value) && value >= 0.8 && value <= 1.6)) {
+      throw new Error('Konuşma hızı 0,8 ile 1,6 arasında olmalı.')
+    }
+    next.speechRate = Math.round(value * 100) / 100
+  }
+  if (patch.speechVolume !== undefined) {
+    const value = patch.speechVolume
+    if (!(Number.isFinite(value) && value >= 0 && value <= 1)) {
+      throw new Error('Ses seviyesi 0 ile 1 arasında olmalı.')
+    }
+    next.speechVolume = Math.round(value * 100) / 100
   }
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))

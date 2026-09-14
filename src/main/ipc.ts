@@ -4,6 +4,16 @@ import { listBackups } from './db/backup'
 import { backupDirectory, createBackupNow, restoreBackup } from './system/database'
 import { logRendererError, openLogDirectory } from './system/logger'
 import { getSystemStatus } from './system/status'
+import { getVoicePackStatus, installVoicePack } from './voice/packManager'
+import {
+  getVoiceState,
+  pushVoiceAudio,
+  speakWithVoice,
+  startVoiceTurn,
+  stopVoiceSession,
+  stopVoiceSpeaking,
+  voicePlaybackEnded
+} from './voice/session'
 import { fetchCalendarEvents, toCalendarItem } from './google/calendar'
 import { promises as fs } from 'node:fs'
 import { editAndResend, regenerateReply, sendMessage, stopChat } from './ai/chat'
@@ -93,6 +103,17 @@ export function registerIpcHandlers(): void {
 
   // Ana Sayfa ve Takvim
   ipcMain.handle('system:status', () => getSystemStatus())
+
+  // Jarvis sesi. Mikrofon sesi ve "çalma bitti" haberi sık geldiği için cevap beklenmez (on)
+  ipcMain.handle('voice:packStatus', () => getVoicePackStatus())
+  ipcMain.handle('voice:installPack', () => installVoicePack())
+  ipcMain.handle('voice:state', () => getVoiceState())
+  ipcMain.on('voice:pushAudio', (_event, chunk: unknown) => pushVoiceAudio(chunk))
+  ipcMain.handle('voice:startTurn', () => startVoiceTurn())
+  ipcMain.handle('voice:stopSession', () => stopVoiceSession())
+  ipcMain.handle('voice:speak', (_event, text: string) => speakWithVoice(String(text)))
+  ipcMain.handle('voice:stopSpeaking', () => stopVoiceSpeaking())
+  ipcMain.on('voice:playbackEnded', (_event, id: number) => voicePlaybackEnded(Number(id)))
   ipcMain.handle(
     'calendar:events',
     async (_event, from: string, to: string): Promise<CalendarItem[]> => {
