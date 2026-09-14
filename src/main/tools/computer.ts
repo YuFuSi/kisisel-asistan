@@ -23,6 +23,8 @@ function userFolders(): string[] {
 }
 
 const computerTools: ToolModule = {
+  risks: { url_ac: 'write', uygulama_ac: 'dangerous', dosya_bul: 'read', dosya_ac: 'dangerous' },
+  selfApproval: ['uygulama_ac', 'dosya_ac'],
   labels: {
     url_ac: 'Adres açma',
     uygulama_ac: 'Uygulama açma',

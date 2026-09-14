@@ -7,6 +7,7 @@ import type { ToolModule } from './types'
 const MAX_READ_LENGTH = 8000
 
 const clipboardTools: ToolModule = {
+  risks: { pano_oku: 'read', pano_yaz: 'write' },
   labels: {
     pano_oku: 'Panoyu okuma',
     pano_yaz: 'Panoya yazma'

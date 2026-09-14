@@ -80,6 +80,25 @@ const migrations: string[] = [
   // 6: Uzun sohbet özetinin hangi mesaja kadar olan kısmı kapsadığı
   `
   ALTER TABLE conversations ADD COLUMN summary_until INTEGER NOT NULL DEFAULT 0;
+  `,
+  // 7: Etkinlik kaydı (araç çağrıları; "Son işlemler" ve analizlerin kaynağı).
+  // Sohbet silinse de kayıt kalsın diye conversation_id yabancı anahtar değil.
+  `
+  CREATE TABLE activity_log (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at      INTEGER NOT NULL,
+    source          TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    label           TEXT NOT NULL,
+    summary         TEXT NOT NULL DEFAULT '',
+    detail          TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL,
+    approval        TEXT,
+    conversation_id INTEGER
+  );
+
+  CREATE INDEX idx_activity_created ON activity_log(created_at);
   `
 ]
 
@@ -87,9 +106,15 @@ let db: Database.Database | null = null
 
 export function openDatabase(path: string): Database.Database {
   const database = new Database(path)
-  database.pragma('journal_mode = WAL')
-  database.pragma('foreign_keys = ON')
-  migrate(database)
+  try {
+    database.pragma('journal_mode = WAL')
+    database.pragma('foreign_keys = ON')
+    migrate(database)
+  } catch (err) {
+    // Bozuk dosyada bağlantı açık kalırsa Windows dosyayı kilitler ve yedekten geri yükleme yapılamaz
+    database.close()
+    throw err
+  }
   return database
 }
 
@@ -106,7 +131,7 @@ function migrate(database: Database.Database): void {
 // Uygulama açılırken bir kez çağrılır. Testlerde ':memory:' ile geçici veritabanı açılır.
 // (Bu dosya electron'u import etmez; böylece veri katmanı testlerde de çalışır.)
 export function initDatabase(path: string): void {
-  db?.close()
+  closeDb()
   db = openDatabase(path)
 }
 
@@ -115,7 +140,32 @@ export function getDb(): Database.Database {
   return db
 }
 
+export function isDbOpen(): boolean {
+  return db !== null
+}
+
+/**
+ * WAL dosyasında bekleyen değişiklikleri ana veritabanı dosyasına yazar ve WAL'i sıfırlar.
+ * Uygulama düzgün kapanamasa bile (süreç öldürülürse, elektrik giderse) veri ana dosyada kalsın diye
+ * düzenli aralıklarla çağrılır.
+ */
+export function checkpointDb(): void {
+  db?.pragma('wal_checkpoint(TRUNCATE)')
+}
+
+/** Veritabanı sağlamsa 'ok', değilse bulunan sorunlar */
+export function checkIntegrity(): string {
+  const rows = getDb().pragma('integrity_check') as { integrity_check: string }[]
+  return rows.map((row) => row.integrity_check).join('\n')
+}
+
 export function closeDb(): void {
-  db?.close()
+  if (!db) return
+  try {
+    checkpointDb()
+  } catch {
+    // Aktarma başarısız olsa da bağlantı kapatılır; SQLite kapanışta WAL'i yine aktarmayı dener
+  }
+  db.close()
   db = null
 }

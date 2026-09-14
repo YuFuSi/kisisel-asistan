@@ -1,0 +1,35 @@
+# Her PR'da ve main dalına her gönderimde kodu kontrol eder:
+# tip kontrolü, kod stili, birim testleri ve derleme.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  kontrol:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # postinstall adımı better-sqlite3'ü Electron için hazırlar
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      - name: Tip kontrolü
+        run: npm run typecheck
+
+      - name: Kod stili
+        run: npm run lint
+
+      - name: Birim testleri
+        run: npm run test
+
+      - name: Derleme
+        run: npx electron-vite build

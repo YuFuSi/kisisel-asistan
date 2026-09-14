@@ -4,6 +4,7 @@ import { collectDailyBrief } from '../ai/brief'
 import type { ToolModule } from './types'
 
 const briefTools: ToolModule = {
+  risks: { gunluk_ozet: 'read' },
   labels: { gunluk_ozet: 'Günlük özet' },
   tools: {
     gunluk_ozet: tool({

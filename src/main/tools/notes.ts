@@ -7,6 +7,7 @@ import type { ToolModule } from './types'
 const MAX_CONTENT = 800
 
 const noteTools: ToolModule = {
+  risks: { not_kaydet: 'write', notlarda_ara: 'read' },
   labels: {
     not_kaydet: 'Not kaydetme',
     notlarda_ara: 'Notlarda arama'

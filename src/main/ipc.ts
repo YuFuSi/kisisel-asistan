@@ -1,4 +1,8 @@
-import { app, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { listActivity } from './data/activity'
+import { listBackups } from './db/backup'
+import { backupDirectory, createBackupNow, restoreBackup } from './system/database'
+import { logRendererError, openLogDirectory } from './system/logger'
 import { promises as fs } from 'node:fs'
 import { editAndResend, regenerateReply, sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
@@ -72,6 +76,17 @@ export function registerIpcHandlers(): void {
   // Uygulama
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('brief:preview', () => showDailyBrief())
+  // Cevap beklenmez; arayüzdeki hata sadece günlüğe yazılır
+  ipcMain.on('app:logError', (_event, message: string) => logRendererError(message))
+  ipcMain.handle('app:openLogs', () => openLogDirectory())
+
+  // Yedekler ve etkinlik kaydı
+  ipcMain.handle('backups:list', () => listBackups(backupDirectory()))
+  ipcMain.handle('backups:create', () => createBackupNow())
+  ipcMain.handle('backups:restore', (event, name: string) =>
+    restoreBackup(BrowserWindow.fromWebContents(event.sender), name)
+  )
+  ipcMain.handle('activity:list', (_event, limit?: number) => listActivity(limit))
 
   // Belgeler: kullanıcının sohbete bıraktığı dosya
   ipcMain.handle(

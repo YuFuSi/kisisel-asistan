@@ -161,6 +161,8 @@ export interface SettingsView extends AppSettings {
   loginItemSupported: boolean
   /** Global kısayol şu an gerçekten kayıtlı mı (başka uygulama almış olabilir) */
   shortcutActive: boolean
+  /** Kaydı olan ama bu bilgisayarda çözülemeyen anahtarlar; kullanıcı yeniden girmeli */
+  unreadableSecrets: SecretId[]
 }
 
 export interface ConnectionResult {
@@ -232,7 +234,8 @@ export type ChatEvent =
 
 // ---- Görevler, hatırlatmalar, notlar, hafıza ----
 
-export type DataScope = 'tasks' | 'reminders' | 'notes' | 'memories' | 'settings' | 'conversations'
+export type DataScope =
+  'tasks' | 'reminders' | 'notes' | 'memories' | 'settings' | 'conversations' | 'activity'
 
 export interface Task {
   id: number
@@ -296,6 +299,52 @@ export interface Memory {
   createdAt: string
 }
 
+// ---- Güvenilirlik: araç izinleri, etkinlik kaydı, yedekler ----
+
+/**
+ * Aracın risk seviyesi.
+ * read: sadece bilgi okur. write: uygulama içindeki veriyi değiştirir (görev, not...).
+ * dangerous: dışarıya etki eder veya geri alınması zordur (e-posta gönderme, uygulama/dosya açma).
+ */
+export type ToolRisk = 'read' | 'write' | 'dangerous'
+
+/** Aracı başlatan: sohbet, rutin (otomasyon), sesli komut veya uzaktan (ör. telefon) */
+export type ToolSource = 'chat' | 'automation' | 'voice' | 'remote'
+
+export type ActivityStatus = 'done' | 'error' | 'denied' | 'timeout'
+
+/** Onay durumu: kullanıcı onayladı veya rutin izniyle onaysız çalıştı; onay gerekmediyse null */
+export type ActivityApproval = 'approved' | 'auto' | null
+
+// "Son işlemler" listesindeki bir kayıt
+export interface ActivityEntry {
+  id: number
+  /** Epoch milisaniye */
+  createdAt: number
+  source: ToolSource
+  kind: 'tool'
+  /** Araç adı, ör. gorev_ekle */
+  name: string
+  /** Türkçe etiket, ör. "Görev ekleme" */
+  label: string
+  /** Kısa açıklama, ör. görevin başlığı */
+  summary: string
+  /** Sonuç veya hata metni (kısaltılmış) */
+  detail: string
+  status: ActivityStatus
+  approval: ActivityApproval
+  conversationId: number | null
+}
+
+export interface BackupInfo {
+  /** Yedek dosyasının adı, ör. asistan-2026-09-14.db */
+  name: string
+  /** Epoch milisaniye */
+  createdAt: number
+  /** Bayt */
+  size: number
+}
+
 // ---- Google hesabı ----
 
 export interface GoogleStatus {
@@ -325,6 +374,25 @@ export interface Api {
   app: {
     /** package.json'daki sürüm (arayüzün altında gösterilir) */
     version(): Promise<string>
+    /** Arayüzde yakalanan hatayı günlük dosyasına yazar */
+    logError(message: string): void
+    /** Günlük dosyalarının klasörünü Dosya Gezgini'nde açar */
+    openLogs(): Promise<void>
+  }
+  backups: {
+    /** Yedekler, en yenisi başta */
+    list(): Promise<BackupInfo[]>
+    /** Hemen yedek alır (bugünün yedeği varsa üzerine yazar) */
+    create(): Promise<BackupInfo>
+    /**
+     * Onay penceresi gösterir; onaylanırsa mevcut veriyi ayrıca yedekleyip seçilen yedeği yükler ve
+     * uygulamayı yeniden başlatır. Vazgeçilirse false döner.
+     */
+    restore(name: string): Promise<boolean>
+  }
+  activity: {
+    /** Son işlemler, en yenisi başta */
+    list(limit?: number): Promise<ActivityEntry[]>
   }
   documents: {
     /** Sürükle-bırak ile gelen dosyanın diskteki yolu (Electron'da File.path artık yok) */

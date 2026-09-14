@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { getToolContext } from './context'
+import { needsApproval } from './permissions'
 import type { ChatEvent, ToolApproval } from '../../shared/api'
 
 // Kullanıcı bu süre içinde cevap vermezse işlem yapılmaz
@@ -17,10 +18,24 @@ const pending = new Map<string, PendingApproval>()
 /**
  * Riskli araçlar bunu çağırır: arayüze onay kartı gönderir ve cevabı bekler.
  * Kullanıcı reddederse veya süre dolarsa hata fırlatır; böylece araç işini yapmadan durur.
+ * İzin kuralları onay gerektirmiyorsa (ör. kullanıcının tam izin verdiği rutin) kart gösterilmez.
  */
 export async function requireApproval(request: Omit<ToolApproval, 'id'>): Promise<void> {
   const context = getToolContext()
   if (!context) throw new Error('Onay istenemedi: sohbet bağlamı bulunamadı.')
+
+  const call = context.call
+  const required = needsApproval({
+    // Sarmalayıcı dışından çağrılırsa en sıkı kural uygulanır
+    risk: call?.risk ?? 'dangerous',
+    source: context.source,
+    allowance: context.allowance,
+    external: context.external
+  })
+  if (!required) {
+    if (call) call.approval = 'auto'
+    return
+  }
 
   const approval: ToolApproval = { ...request, id: randomUUID() }
   const send = (event: ChatEvent): void => {
@@ -38,6 +53,7 @@ export async function requireApproval(request: Omit<ToolApproval, 'id'>): Promis
     send({ conversationId: context.conversationId, type: 'approval', approval })
   })
 
+  if (call) call.approval = outcome
   send({
     conversationId: context.conversationId,
     type: 'approval-resolved',

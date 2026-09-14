@@ -35,6 +35,7 @@ function CloudSettings({
         id={provider}
         label="API anahtarı"
         saved={settings.hasSecret[provider]}
+        unreadable={settings.unreadableSecrets.includes(provider)}
         helpUrl={info.apiKeyUrl}
         onSaved={onSettings}
       />

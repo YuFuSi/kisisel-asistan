@@ -15,7 +15,17 @@ const api: Api = {
     listModels: () => ipcRenderer.invoke('ollama:listModels')
   },
   app: {
-    version: () => ipcRenderer.invoke('app:version')
+    version: () => ipcRenderer.invoke('app:version'),
+    logError: (message) => ipcRenderer.send('app:logError', message),
+    openLogs: () => ipcRenderer.invoke('app:openLogs')
+  },
+  backups: {
+    list: () => ipcRenderer.invoke('backups:list'),
+    create: () => ipcRenderer.invoke('backups:create'),
+    restore: (name) => ipcRenderer.invoke('backups:restore', name)
+  },
+  activity: {
+    list: (limit) => ipcRenderer.invoke('activity:list', limit)
   },
   documents: {
     pathForFile: (file) => webUtils.getPathForFile(file),

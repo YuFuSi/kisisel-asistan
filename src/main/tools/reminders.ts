@@ -17,6 +17,7 @@ function firstString(input: Record<string, unknown>, keys: string[]): string | u
 }
 
 const reminderTools: ToolModule = {
+  risks: { hatirlatma_kur: 'write', hatirlatmalari_listele: 'read', hatirlatma_iptal: 'write' },
   labels: {
     hatirlatma_kur: 'Hatırlatma kurma',
     hatirlatmalari_listele: 'Hatırlatma listesi',

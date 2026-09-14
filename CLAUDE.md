@@ -5,9 +5,11 @@
 
 ## Nerede kaldık
 
-- **Son güncelleme:** 2026-09-13
-- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A, B, C, D ve F** bitti. **v1.0.0-beta** kurulum dosyası çıktı ve kullanıcının bilgisayarına kuruldu (`git tag v1.0.0-beta`).
-- **Sıradaki adım:** Kullanıcı 2026-09-13'te **Tur E'yi atlamaya** karar verdi; v1.0.0-beta kurulum dosyası (`dist/kisisel-asistan-1.0.0-beta-setup.exe`, commit b882b0d ile güncel) teslim edildi. Yeni istek gelene kadar bekleniyor. Tur E (hata günlüğü, WAL aktarma, otomatik yedek) ileride yapılmak üzere listede duruyor; veritabanı olayı yüzünden hâlâ önerilir. Google yeniden bağlanınca Gmail/Takvim testi.
+- **Son güncelleme:** 2026-09-14
+- **Tamamlanan:** Aşama 0-4 ve 6. Aşama 5'in kodu hazır (hesap bağlanınca test edilecek). Bölüm 2'de **Tur A, B, C, D ve F** bitti. **v1.0.0-beta** kurulum dosyası çıktı ve kullanıcının bilgisayarına kuruldu (`git tag v1.0.0-beta`). **Bölüm 3 (Jarvis)** başladı: **Tur G (sağlam temel)** `tur-g/saglam-temel` dalında yapıldı, PR olarak açıldı.
+- **GitHub:** gizli depo `YuFuSi/kisisel-asistan`. `gh` CLI kurulu (`C:\Program Files\GitHub CLI\gh.exe`, PATH'e yeni oturumda girer) ve hesaba bağlı. Her tur ayrı dalda yapılır ve PR açılır. PR #1 (README yenileme) birleştirilmeyi bekliyor. CI: `.github/workflows/ci.yml` (Windows koşucusu; typecheck, lint, test, build).
+- **Sıradaki adım:** Tur G PR'ı birleşince **Tur H (Jarvis arayüzü)**. Plan: `C:\Users\ysfll\.claude\plans\imdi-bu-uygulama-i-in-hazy-boot.md`. Tur H başında sorulacaklar: görünen ad "Jarvis" olsun mu; otomatik güncelleme için ayrı açık `releases` deposu mu, elle kurulum mu (gizli depodan `electron-updater` anahtarsız güncelleme alamaz).
+- **Ollama modeli bozuk (2026-09-14):** Ollama 0.34.0'a güncellenmiş; `ollama list` `qwen3:14b`'yi gösteriyor ama model dosyası (blob `sha256-a8cc1361...`) diskte yok. Sohbet "Bad Request" veriyor, doğrudan istek `"qwen3:14b" does not support chat` diyor. Çözüm `ollama pull qwen3:14b` (9,3 GB); indirme kullanıcı onayıyla yapılır. Bu yüzden Tur G'de araç kaydı sohbetle değil `tools/guard.test.ts` ile doğrulandı.
 - **Kullanıcının yapması gerekenler:** Ayarlar > Google'a istemci kimliği ve gizli anahtarı yeniden girip "Bağla" (eski kayıtlar çözülemiyor), Ayarlar > Servisler'e Tavily anahtarını yeniden girmek. Google Cloud'da Gmail API ve Google Calendar API etkin olmalı.
 - **Yeni sürüm çıkarma:** `package.json` sürümünü artır → uygulamayı kapat → `out` ve `dist` sil → `npm run build:win` (sırada başka iş yok) → kurulum dosyasını dene. Kurulu uygulama aynı veri klasörünü kullanır.
 - Bekleyen iki test: Google hesabı bağlanınca Gmail/Takvim (Tur C'deki yanıtlama, arşivleme, etkinlik güncelleme/silme dahil), Groq anahtarı girilince mikrofonla yazma.
@@ -16,7 +18,7 @@
   - Tur C sonunda (22:33) sohbetler, görevler, notlar ve hafıza boştu ama sayaçlar yüksekti (satırlar silinmiş). O sırada `asistan.db` 4 KB, `-wal` 3,1 MB idi; yani veri hiç ana dosyaya aktarılmamış, tamamı WAL'deydi. Geliştirme sunucusu her seferinde süreç ağacı öldürülerek kapatıldığı için `closeDb` hiç çalışmamış olabilir.
   - 23:11'de geliştirme sunucusu açılınca bambaşka bir geçmiş göründü: sayaçlar 1-3, 19:59'da açılmış bir "Merhaba sohbeti", `googleAccount` dolu, gizli anahtarlar yeniden kayıtlı. Önceki 22:33 okumasında bu kayıtlar yoktu. Kesin neden bulunamadı.
   - Bu yeni kayıttaki Google istemci bilgileri, yenileme anahtarı ve Tavily anahtarı çözülemiyor (`safeStorage.decryptString` hatası). Aynı uygulamada yeni yazılan geçici bir değer yazılıp okunabildi; yani şifreleme çalışıyor, eski anahtarlar farklı bir şifreleme kimliğiyle yazılmış. Kullanıcı Google istemci bilgilerini, Tavily anahtarını yeniden girmeli ve Google'ı yeniden bağlamalı.
-  - **Yapılacak (Tur E):** WAL'i düzenli aktarmak (`PRAGMA wal_checkpoint`), kapanışta temiz kapatma, otomatik yedek. Test sırasında süreç öldürmeden önce uygulamayı düzgün kapatmayı araştır.
+  - **Tur G'de yapıldı:** 5 dakikada bir, uykuya geçerken, Windows kapanırken ve `closeDb`'de WAL aktarma; açılışta bütünlük kontrolü; günlük otomatik yedek; çözülemeyen anahtarların Ayarlar'da kırmızı uyarısı. 2026-09-14 açılışında `asistan.db` 86 KB, `-wal` 647 KB idi (12 Eylül'den beri aktarılmamış); Tur G öncesi kopyası oturumun geçici klasörüne alındı.
 - **npm audit:** Electron'un bağımlılığı `extract-zip` için 2 yüksek uyarı var; düzeltmesi Electron 44'e geçmek (büyük sürüm). Tur F'de değerlendirilecek.
 - **Uygulamanın durumu:**
   - Ayarlar: sağlayıcı Ollama, model `qwen3:14b`. Kapatınca tepside kalma açık, kısayol `Ctrl+Shift+Space`, Windows ile başlama kapalı.
@@ -121,7 +123,7 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - **Uçtan uca doğrulandı:** "Listeme TEST süt al ekle" → `gorev_ekle` (Google araçları gizlenince doğru araç), ardından "az önce eklediğin görevin numarası" → listeye bakmadan doğru numara (1). 52 mesajlık sohbette cevaptan sonra özet oluştu (14 eski mesaj, "turkuaz" bilgisi dahil), sonra "en sevdiğim renk neydi?" → "turkuazdı" (bilgi son 40 mesajın dışındaydı). Hafıza birleştirme/düzenleme/silme ve ayar doğrulamaları IPC ile denendi.
   - **Test ipucu:** `location.reload()` sonrası `cdp.mjs key Enter` gönderimi tetiklemedi (metin kutuda kaldı); mesajı "Gönder" düğmesine tıklayarak göndermek güvenilir.
   - **Çözülemeyen gizli anahtar:** `getSecret` artık `safeStorage.decryptString` hatasında çökmez, anahtarı yok sayar (`getSecretStatus` de sadece çözülebilenleri kayıtlı sayar). Kullanıcının Google yenileme anahtarı 2026-09-13'te bu hatayı verdi; hesabı yeniden bağlaması gerekiyor.
-- [ ] **Tur E: Güvenilirlik.** Hata günlüğü dosyası, yedekleme, arayüz testleri. **Kullanıcı kararıyla atlandı (2026-09-13)**, ileride yapılabilir.
+- [x] **Tur E: Güvenilirlik.** Kullanıcı kararıyla 2026-09-13'te atlandı; kapsamı Bölüm 3'teki **Tur G**'ye taşındı ve orada yapıldı (arayüz testleri hariç).
 - [x] **Tur F (eski Aşama 7): Paketleme — v1.0.0-beta.** Kullanıcı Tur E'den önce kuruluma geçmek istedi (Tur E hâlâ yapılacak).
   - Sürüm `package.json` → `1.0.0-beta`; kurulum dosyası `dist/kisisel-asistan-1.0.0-beta-setup.exe` (`npm run build:win`).
   - **Veri klasörü sabitlendi:** `src/main/index.ts` en başta `app.setPath('userData', %APPDATA%\kisisel-asistan)`. Neden: `electron-builder.yml`'deki `productName: Kişisel Asistan` yüzünden kurulu uygulama `%APPDATA%\Kişisel Asistan` klasörünü kullanacaktı; geliştirme ve kurulu uygulama farklı veritabanı ve farklı şifreleme anahtarı (Local State) görürdü. Tek kopya kilidi de bu klasöre bağlı.
@@ -132,6 +134,32 @@ Ayrıntılı plan: plan dosyasının "Bölüm 2" kısmı (`.claude/plans` klasö
   - Paketlemede `better-sqlite3` prebuild'leri `app.asar.unpacked` altına açılıyor; `scripts/`, `CLAUDE.md` pakete girmiyor.
   - **İmzasız:** Kod imzalama sertifikası yok; Windows SmartScreen ilk açılışta "Tanınmayan uygulama" uyarısı gösterebilir ("Ek bilgi → Yine de çalıştır").
   - **Kaldırma:** Ayarlar > Uygulamalar > Kişisel Asistan veya `Uninstall kisisel-asistan.exe`. Veriler `%APPDATA%\kisisel-asistan` içinde kalır.
+
+### Bölüm 3: Jarvis
+
+Kullanıcı görseldeki gibi bir "Jarvis" istiyor: parlayan küreli ana ekran, eller serbest ses, otomasyonlar, bilgisayarı yönetme. Kararlar: dört alanın hepsi; **seviyeli izin** (okuma serbest, değişiklik onaylı, rutinlerde onay kaldırılabilir, her işlem kayıtlı); **yerel model + gerekince bulut**. Plan dosyası: `C:\Users\ysfll\.claude\plans\imdi-bu-uygulama-i-in-hazy-boot.md`.
+
+- [x] **Tur G: Sağlam temel.** Dal `tur-g/saglam-temel`.
+  - **Veritabanı** (`db/index.ts`): `checkpointDb` (`wal_checkpoint(TRUNCATE)`), `checkIntegrity`, `isDbOpen`. `closeDb` önce aktarır. `openDatabase` hata verirse bağlantıyı kapatır (yoksa Windows bozuk dosyayı kilitliyor ve geri yükleme yapılamıyor). `initDatabase` önce `closeDb` çağırır.
+  - **Açılış** (`system/database.ts` → `openDatabaseSafely`): bütünlük bozuksa veya dosya açılamıyorsa yerel pencereyle son yedeği geri yüklemeyi önerir. Bozuk dosya `asistan-bozuk-<zaman>.db` olarak saklanır. Kullanılamıyorsa uygulama kapanır.
+  - **Yedek** (`db/backup.ts`, electron'suz ve test edilebilir): `db.backup()` önce `.part` dosyasına yazar, sonra ad değiştirilir. Adlar `asistan-YYYY-MM-DD.db` ve `geri-yukleme-oncesi-YYYY-MM-DD-HHmmss.db`. Saklama: son 7 günlük + kapsanmayan 4 hafta (haftanın en yenisi) + son 3 güvenlik yedeği (`selectExpiredBackups`). Klasör `%APPDATA%\kisisel-asistan\backups`.
+  - **Bakım** (`scheduler/maintenance.ts`): 5 dakikada bir WAL aktarma, açılıştan 1 dakika sonra ve saatte bir "bugünün yedeği yoksa al", açılışta 180 günden eski etkinlik kayıtlarını silme. `index.ts` ayrıca `session-end` ve `powerMonitor` `suspend` olayında aktarır; `SIGINT`/`SIGTERM` gelirse düzgün kapanır.
+  - **Geri yükleme** (`restoreBackup`): sadece yedek klasöründeki listelenen adlar kabul edilir. Onay penceresi ana süreçte gösterilir (varsayılan düğme "Vazgeç"). Mevcut veri önce güvenlik yedeğine alınır, dosya değiştirilir, `app.relaunch()` + `app.exit(0)`. Dosya değişemezse mevcut veritabanı yeniden açılır.
+  - **Günlük** (`system/logger.ts`, `electron-log` 5): `%APPDATA%\kisisel-asistan\logs\main.log` (2 MB'da `main.old.log`). `Object.assign(console, log.functions)` ile tüm `console.*` dosyaya gider; yakalanmayan hatalar `errorHandler.startCatching`. Arayüz hataları `window` `error`/`unhandledrejection` → `app:logError` (`ipcRenderer.send`). Çöken süreçler `render-process-gone`/`child-process-gone` ile yazılır. Dosya UTF-8; PowerShell 5.1'de `Get-Content -Encoding UTF8` ile okunur.
+  - **Araç izinleri** (`tools/permissions.ts` → `needsApproval`): `ToolRisk` = `read | write | dangerous`, `ToolSource` = `chat | automation | voice | remote`, rutin izni `RoutineAllowance` = `none | write | all`. read hiç onay istemez; write sohbet/seste serbest, rutin ve uzaktan çalışmada izin `none` ise onaylı; dangerous her zaman onaylı, tek istisna `automation` + `all` ve `external` değilse. **Dışarıdan gelen içerik (e-posta, web) tam izni kullanamaz.**
+  - **Araç sarmalayıcısı** (`tools/index.ts` → `guardTool`): `getAssistantTools()` her aracı sarar. Bağlam yoksa (testler) araç olduğu gibi çalışır. write/dangerous araç `selfApproval` listesinde değilse ve izin gerektiriyorsa genel onay kartı gösterilir ("Görev ekleme yapılsın mı?"). Her çağrı `activity_log`'a yazılır (`done/error/denied/timeout`, onay `approved/auto/null`). `ToolContext` artık `source`, `allowance`, `external`, `call` taşır; `requireApproval` onay sonucunu `call.approval`'a yazar ve izin gerekmiyorsa kart göstermeden `auto` der.
+  - **Etkinlik kaydı** (migration 7, `data/activity.ts`, `activity.ts` → `recordActivity`): `activity_log` (created_at epoch ms, source, kind, name, label, summary ≤200, detail ≤1000, status, approval, conversation_id yabancı anahtar değil). `recordActivity` veritabanı kapalıysa sessizce çıkar, sonra `notifyDataChanged('activity')`. Özet `lib/activityText.ts` → `describeToolInput` (girdideki metin/sayı alanları, 120 karakter).
+  - **Gizli anahtarlar:** `settings.ts` → `readSecret` (`missing/ok/unreadable`), `getUnreadableSecrets`. Çözülemedi uyarısı her anahtar için bir kez yazılır, anahtar yeniden girilince sıfırlanır. `SettingsView.unreadableSecrets`; `SecretField` `unreadable` alırsa kırmızı "yeniden gir" yazar; Google yenileme anahtarı çözülemiyorsa Google sekmesinde uyarı çıkar.
+  - **Arayüz:** Ayarlar > Uygulama'da "Yedekler ve günlükler" (`settings/BackupSettings.tsx`: şimdi yedekle, günlük klasörünü aç, liste ve geri yükle) ve "Son işlemler" (`activity/ActivityList.tsx`, `useLiveData(..., 'activity')`, son 10 kayıt; Tur H'de Ana Sayfa'da da kullanılacak).
+  - **IPC:** `app:logError` (on), `app:openLogs`, `backups:list/create/restore`, `activity:list`.
+  - **Doğrulandı:** 24 test dosyası, 142 test (yeni: `db/backup.test.ts` bozuk dosyayı yedekle değiştirme dahil, `data/activity.test.ts`, `tools/permissions.test.ts`, `tools/guard.test.ts` gerçek `gorev_ekle` ile onaysız/rutinde ret/izinli rutin/hata kaydı, `tools/modules.test.ts` her aracın etiketi ve riski tanımlı, `lib/activityText.test.ts`). Uygulamada (CDP): günlük dosyası oluştu, 4 çözülemeyen anahtar tespit edildi ve birer kez yazıldı, `backups.create` 56 KB yedek üretti, Ayarlar ekranı görüntüsü alındı, geri yükleme penceresinde Vazgeç `false` döndü, 5 dakikalık aktarmada WAL küçüldü. **Yapılmadı:** gerçek geri yükleme ve açılışta bozuk veritabanı penceresi (geliştirme modunda `app.relaunch` dev sunucusunu bozar; kurulum paketinde denenmeli), sohbet üzerinden araç kaydı (Ollama modeli bozuk).
+- [ ] **Tur H: Jarvis arayüzü.** Mavi tema (`@theme`), küre (`components/jarvis/Orb.tsx`, `assistant:state` olayı), Ana Sayfa (komut kutusu, hızlı erişim, son işlemler, sistem durumu), yeni yan menü (Ana Sayfa, Asistan, Görevler, Takvim, Otomasyonlar, Analizler, Başarımlar, Hafıza Merkezi, Ayarlar), Takvim sayfası, başlık çubuğunda saat/pil/internet.
+- [ ] **Tur I: Jarvis sesi.** "hey jarvis" uyandırma (openWakeWord + onnxruntime-web), Silero VAD, yerel whisper.cpp, Piper Türkçe ses, sözünü kesme, HUD penceresi, sesli onay.
+- [ ] **Tur J: Otomasyon motoru.** `automations` / `automation_runs`, tetikleyici → koşul → eylem, hazır rutinler, sohbetten rutin kurma, kuru çalıştırma, model yönlendirici (`ai/router.ts`). Tur G'deki `source: 'automation'`, `allowance`, `external` burada kullanılacak.
+- [ ] **Tur K: Hafıza Merkezi 2.0 ve proaktif Jarvis.** `bge-m3` + `sqlite-vec` anlamsal arama, kişisel bilgi tabanı, proaktif gözlemler.
+- [ ] **Tur L: Bilgisayarı yönetme.** Ekranı görme, pencere/sistem kontrolü, geri dönüşüm kutusuna dosya işleri, ayrı profilli tarayıcı otomasyonu, deneysel fare/klavye ajanı, uzun görev kuyruğu.
+- [ ] **Tur M: Her yerde Jarvis.** MCP istemcisi, Telegram botu, Home Assistant, Spotify, toplantı yardımcısı.
+- [ ] **Tur N: Analizler ve Başarımlar.** `activity_log` üzerinden istatistikler, rozetler, haftalık rapor.
 
 - [ ] **Aşama 7: Paketleme.** `npm run build:win` ile .exe kurulum dosyası.
   - Aşama 3'te `npm run build:unpack` ile paketli uygulama denendi. Uygulama açılıyor; "Windows ile başlat" kaydı ekleniyor ve siliniyor.
@@ -191,19 +219,25 @@ src/
 │  │  ├─ tray.ts            Tepsi simgesi ve menüsü
 │  │  ├─ shortcut.ts        Global kısayol kaydı, değiştirme, askıya alma
 │  │  ├─ startup.ts         Windows ile başlama (--hidden)
-│  │  └─ appSettings.ts     applySettingsPatch (ayarı kaydet ve uygula), getSettingsView
+│  │  ├─ appSettings.ts     applySettingsPatch (ayarı kaydet ve uygula), getSettingsView
+│  │  ├─ database.ts        Güvenli açılış (bütünlük + yedekten geri yükleme), günlük yedek, geri yükleme
+│  │  └─ logger.ts          electron-log: günlük dosyası, arayüz hataları, günlük klasörünü açma
+│  ├─ activity.ts           recordActivity: etkinlik kaydına yaz ve sayfalara haber ver
 │  ├─ ipc.ts                Tüm ipcMain.handle kayıtları
 │  ├─ events.ts             notifyDataChanged: "veri değişti" olayını pencerelere gönderir
 │  ├─ settings.ts           Ayarlar ve şifreli API anahtarları (safeStorage)
-│  ├─ db/index.ts           SQLite bağlantısı (initDatabase/getDb) ve migration listesi
+│  ├─ db/index.ts           SQLite bağlantısı (initDatabase/getDb), migration listesi, WAL aktarma, bütünlük
+│  ├─ db/backup.ts          Yedek alma, saklama kuralı, dosyayı yedekle değiştirme (+ testi)
+│  ├─ scheduler/maintenance.ts  Bakım: 5 dk WAL aktarma, günlük yedek, eski etkinlik kaydı silme
 │  ├─ data/                 Veritabanı işlemleri. electron import ETMEZ, bu yüzden test edilebilir.
-│  │  ├─ conversations.ts, tasks.ts, reminders.ts, notes.ts, memories.ts
+│  │  ├─ conversations.ts, tasks.ts, reminders.ts, notes.ts, memories.ts, activity.ts
 │  │  └─ data.test.ts
 │  ├─ tools/                AI araçları (her yetenek bir modül)
 │  │  ├─ types.ts           ToolModule = { tools, labels }
 │  │  ├─ index.ts           Modül listesi, assistantTools, toolLabel
 │  │  ├─ context.ts         Aracın hangi sohbette çalıştığını taşıyan bağlam (AsyncLocalStorage)
 │  │  ├─ approval.ts        requireApproval: onay kartı gönderir ve cevabı bekler (+ testi)
+│  │  ├─ permissions.ts     needsApproval: risk + kaynak + rutin izni → onay gerekir mi (+ testi)
 │  │  └─ tasks.ts, reminders.ts, notes.ts, memory.ts, weather.ts, websearch.ts, system.ts, computer.ts
 │  ├─ scheduler/reminders.ts  Zamanı gelen hatırlatmaları Windows bildirimi olarak gösterir
 │  ├─ scheduler/brief.ts   Sabah özeti bildirimi (her dakika kontrol, günde bir kez)
@@ -245,13 +279,16 @@ vitest.config.ts            Test ayarları
   1. `src/main/tools/<ad>.ts` dosyasında `ToolModule` yaz: `tools` içinde `tool({ description, inputSchema: z.object(...), execute })`, `labels` içinde arayüz etiketi.
   2. `src/main/tools/index.ts` içindeki `modules` listesine ekle.
   3. Veri gerekiyorsa `src/main/data/<ad>.ts` ekle, `db/index.ts` migration listesine yeni eleman koy, gerekiyorsa `DataScope`'a yeni değer ekle. Veriyi değiştiren araç `notifyDataChanged(scope)` çağırır.
-  4. Araç açıklamaları ve alan açıklamaları Türkçe ve net olmalı. Küçük yerel modeller boş bırakılması gereken isteğe bağlı alanları doldurmaya meyilli, bu yüzden "SADECE kullanıcı söylediyse doldur" gibi yazılır.
+  4. Modülde **her araç için `risks`** (`read`/`write`/`dangerous`) yazılır; eksikse `tools/modules.test.ts` başarısız olur ve sarmalayıcı aracı güvenlik için `dangerous` sayar. Kendi ayrıntılı onay kartını gösteren araç `selfApproval` listesine eklenir; listede olmayan write/dangerous araçlara gerektiğinde genel onay kartı sarmalayıcıda gösterilir. Etkinlik kaydı sarmalayıcıda otomatik yapılır, araç içinde ayrıca yazılmaz.
+  5. Araç açıklamaları ve alan açıklamaları Türkçe ve net olmalı. Küçük yerel modeller boş bırakılması gereken isteğe bağlı alanları doldurmaya meyilli, bu yüzden "SADECE kullanıcı söylediyse doldur" gibi yazılır.
 - **Riskli araç eklerken:** aracın `execute` fonksiyonunda işi yapmadan önce `await requireApproval({ toolName, label, summary, details })` çağrılır. Onay verilmezse fonksiyon hata fırlatır ve iş yapılmaz.
 - **Komut çalıştırma:** rastgele shell komutu çalıştırılmaz. Gerekirse sabit komut + sabit argümanlar kullanılır (`execFile`), modelden gelen metin doğrudan komuta girmez.
 - **Veri değişim olayı:** IPC'deki değiştirici işlemler `changing(scope, ...)` ile sarılır. Sayfalar veriyi `useLiveData(load, scope)` ile alır ve kendiliğinden yenilenir.
 - **`data/` klasörü** `electron` import etmez. Electron'a bağlı işler `events.ts`, `scheduler/`, `settings.ts`, `ai/` içinde durur.
 - **Renderer**, Node/Electron'a doğrudan erişmez, sadece `window.api` kullanır. Ham `ipcRenderer` açılmaz.
-- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 6.
+- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 7.
+- **Veri güvenliği:** veritabanı dosyasına doğrudan dokunan kod (`db/backup.ts`) sadece veritabanı kapalıyken dosya değiştirir. Yeni zamanlayıcı veya uzun iş, çıkışta `will-quit` içinde durdurulur; `closeDb` en sonda çağrılır.
+- **Hata ayıklama:** `console.*` günlük dosyasına da gider; kullanıcıya gösterilmeyen ama sonradan lazım olacak hatalar `console.error` ile yazılır.
 - **Zaman:** Hatırlatma zamanı epoch ms (INTEGER), görev son tarihi yerel `YYYY-MM-DD`. Modele ve modelden gelen zamanlar yerel `YYYY-MM-DDTHH:mm` biçimindedir (`lib/datetime.ts`).
 - **API anahtarları** sadece main süreçte, `safeStorage` ile şifreli tutulur. Renderer'a sadece `hasApiKey` gider.
 - **Dış linkler:** sadece `http(s)` adresler `shell.openExternal` ile açılır. `will-navigate` engellenir.
@@ -316,6 +353,9 @@ vitest.config.ts            Test ayarları
    - **Tek kopya:** uygulama açıkken `node_modules\electron\dist\electron.exe .` başlatılır. İkinci kopya hemen kapanmalı, mevcut pencere öne gelmeli.
    - **Tepsi simgesi ve menüsü** otomatik test edilemiyor, gözle kontrol gerekir.
    - **Uzun komut tuzağı:** Çok uzun bash komutları (büyük heredoc'lar) kesilip "unexpected EOF" hatası veriyor. Büyük dosyaları Write aracıyla yaz; Write "file modified" derse dosyayı silip yeniden oluştur.
+   - **Büyük harf tuzağı:** Ayarlar'daki bölüm başlıkları CSS `uppercase` kullanıyor; `innerText` "SON İŞLEMLER" döner. Metin beklerken başlık yerine içerikteki bir cümle veya `textContent` kullanılır.
+   - **Yerel onay penceresi (dialog.showMessageBox):** CDP'den işlemi beklemeden başlat (`window.__x = api...()`), sonra `AppActivate('<pencere başlığı>')` + `SendKeys('{ESC}')` ile Vazgeç; ardından `await window.__x`.
+   - **Sohbet "Bad Request" verirse** önce Ollama'nın kendisini dene: `curl http://localhost:11434/api/chat ...` ve `%LOCALAPPDATA%\Ollama\server.log`. 2026-09-14'te sebep eksik model dosyasıydı (kod değil).
    - PowerShell komutunda JavaScript metni (`'/'` gibi) ile `Remove-Item` bir arada olursa güvenlik denetimi komutu "sistem yolu siliniyor" diye engelliyor. Silme işlemi ayrı ve sade bir komutla yapılır.
 4. Aşama tamamlanınca commit atılır. Commit mesajı Türkçe olur ve `Co-Authored-By` satırı eklenir.
 

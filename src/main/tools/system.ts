@@ -7,6 +7,7 @@ const gb = (bytes: number): number => Math.round((bytes / 1024 ** 3) * 10) / 10
 const percent = (value: number): string => `%${Math.round(value)}`
 
 const systemTools: ToolModule = {
+  risks: { sistem_bilgisi: 'read' },
   labels: { sistem_bilgisi: 'Sistem bilgisi' },
   tools: {
     sistem_bilgisi: tool({

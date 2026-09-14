@@ -46,6 +46,13 @@ const formatEventTime = (time?: EventTime): string => {
 }
 
 const calendarTools: ToolModule = {
+  risks: {
+    takvim_listele: 'read',
+    etkinlik_ekle: 'dangerous',
+    etkinlik_guncelle: 'dangerous',
+    etkinlik_sil: 'dangerous'
+  },
+  selfApproval: ['etkinlik_ekle', 'etkinlik_guncelle', 'etkinlik_sil'],
   isAvailable: () => getGoogleStatus().connected,
   labels: {
     takvim_listele: 'Takvime bakma',
