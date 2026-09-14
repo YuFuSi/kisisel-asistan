@@ -63,7 +63,55 @@ export const SECRET_IDS: SecretId[] = [
 // ---- Ses ----
 
 /** Konuşmayı yazıya çeviren servis */
-export type SpeechProvider = 'groq' | 'openai'
+export type SpeechProvider = 'local' | 'groq' | 'openai'
+
+/** Cevapları seslendiren motor */
+export type TtsEngine = 'windows' | 'piper'
+
+/** Yerel ses paketinin parçaları */
+export type VoicePackComponent = 'wakeword' | 'piper' | 'piperVoice' | 'whisper' | 'whisperModel'
+
+export interface VoicePackItemStatus {
+  id: VoicePackComponent
+  label: string
+  sizeMb: number
+  installed: boolean
+}
+
+export interface VoicePackStatus {
+  items: VoicePackItemStatus[]
+  /** Bütün parçalar kurulu mu */
+  installed: boolean
+  /** Şu an indirilen parça */
+  installing: VoicePackComponent | null
+  /** İndirilen parçanın ilerlemesi (bayt) */
+  received: number
+  total: number
+  error: string | null
+}
+
+/**
+ * Sesli sohbetin aşaması.
+ * off: dinlenmiyor, wake: "hey jarvis" bekleniyor, capturing: kullanıcı dinleniyor,
+ * transcribing: konuşma yazıya çevriliyor, responding: Jarvis cevap veriyor/konuşuyor.
+ */
+export type VoicePhase = 'off' | 'wake' | 'capturing' | 'transcribing' | 'responding'
+
+export interface VoiceState {
+  phase: VoicePhase
+  /** Sesli sohbet sürüyor mu (cevaptan sonra uyandırma kelimesi beklemeden yeniden dinlenir) */
+  sessionActive: boolean
+}
+
+export type VoiceEvent =
+  | { type: 'pack'; status: VoicePackStatus }
+  | { type: 'phase'; phase: VoicePhase; sessionActive: boolean }
+  | { type: 'wake' }
+  | { type: 'caption'; role: 'user' | 'assistant'; text: string; conversationId: number | null }
+  /** Çalınacak ses; audio null ise metin Windows sesiyle (voiceUri) okunur */
+  | { type: 'play'; id: number; audio: ArrayBuffer | null; text: string; voiceUri: string }
+  | { type: 'stop-playback' }
+  | { type: 'error'; message: string }
 
 /** Asistanın konuşma tonu */
 export type AssistantTone = 'dengeli' | 'samimi' | 'resmi' | 'kisa'
@@ -81,11 +129,16 @@ export const CONTEXT_LENGTHS = [4096, 8192, 16384, 32768]
 export interface SpeechProviderInfo {
   label: string
   description: string
-  secret: SecretId
-  apiKeyUrl: string
+  /** Bulut servisinin anahtarı; yerel serviste yok */
+  secret?: SecretId
+  apiKeyUrl?: string
 }
 
 export const SPEECH_PROVIDERS: Record<SpeechProvider, SpeechProviderInfo> = {
+  local: {
+    label: 'Bilgisayarında',
+    description: 'İnternetsiz ve ücretsiz (Jarvis ses paketi gerekir)'
+  },
   groq: {
     label: 'Groq',
     description: 'Ücretsiz kotası var ve hızlı',
@@ -131,6 +184,14 @@ export interface AppSettings {
   temperature: number | null
   /** Ollama bağlam uzunluğu (num_ctx); null ise Ollama varsayılanı */
   contextLength: number | null
+  /** Cevapları seslendiren motor: Windows sesi veya yerel Piper sesi */
+  ttsEngine: TtsEngine
+  /** "Hey Jarvis" deyince dinlemeye başla (mikrofon açık kalır, ses bilgisayardan çıkmaz) */
+  wakeWordEnabled: boolean
+  /** Uyandırma eşiği (0,2-0,9): düşük değer daha kolay uyanır ama yanlış uyanma artar */
+  wakeWordThreshold: number
+  /** Jarvis konuşurken kullanıcı konuşmaya başlarsa susup dinlesin (kulaklıkla önerilir) */
+  voiceBargeIn: boolean
 }
 
 export interface SettingsPatch {
@@ -151,6 +212,10 @@ export interface SettingsPatch {
   tone?: AssistantTone
   temperature?: number | null
   contextLength?: number | null
+  ttsEngine?: TtsEngine
+  wakeWordEnabled?: boolean
+  wakeWordThreshold?: number
+  voiceBargeIn?: boolean
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -504,6 +569,26 @@ export interface Api {
   speech: {
     /** Ses kaydını yazıya çevirir */
     transcribe(audio: ArrayBuffer, mimeType: string): Promise<string>
+  }
+  voice: {
+    packStatus(): Promise<VoicePackStatus>
+    /** Eksik parçaları indirir; ilerleme voice.onEvent ile 'pack' olayı olarak gelir */
+    installPack(): Promise<VoicePackStatus>
+    /** Sesli sohbetin şu anki aşaması (arayüz açılırken okunur, sonra olaylarla güncellenir) */
+    state(): Promise<VoiceState>
+    /** Mikrofondan 80 ms'lik ses (1280 örnek, 16 kHz, -1..1) */
+    pushAudio(chunk: Float32Array): void
+    /** Uyandırma kelimesi beklemeden dinlemeye başla (küreye tıklama) */
+    startTurn(): Promise<void>
+    /** Sesli sohbeti bitir */
+    stopSession(): Promise<void>
+    /** Metni seçili motorla seslendir (sohbetteki "sesli oku") */
+    speak(text: string): Promise<void>
+    /** Seslendirmeyi durdur */
+    stopSpeaking(): Promise<void>
+    /** Arayüz bir sesi çalmayı bitirdi (veya durdurdu) */
+    playbackEnded(id: number): void
+    onEvent(listener: (event: VoiceEvent) => void): () => void
   }
   google: {
     status(): Promise<GoogleStatus>

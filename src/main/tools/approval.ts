@@ -15,6 +15,21 @@ interface PendingApproval {
 
 const pending = new Map<string, PendingApproval>()
 
+type ApprovalListener = (conversationId: number, approval: ToolApproval) => void
+// Onay istendiğinde haber alanlar (ör. sesli sohbet onayı sesle sorar)
+const approvalListeners = new Set<ApprovalListener>()
+
+export function onApprovalRequested(listener: ApprovalListener): () => void {
+  approvalListeners.add(listener)
+  return () => {
+    approvalListeners.delete(listener)
+  }
+}
+
+export function isApprovalPending(approvalId: string): boolean {
+  return pending.has(approvalId)
+}
+
 /**
  * Riskli araçlar bunu çağırır: arayüze onay kartı gönderir ve cevabı bekler.
  * Kullanıcı reddederse veya süre dolarsa hata fırlatır; böylece araç işini yapmadan durur.
@@ -51,6 +66,7 @@ export async function requireApproval(request: Omit<ToolApproval, 'id'>): Promis
     }
     pending.set(approval.id, { conversationId: context.conversationId, settle: finish })
     send({ conversationId: context.conversationId, type: 'approval', approval })
+    approvalListeners.forEach((listener) => listener(context.conversationId, approval))
   })
 
   if (call) call.approval = outcome

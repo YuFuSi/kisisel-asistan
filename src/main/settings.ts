@@ -38,7 +38,11 @@ const defaults: AppSettings = {
   aboutMe: '',
   tone: 'dengeli',
   temperature: null,
-  contextLength: null
+  contextLength: null,
+  ttsEngine: 'windows',
+  wakeWordEnabled: false,
+  wakeWordThreshold: 0.5,
+  voiceBargeIn: false
 }
 
 function readValue(key: string): string | undefined {
@@ -86,7 +90,11 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.openAtLogin === 'boolean') next.openAtLogin = patch.openAtLogin
   if (typeof patch.globalShortcut === 'string') next.globalShortcut = patch.globalShortcut.trim()
   if (patch.googleAccount !== undefined) next.googleAccount = patch.googleAccount
-  if (patch.sttProvider === 'groq' || patch.sttProvider === 'openai') {
+  if (
+    patch.sttProvider === 'local' ||
+    patch.sttProvider === 'groq' ||
+    patch.sttProvider === 'openai'
+  ) {
     next.sttProvider = patch.sttProvider
   }
   if (typeof patch.speakReplies === 'boolean') next.speakReplies = patch.speakReplies
@@ -123,6 +131,16 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
       throw new Error('Geçersiz bağlam uzunluğu.')
     }
     next.contextLength = value
+  }
+  if (patch.ttsEngine === 'windows' || patch.ttsEngine === 'piper') next.ttsEngine = patch.ttsEngine
+  if (typeof patch.wakeWordEnabled === 'boolean') next.wakeWordEnabled = patch.wakeWordEnabled
+  if (typeof patch.voiceBargeIn === 'boolean') next.voiceBargeIn = patch.voiceBargeIn
+  if (patch.wakeWordThreshold !== undefined) {
+    const value = patch.wakeWordThreshold
+    if (!(Number.isFinite(value) && value >= 0.2 && value <= 0.9)) {
+      throw new Error('Uyandırma hassasiyeti 0,2 ile 0,9 arasında olmalı.')
+    }
+    next.wakeWordThreshold = Math.round(value * 100) / 100
   }
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))

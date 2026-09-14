@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { VoicePhase } from '@shared/api'
 
 /** Jarvis küresinin ve menüdeki durum göstergesinin gösterdiği durum */
 export type AssistantState = 'idle' | 'listening' | 'thinking' | 'working' | 'speaking'
@@ -16,12 +17,15 @@ const listeners = new Set<() => void>()
 const replies = new Map<number, Set<string>>()
 let listening = false
 let speaking = false
+// Sesli sohbetin aşaması ("hey jarvis" bekleme durumu küreyi değiştirmez)
+let voicePhase: VoicePhase = 'off'
 let current: AssistantState = 'idle'
 let chatSubscribed = false
 
 function compute(): AssistantState {
-  if (listening) return 'listening'
+  if (listening || voicePhase === 'capturing') return 'listening'
   if (speaking) return 'speaking'
+  if (voicePhase === 'transcribing') return 'thinking'
   for (const runningTools of replies.values()) {
     if (runningTools.size > 0) return 'working'
   }
@@ -68,6 +72,11 @@ export function noteReplyStarted(conversationId: number): void {
 
 export function setListening(value: boolean): void {
   listening = value
+  update()
+}
+
+export function setVoicePhase(value: VoicePhase): void {
+  voicePhase = value
   update()
 }
 

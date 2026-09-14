@@ -8,11 +8,15 @@ import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
 import SettingsPage from './pages/SettingsPage'
-import { requestNewChat } from './lib/chatRequests'
+import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
+import { initVoiceClient } from './lib/voiceClient'
 
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('home')
+
+  // Jarvis sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
+  useEffect(() => initVoiceClient(), [])
 
   // Global kısayol veya tepsi menüsünden gelince sohbet sayfasına geç ve yazı kutusuna odaklan
   useEffect(() => {
@@ -28,6 +32,11 @@ function App(): React.JSX.Element {
     requestNewChat(text)
   }
 
+  function openConversation(conversationId: number): void {
+    setPage('chat')
+    requestOpenConversation(conversationId)
+  }
+
   return (
     <div className="flex h-full flex-col bg-app">
       <TitleBar page={PAGE_LABELS[page]} />
@@ -37,7 +46,7 @@ function App(): React.JSX.Element {
         <main className="min-w-0 flex-1 bg-surface">
           {page === 'home' && (
             <div className="animate-fade h-full">
-              <HomePage onNavigate={setPage} onAsk={ask} />
+              <HomePage onNavigate={setPage} onAsk={ask} onOpenConversation={openConversation} />
             </div>
           )}
           {/* Sohbet sayfası hep açık kalır; cevap yazılırken sayfa değiştirilse de akış kaybolmaz */}
