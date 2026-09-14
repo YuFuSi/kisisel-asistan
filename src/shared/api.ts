@@ -108,8 +108,20 @@ export type VoiceEvent =
   | { type: 'phase'; phase: VoicePhase; sessionActive: boolean }
   | { type: 'wake' }
   | { type: 'caption'; role: 'user' | 'assistant'; text: string; conversationId: number | null }
-  /** Çalınacak ses; audio null ise metin Windows sesiyle (voiceUri) okunur */
-  | { type: 'play'; id: number; audio: ArrayBuffer | null; text: string; voiceUri: string }
+  /**
+   * Çalınacak ses; audio null ise metin Windows sesiyle (voiceUri) okunur.
+   * rate: Windows sesinde konuşma hızı çarpanı olarak uygulanır (Piper'da zaten üretim sırasında uygulandı).
+   * volume: her iki motorda da oynatma seviyesi (0-1).
+   */
+  | {
+      type: 'play'
+      id: number
+      audio: ArrayBuffer | null
+      text: string
+      voiceUri: string
+      rate: number
+      volume: number
+    }
   | { type: 'stop-playback' }
   | { type: 'error'; message: string }
 
@@ -192,6 +204,10 @@ export interface AppSettings {
   wakeWordThreshold: number
   /** Jarvis konuşurken kullanıcı konuşmaya başlarsa susup dinlesin (kulaklıkla önerilir) */
   voiceBargeIn: boolean
+  /** Konuşma hızı çarpanı (ör. 1,3 = %30 hızlı). Piper'da length_scale'e, Windows sesinde rate'e çevrilir */
+  speechRate: number
+  /** Ses seviyesi (0-1) */
+  speechVolume: number
 }
 
 export interface SettingsPatch {
@@ -216,6 +232,8 @@ export interface SettingsPatch {
   wakeWordEnabled?: boolean
   wakeWordThreshold?: number
   voiceBargeIn?: boolean
+  speechRate?: number
+  speechVolume?: number
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi

@@ -138,6 +138,8 @@ interface PlayItem {
   audio: ArrayBuffer | null
   text: string
   voiceUri: string
+  rate: number
+  volume: number
 }
 
 const playQueue: PlayItem[] = []
@@ -186,7 +188,10 @@ function playNext(): void {
         if (token !== playToken || playing?.id !== item.id) return
         const source = context.createBufferSource()
         source.buffer = buffer
-        source.connect(analyser)
+        // Hız Piper'da üretim sırasında ayarlandı (length_scale); burada sadece ses seviyesi uygulanır
+        const gain = context.createGain()
+        gain.gain.value = item.volume
+        source.connect(gain).connect(analyser)
         source.onended = finish
         playing = {
           id: item.id,
@@ -216,6 +221,8 @@ function playNext(): void {
     return
   }
   const utterance = new SpeechSynthesisUtterance(item.text)
+  utterance.rate = item.rate
+  utterance.volume = item.volume
   const voice = pickVoice(synth.getVoices(), item.voiceUri)
   if (voice) {
     utterance.voice = voice
@@ -306,7 +313,9 @@ function handleEvent(event: VoiceEvent): void {
         id: event.id,
         audio: event.audio,
         text: event.text,
-        voiceUri: event.voiceUri
+        voiceUri: event.voiceUri,
+        rate: event.rate,
+        volume: event.volume
       })
       playNext()
       break

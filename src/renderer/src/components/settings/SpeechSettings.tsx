@@ -49,6 +49,8 @@ function SpeechSettings({
   const [installing, setInstalling] = useState(false)
   // Kaydırıcı sürüklenirken her adımda ayar yazılmasın; bırakınca kaydedilir
   const [thresholdDraft, setThresholdDraft] = useState<number | null>(null)
+  const [rateDraft, setRateDraft] = useState<number | null>(null)
+  const [volumeDraft, setVolumeDraft] = useState<number | null>(null)
 
   const pack = voice.pack
   const installed = (id: VoicePackComponent): boolean =>
@@ -67,6 +69,10 @@ function SpeechSettings({
   const providerInfo = SPEECH_PROVIDERS[provider]
   const secret = providerInfo.secret
   const threshold = thresholdDraft ?? settings.wakeWordThreshold
+  // Ayarlar ana süreçte yeni eklendi; geliştirme sunucusu yeniden başlamadan eski bir kayıttan
+  // geliyorsa bu alanlar geçici olarak eksik olabilir. Varsayılana düşmek render'ı çökertmez.
+  const rate = rateDraft ?? settings.speechRate ?? 1.3
+  const volume = volumeDraft ?? settings.speechVolume ?? 1
 
   // Windows sesleri bazen gecikmeli geliyor, bu yüzden voiceschanged olayı da dinleniyor
   useEffect(() => {
@@ -97,6 +103,18 @@ function SpeechSettings({
     if (thresholdDraft === null) return
     void onUpdate({ wakeWordThreshold: thresholdDraft })
     setThresholdDraft(null)
+  }
+
+  function commitRate(): void {
+    if (rateDraft === null) return
+    void onUpdate({ speechRate: rateDraft })
+    setRateDraft(null)
+  }
+
+  function commitVolume(): void {
+    if (volumeDraft === null) return
+    void onUpdate({ speechVolume: volumeDraft })
+    setVolumeDraft(null)
   }
 
   return (
@@ -256,6 +274,39 @@ function SpeechSettings({
             </button>
           ))}
         </div>
+      </Field>
+
+      <Field
+        label={`Konuşma hızı: ${rate.toFixed(2).replace('.', ',')}x`}
+        hint="Jarvis sesi bu hızla üretilir, Windows sesi de aynı çarpanla okur."
+      >
+        <input
+          type="range"
+          min={0.8}
+          max={1.6}
+          step={0.05}
+          value={rate}
+          onChange={(e) => setRateDraft(Number(e.target.value))}
+          onPointerUp={commitRate}
+          onKeyUp={commitRate}
+          onBlur={commitRate}
+          className="w-full accent-accent"
+        />
+      </Field>
+
+      <Field label={`Ses seviyesi: %${Math.round(volume * 100)}`}>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={volume}
+          onChange={(e) => setVolumeDraft(Number(e.target.value))}
+          onPointerUp={commitVolume}
+          onKeyUp={commitVolume}
+          onBlur={commitVolume}
+          className="w-full accent-accent"
+        />
       </Field>
 
       <Toggle

@@ -126,12 +126,22 @@ function enqueueSpeech(text: string, caption = false): void {
       }
     }
     if (gen !== generation || !outstanding.has(id)) return
-    const estimatedMs = audio ? (audio.byteLength / (22050 * 2)) * 1000 : clean.length * 90
+    const estimatedMs = audio
+      ? (audio.byteLength / (22050 * 2)) * 1000
+      : (clean.length * 90) / settings.speechRate
     outstanding.set(
       id,
       setTimeout(() => voicePlaybackEnded(id), estimatedMs + PLAYBACK_GRACE_MS)
     )
-    emitVoiceEvent({ type: 'play', id, audio, text: clean, voiceUri: settings.voiceUri })
+    emitVoiceEvent({
+      type: 'play',
+      id,
+      audio,
+      text: clean,
+      voiceUri: settings.voiceUri,
+      rate: settings.speechRate,
+      volume: settings.speechVolume
+    })
   })
 }
 

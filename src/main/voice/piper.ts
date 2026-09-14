@@ -27,15 +27,34 @@ export class PiperVoice {
 
   constructor(
     private readonly exe: string,
-    private readonly model: string
+    private readonly model: string,
+    // Piper'ın üretim sırasında hızı ayarlayan parametresi: 1 = normal, düşük değer = daha hızlı.
+    // Ayarlar'daki "konuşma hızı" çarpanının tersidir (1 / hız); playbackRate ile sonradan hızlandırmaktan
+    // farklı olarak tona ve doğallığa dokunmaz çünkü modelin kendisi o hızda üretir.
+    private lengthScale = 1
   ) {}
+
+  /** Hız ayarı değiştiyse çalışan programı kapatır; bir sonraki cümle yeni hızla yeniden başlatır */
+  setLengthScale(value: number): void {
+    if (value === this.lengthScale) return
+    this.lengthScale = value
+    if (this.child) this.stop()
+  }
 
   private ensureProcess(): ChildProcessWithoutNullStreams {
     if (this.child) return this.child
-    const child = spawn(this.exe, ['--model', this.model, '--json-input', '--quiet'], {
-      cwd: dirname(this.exe),
-      windowsHide: true
-    })
+    const child = spawn(
+      this.exe,
+      [
+        '--model',
+        this.model,
+        '--length_scale',
+        String(this.lengthScale),
+        '--json-input',
+        '--quiet'
+      ],
+      { cwd: dirname(this.exe), windowsHide: true }
+    )
     let stderr = ''
     const fail = (message: string): void => {
       if (this.child === child) this.child = null

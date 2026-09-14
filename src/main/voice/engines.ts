@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 import vadModelPath from '../../../resources/voice/silero_vad.onnx?asset'
+import { getSettings } from '../settings'
 import { resolveVoicePaths, type VoicePaths } from './pack'
 import { PiperVoice } from './piper'
 import { SileroVad } from './vad'
@@ -43,13 +44,20 @@ export function getWhisper(): WhisperServer {
   return whisper
 }
 
+// Ayarlar'daki hız çarpanının Piper'ın length_scale'ine çevrilmesi (ters orantı: çarpan büyüdükçe süre kısalır)
+const lengthScaleFromRate = (rate: number): number => Math.round((1 / rate) * 1000) / 1000
+
 export function getPiper(): PiperVoice {
-  if (piper) return piper
+  const lengthScale = lengthScaleFromRate(getSettings().speechRate)
+  if (piper) {
+    piper.setLengthScale(lengthScale)
+    return piper
+  }
   const paths = getVoicePaths()
   if (!paths.piper || !paths.piperVoice) {
     throw new Error('Türkçe ses kurulu değil. Ayarlar > Ses bölümünden Jarvis ses paketini indir.')
   }
-  piper = new PiperVoice(paths.piper, paths.piperVoice)
+  piper = new PiperVoice(paths.piper, paths.piperVoice, lengthScale)
   return piper
 }
 
