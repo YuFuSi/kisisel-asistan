@@ -15,6 +15,8 @@ import SpeechSettings from '../components/settings/SpeechSettings'
 import SecretField from '../components/settings/SecretField'
 import BriefSettings from '../components/settings/BriefSettings'
 import AssistantSettings from '../components/settings/AssistantSettings'
+import BackupSettings from '../components/settings/BackupSettings'
+import ActivityList from '../components/activity/ActivityList'
 import Skeleton from '../components/ui/Skeleton'
 import { errorMessage } from '../lib/errors'
 import { sectionTitleClass, tabClass } from '../lib/styles'
@@ -170,6 +172,7 @@ function SettingsPage(): React.JSX.Element {
               id="tavily"
               label="Tavily API anahtarı"
               saved={settings.hasSecret.tavily}
+              unreadable={settings.unreadableSecrets.includes('tavily')}
               description="Asistanın internette arama yapabilmesi için gerekir. tavily.com ücretsiz anahtar veriyor."
               placeholder="Örn. tvly-..."
               helpUrl="https://app.tavily.com/home"
@@ -196,6 +199,12 @@ function SettingsPage(): React.JSX.Element {
             </Section>
             <Section title="Sabah özeti">
               <BriefSettings settings={settings} onUpdate={update} />
+            </Section>
+            <Section title="Yedekler ve günlükler">
+              <BackupSettings />
+            </Section>
+            <Section title="Son işlemler">
+              <ActivityList />
             </Section>
           </>
         )}

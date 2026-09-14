@@ -238,7 +238,7 @@ async function streamReply(
     const summary = all.length > HISTORY_LIMIT ? getConversationSummary(conversationId).summary : ''
 
     // Araçlar hangi sohbette çalıştıklarını bu bağlamdan öğrenir (onay kartı göndermek için gerekli)
-    await runWithToolContext({ conversationId, sender }, async () => {
+    await runWithToolContext({ conversationId, sender, source: 'chat' }, async () => {
       const result = streamText({
         model: getModel(),
         instructions: buildInstructions(query, summary),

@@ -71,6 +71,7 @@ function SpeechSettings({
         id={info.secret}
         label={`${info.label} API anahtarı`}
         saved={settings.hasSecret[info.secret]}
+        unreadable={settings.unreadableSecrets.includes(info.secret)}
         description={`Mikrofonla konuşabilmek için ${info.label} anahtarı gerekir.`}
         helpUrl={info.apiKeyUrl}
         onSaved={onSettings}

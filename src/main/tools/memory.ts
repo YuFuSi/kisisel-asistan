@@ -5,6 +5,7 @@ import { notifyDataChanged } from '../events'
 import type { ToolModule } from './types'
 
 const memoryTools: ToolModule = {
+  risks: { hafizaya_kaydet: 'write', hafizayi_listele: 'read', hafizadan_sil: 'write' },
   labels: {
     hafizaya_kaydet: 'Hafızaya kaydetme',
     hafizayi_listele: 'Hafızaya bakma',

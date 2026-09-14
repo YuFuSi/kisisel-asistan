@@ -6,6 +6,7 @@ import { parseLocalDate } from '../lib/datetime'
 import type { ToolModule } from './types'
 
 const taskTools: ToolModule = {
+  risks: { gorev_ekle: 'write', gorevleri_listele: 'read', gorev_tamamla: 'write' },
   labels: {
     gorev_ekle: 'Görev ekleme',
     gorevleri_listele: 'Görev listesi',

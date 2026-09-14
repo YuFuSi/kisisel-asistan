@@ -65,6 +65,12 @@ function GoogleSettings({
         Gmail ve Takvim kullanmak için önce Google Cloud&apos;da &quot;Masaüstü uygulaması&quot;
         türünde bir OAuth istemcisi oluştur, sonra bilgilerini buraya gir.
       </p>
+      {settings.unreadableSecrets.includes('google-refresh-token') && (
+        <p className="rounded-xl border border-caution/30 bg-caution/10 px-4 py-3 text-sm text-caution">
+          Daha önce bağlanan Google hesabının anahtarı bu bilgisayarda çözülemiyor. Bilgileri
+          kontrol edip hesabı yeniden bağla.
+        </p>
+      )}
       <a
         href="https://console.cloud.google.com/apis/credentials"
         target="_blank"
@@ -79,6 +85,7 @@ function GoogleSettings({
         id="google-client-id"
         label="İstemci kimliği (Client ID)"
         saved={settings.hasSecret['google-client-id']}
+        unreadable={settings.unreadableSecrets.includes('google-client-id')}
         description="Google Cloud'da oluşturduğun OAuth istemcisinin kimliği."
         placeholder="Örn. 1234567890-abc123.apps.googleusercontent.com"
         onSaved={onSettings}
@@ -87,6 +94,7 @@ function GoogleSettings({
         id="google-client-secret"
         label="İstemci gizli anahtarı (Client secret)"
         saved={settings.hasSecret['google-client-secret']}
+        unreadable={settings.unreadableSecrets.includes('google-client-secret')}
         description="Aynı ekranda verilen gizli anahtar."
         placeholder="Örn. GOCSPX-..."
         onSaved={onSettings}

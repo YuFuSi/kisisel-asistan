@@ -20,8 +20,9 @@ function fakeSender(events: ChatEvent[]): WebContents {
 const request = { toolName: 'uygulama_ac', label: 'Uygulama açılsın mı?', summary: 'Not Defteri' }
 
 async function startApproval(events: ChatEvent[]): Promise<{ promise: Promise<void>; id: string }> {
-  const promise = runWithToolContext({ conversationId: 1, sender: fakeSender(events) }, () =>
-    requireApproval(request)
+  const promise = runWithToolContext(
+    { conversationId: 1, sender: fakeSender(events), source: 'chat' },
+    () => requireApproval(request)
   )
   await new Promise((resolve) => setTimeout(resolve, 5))
   const first = events[0]

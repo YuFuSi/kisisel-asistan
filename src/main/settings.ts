@@ -132,8 +132,30 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
 // API anahtarları Windows'un kullanıcı hesabına bağlı şifreleme (DPAPI) ile saklanır
 const secretKey = (id: SecretId): string => `secret:${id}`
 
+// Çözülemediği günlüğe bir kez yazılan anahtarlar (her cevapta tekrar tekrar yazılmasın)
+const reportedUnreadable = new Set<SecretId>()
+
+type SecretRead = { state: 'missing' } | { state: 'ok'; value: string } | { state: 'unreadable' }
+
+function readSecret(id: SecretId): SecretRead {
+  const raw = readValue(secretKey(id))
+  if (!raw) return { state: 'missing' }
+  try {
+    return { state: 'ok', value: safeStorage.decryptString(Buffer.from(raw, 'base64')) }
+  } catch (err) {
+    // Anahtar başka bir Windows oturumunda/kurulumda şifrelenmiş olabilir; çözülemeyen kayıt yok sayılır.
+    // Kullanıcı anahtarı yeniden girince (veya Google'ı yeniden bağlayınca) üzerine yazılır.
+    if (!reportedUnreadable.has(id)) {
+      reportedUnreadable.add(id)
+      console.warn(`Kayıtlı "${id}" anahtarı çözülemedi, yok sayılıyor:`, err)
+    }
+    return { state: 'unreadable' }
+  }
+}
+
 export function setSecret(id: SecretId, key: string): void {
   if (!SECRET_IDS.includes(id)) throw new Error('Bilinmeyen servis.')
+  reportedUnreadable.delete(id)
   const value = key.trim()
   if (!value) {
     getDb().prepare('DELETE FROM settings WHERE key = ?').run(secretKey(id))
@@ -146,16 +168,13 @@ export function setSecret(id: SecretId, key: string): void {
 }
 
 export function getSecret(id: SecretId): string | undefined {
-  const raw = readValue(secretKey(id))
-  if (!raw) return undefined
-  try {
-    return safeStorage.decryptString(Buffer.from(raw, 'base64'))
-  } catch (err) {
-    // Anahtar başka bir Windows oturumunda/kurulumda şifrelenmiş olabilir; çözülemeyen kayıt yok sayılır.
-    // Kullanıcı anahtarı yeniden girince (veya Google'ı yeniden bağlayınca) üzerine yazılır.
-    console.warn(`Kayıtlı "${id}" anahtarı çözülemedi, yok sayılıyor:`, err)
-    return undefined
-  }
+  const secret = readSecret(id)
+  return secret.state === 'ok' ? secret.value : undefined
+}
+
+/** Kaydı olan ama çözülemeyen anahtarlar (Ayarlar'da "yeniden gir" uyarısı için) */
+export function getUnreadableSecrets(): SecretId[] {
+  return SECRET_IDS.filter((id) => readSecret(id).state === 'unreadable')
 }
 
 export function getSecretStatus(): Record<SecretId, boolean> {

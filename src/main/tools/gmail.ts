@@ -88,6 +88,17 @@ function requireAddress(address: string): string {
 }
 
 const gmailTools: ToolModule = {
+  risks: {
+    epostalari_ozetle: 'read',
+    eposta_ara: 'read',
+    eposta_oku: 'read',
+    taslak_olustur: 'write',
+    eposta_gonder: 'dangerous',
+    eposta_yanitla: 'dangerous',
+    eposta_isaretle: 'write',
+    eposta_arsivle: 'dangerous'
+  },
+  selfApproval: ['eposta_gonder', 'eposta_yanitla', 'eposta_arsivle'],
   isAvailable: () => getGoogleStatus().connected,
   labels: {
     epostalari_ozetle: 'E-postalara bakma',

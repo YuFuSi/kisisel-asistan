@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, ExternalLink } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ExternalLink } from 'lucide-react'
 import type { SecretId, SettingsView } from '@shared/api'
 import Field from './Field'
 import { errorMessage } from '../../lib/errors'
@@ -11,6 +11,8 @@ interface SecretFieldProps {
   label: string
   /** Anahtar kayıtlı mı */
   saved: boolean
+  /** Kayıt var ama bu bilgisayarda çözülemiyor; kullanıcı yeniden girmeli */
+  unreadable?: boolean
   description?: string
   /** Boş alanda görünecek örnek metin */
   placeholder?: string
@@ -23,6 +25,7 @@ function SecretField({
   id,
   label,
   saved,
+  unreadable = false,
   description,
   placeholder,
   helpUrl,
@@ -57,6 +60,11 @@ function SecretField({
             <span className="inline-flex items-center gap-1 text-positive">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Anahtar kayıtlı, bu bilgisayarda şifreli saklanıyor.
+            </span>
+          ) : unreadable ? (
+            <span className="inline-flex items-center gap-1 text-negative">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              Kayıtlı anahtar bu bilgisayarda çözülemiyor. Anahtarı yeniden gir.
             </span>
           ) : (
             (description ??

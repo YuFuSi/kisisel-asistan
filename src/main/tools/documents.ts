@@ -16,6 +16,10 @@ export function allowDocument(conversationId: number, filePath: string): void {
 }
 
 const documentTools: ToolModule = {
+  // Diskteki herhangi bir dosyayı okuyup modele verebildiği için tehlikeli sayılır;
+  // kullanıcının sohbete eklediği belgeler onay sormaz
+  risks: { belge_oku: 'dangerous' },
+  selfApproval: ['belge_oku'],
   labels: { belge_oku: 'Belge okuma' },
   tools: {
     belge_oku: tool({

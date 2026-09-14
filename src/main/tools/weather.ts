@@ -4,6 +4,7 @@ import { findPlace, getWeather } from '../lib/weather'
 import type { ToolModule } from './types'
 
 const weatherTools: ToolModule = {
+  risks: { hava_durumu: 'read' },
   labels: { hava_durumu: 'Hava durumu' },
   tools: {
     hava_durumu: tool({

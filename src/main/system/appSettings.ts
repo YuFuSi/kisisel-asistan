@@ -1,4 +1,4 @@
-import { getSecretStatus, getSettings, updateSettings } from '../settings'
+import { getSecretStatus, getSettings, getUnreadableSecrets, updateSettings } from '../settings'
 import { notifyDataChanged } from '../events'
 import { changeGlobalShortcut, isShortcutActive } from './shortcut'
 import { applyOpenAtLogin, isLoginItemSupported } from './startup'
@@ -10,7 +10,8 @@ export function getSettingsView(): SettingsView {
     ...getSettings(),
     hasSecret: getSecretStatus(),
     loginItemSupported: isLoginItemSupported(),
-    shortcutActive: isShortcutActive()
+    shortcutActive: isShortcutActive(),
+    unreadableSecrets: getUnreadableSecrets()
   }
 }
 
