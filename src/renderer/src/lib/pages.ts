@@ -1,8 +1,10 @@
-export type PageId = 'chat' | 'tasks' | 'notes' | 'settings'
+export type PageId = 'home' | 'chat' | 'tasks' | 'calendar' | 'notes' | 'settings'
 
 export const PAGE_LABELS: Record<PageId, string> = {
-  chat: 'Sohbet',
+  home: 'Ana Sayfa',
+  chat: 'Asistan',
   tasks: 'Görevler',
-  notes: 'Notlar',
+  calendar: 'Takvim',
+  notes: 'Hafıza Merkezi',
   settings: 'Ayarlar'
 }

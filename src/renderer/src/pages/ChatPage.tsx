@@ -21,6 +21,8 @@ import { quietIconButtonClass } from '../lib/styles'
 import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
+import { noteReplyStarted } from '../lib/assistantState'
+import { onNewChatRequest } from '../lib/chatRequests'
 
 const SUGGESTIONS = [
   'Bugünümü planlamama yardım et',
@@ -190,6 +192,16 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     })
   }, [openConversation])
 
+  // Ana Sayfa'daki komut kutusundan gelen istek yeni sohbette cevaplanır
+  useEffect(
+    () =>
+      onNewChatRequest((text) => {
+        openConversation(null)
+        void sendRef.current(text, [])
+      }),
+    [openConversation]
+  )
+
   // Klavye kısayolları: Ctrl+N yeni sohbet, Ctrl+F arama, Esc cevabı durdur
   useEffect(() => {
     if (!active) return
@@ -270,6 +282,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
       setAttachments([])
       setStreaming({ conversationId: id, text: '', tools: [] })
+      noteReplyStarted(id)
       const userMessage = await window.api.chat.send(id, content)
       setMessages((list) => [...list, userMessage])
     } catch (err) {

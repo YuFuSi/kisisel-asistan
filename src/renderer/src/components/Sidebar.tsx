@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react'
 import {
+  Brain,
+  CalendarDays,
+  House,
   ListTodo,
   MessageSquare,
-  NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
   type LucideIcon
 } from 'lucide-react'
+import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
 import { PAGE_LABELS, type PageId } from '../lib/pages'
 
 const ITEMS: { id: PageId; icon: LucideIcon }[] = [
+  { id: 'home', icon: House },
   { id: 'chat', icon: MessageSquare },
   { id: 'tasks', icon: ListTodo },
-  { id: 'notes', icon: NotebookPen },
+  { id: 'calendar', icon: CalendarDays },
+  { id: 'notes', icon: Brain },
   { id: 'settings', icon: Settings }
 ]
 
@@ -44,6 +49,8 @@ interface SidebarProps {
 function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const version = useAppVersion()
+  const assistant = useAssistantState()
+  const busy = assistant !== 'idle'
 
   function toggle(): void {
     const next = !collapsed
@@ -57,8 +64,8 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-r border-line bg-app py-3 transition-[width] duration-200 ${
-        collapsed ? 'w-[60px] px-2' : 'w-[212px] px-3'
+      className={`flex shrink-0 flex-col border-r border-line bg-app py-4 transition-[width] duration-200 ${
+        collapsed ? 'w-[64px] px-2' : 'w-[220px] px-3'
       }`}
     >
       <nav className="flex flex-col gap-1">
@@ -70,36 +77,54 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
               onClick={() => onSelect(id)}
               title={collapsed ? PAGE_LABELS[id] : undefined}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex h-9 items-center gap-3 rounded-lg text-sm transition-colors ${
+              className={`relative flex h-10 items-center gap-3 rounded-xl border text-sm transition-colors ${
                 collapsed ? 'justify-center px-0' : 'px-3'
               } ${
-                isActive ? 'bg-elevated text-ink' : 'text-muted hover:bg-elevated/60 hover:text-ink'
+                isActive
+                  ? 'border-accent/40 bg-linear-to-r from-accent/30 to-accent/5 text-ink shadow-[0_0_24px_-12px_var(--color-accent)]'
+                  : 'border-transparent text-muted hover:bg-elevated/70 hover:text-ink'
               }`}
             >
-              {isActive && (
-                <span className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
-              )}
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-glow' : ''}`} />
               {!collapsed && <span className="truncate">{PAGE_LABELS[id]}</span>}
             </button>
           )
         })}
       </nav>
 
-      <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-        {!collapsed && version && <span className="px-1 text-xs text-faint">v{version}</span>}
-        <button
-          onClick={toggle}
-          title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
-          aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
-          className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink"
+      <div className="mt-auto space-y-3 pt-3">
+        <div
+          className={`flex items-center gap-2.5 border-t border-line pt-3 ${collapsed ? 'justify-center' : 'px-2'}`}
+          title={collapsed ? STATE_LABELS[assistant] : undefined}
         >
-          {collapsed ? (
-            <PanelLeftOpen className="h-4 w-4" />
-          ) : (
-            <PanelLeftClose className="h-4 w-4" />
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${busy ? 'animate-pulse bg-glow' : 'bg-positive'}`}
+          />
+          {!collapsed && (
+            <div className="min-w-0 leading-tight">
+              <div className={`truncate text-xs ${busy ? 'text-glow' : 'text-positive'}`}>
+                {busy ? `${STATE_LABELS[assistant]}...` : 'Sistem hazır'}
+              </div>
+              <div className="truncate text-[11px] text-faint">Her zaman yanında</div>
+            </div>
           )}
-        </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          {!collapsed && version && <span className="px-2 text-xs text-faint">v{version}</span>}
+          <button
+            onClick={toggle}
+            title={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+            aria-label={collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'}
+            className={`rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink ${collapsed ? 'mx-auto' : ''}`}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
     </aside>
   )

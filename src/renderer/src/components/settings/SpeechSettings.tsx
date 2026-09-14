@@ -106,7 +106,7 @@ function SpeechSettings({
             ))}
           </select>
           <button
-            onClick={() => speakText('Merhaba, ben kişisel asistanın.', settings.voiceUri)}
+            onClick={() => speakText('Merhaba, ben Jarvis.', settings.voiceUri)}
             className={`${secondaryButtonClass} inline-flex items-center gap-1.5`}
           >
             <Volume2 className="h-4 w-4" />
