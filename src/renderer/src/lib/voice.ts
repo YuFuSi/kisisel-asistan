@@ -1,4 +1,5 @@
 // Cevapları sesli okuma. Windows'un kendi sesleri kullanılır; internet veya anahtar gerekmez.
+import { setSpeaking } from './assistantState'
 
 export interface VoiceOption {
   uri: string
@@ -64,9 +65,14 @@ export function speakText(text: string, preferredUri: string): void {
   } else {
     utterance.lang = 'tr-TR'
   }
+  // Jarvis küresi konuşurken "konuşuyor" durumuna geçsin
+  utterance.onstart = () => setSpeaking(true)
+  utterance.onend = () => setSpeaking(false)
+  utterance.onerror = () => setSpeaking(false)
   synth.speak(utterance)
 }
 
 export function stopSpeaking(): void {
   window.speechSynthesis?.cancel()
+  setSpeaking(false)
 }

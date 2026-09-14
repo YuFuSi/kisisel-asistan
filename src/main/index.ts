@@ -42,8 +42,9 @@ function quitApp(): void {
 }
 
 // Veri klasörü sabit: geliştirme (npm run dev / npm start) ve kurulu uygulama aynı veritabanını ve
-// şifreleme anahtarını kullansın. Kurulu uygulamanın adı "Kişisel Asistan" olduğu için aksi halde
-// %APPDATA%\Kişisel Asistan klasörüne yazar ve orada kayıtlı API anahtarları geliştirmede çözülemez.
+// şifreleme anahtarını kullansın. Kurulu uygulamanın adı (productName, şu an "Jarvis") farklı olduğu için
+// aksi halde %APPDATA%\Jarvis klasörüne yazar ve orada kayıtlı API anahtarları geliştirmede çözülemez.
+// Uygulamanın adı değişse de eski veriler bu sayede kaybolmaz.
 // Tek kopya kilidi de bu klasöre bağlı olduğundan her şeyden önce ayarlanır.
 app.setPath('userData', join(app.getPath('appData'), 'kisisel-asistan'))
 

@@ -1,5 +1,5 @@
 appId: com.kisisel.asistan
-productName: Kişisel Asistan
+productName: Jarvis
 directories:
   buildResources: build
 files:

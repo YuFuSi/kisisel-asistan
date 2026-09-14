@@ -16,7 +16,7 @@ function NotesPage(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <header className="shrink-0 border-b border-line px-8 pt-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Notlar</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Hafıza Merkezi</h1>
         <div className="mt-4 flex gap-1">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={tabClass(tab === t.id)}>

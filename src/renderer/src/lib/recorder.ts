@@ -1,4 +1,5 @@
 // Mikrofon kaydı. Kayıt bitince sesi ana sürece gönderip yazıya çevirtiyoruz.
+import { setListening } from './assistantState'
 
 export interface Recording {
   /** Kaydı bitirir ve ses verisini döndürür */
@@ -6,6 +7,9 @@ export interface Recording {
   /** Kaydı iptal eder, ses verisi kullanılmaz */
   cancel: () => void
 }
+
+// Kayıt sürerken ses seviyesini ölçen düğüm (Jarvis küresi buna göre titreşir)
+let analyser: AnalyserNode | null = null
 
 function describeMicError(error: unknown): Error {
   const name = error instanceof Error ? error.name : ''
@@ -16,6 +20,19 @@ function describeMicError(error: unknown): Error {
   }
   if (name === 'NotFoundError') return new Error('Mikrofon bulunamadı.')
   return new Error('Mikrofon açılamadı.')
+}
+
+/** Kayıt sürüyorsa 0-1 arası ses seviyesi, değilse 0 */
+export function getInputLevel(): number {
+  if (!analyser) return 0
+  const samples = new Uint8Array(analyser.fftSize)
+  analyser.getByteTimeDomainData(samples)
+  let sum = 0
+  for (const sample of samples) {
+    const value = (sample - 128) / 128
+    sum += value * value
+  }
+  return Math.min(1, Math.sqrt(sum / samples.length) * 4)
 }
 
 export async function startRecording(): Promise<Recording> {
@@ -36,7 +53,19 @@ export async function startRecording(): Promise<Recording> {
   })
   recorder.start()
 
-  const releaseMicrophone = (): void => stream.getTracks().forEach((track) => track.stop())
+  const audioContext = new AudioContext()
+  const level = audioContext.createAnalyser()
+  level.fftSize = 512
+  audioContext.createMediaStreamSource(stream).connect(level)
+  analyser = level
+  setListening(true)
+
+  const releaseMicrophone = (): void => {
+    stream.getTracks().forEach((track) => track.stop())
+    if (analyser === level) analyser = null
+    void audioContext.close()
+    setListening(false)
+  }
 
   return {
     stop: () =>

@@ -26,7 +26,7 @@ function showTrayHintOnce(): void {
   const { globalShortcut } = getSettings()
   const shortcut = globalShortcut ? ` ya da ${formatAccelerator(globalShortcut)} tuşlarına bas` : ''
   new Notification({
-    title: 'Kişisel Asistan arka planda çalışıyor',
+    title: 'Jarvis arka planda çalışıyor',
     body: `Hatırlatmaların gelmeye devam edecek. Açmak için sistem tepsisindeki simgeye tıkla${shortcut}.`,
     icon
   }).show()
@@ -43,15 +43,17 @@ export function createMainWindow(options: { startHidden: boolean }): BrowserWind
   allowMicrophoneOnly()
 
   const window = new BrowserWindow({
-    width: 1100,
-    height: 750,
+    // Ana Sayfa'daki küre ve sağdaki kartlar yan yana sığsın
+    width: 1360,
+    height: 860,
     minWidth: 900,
     minHeight: 560,
-    title: 'Kişisel Asistan',
-    backgroundColor: '#0a0a0f',
+    title: 'Jarvis',
+    // Renkler main.css'teki --color-app ve --color-muted ile aynı
+    backgroundColor: '#040914',
     // Kendi başlık çubuğumuzu çiziyoruz; kapat/küçült düğmelerini Windows çiziyor
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#0a0a0f', symbolColor: '#a1a1b0', height: 40 },
+    titleBarOverlay: { color: '#040914', symbolColor: '#9aabcb', height: 40 },
     show: false,
     autoHideMenuBar: true,
     icon,

@@ -21,9 +21,7 @@ export function initLogging(): void {
   Object.assign(console, log.functions)
   // Yakalanmayan hatalar da dosyaya yazılsın; Electron'un hata penceresi yerine günlük yeterli
   log.errorHandler.startCatching({ showDialog: false })
-  log.info(
-    `Kişisel Asistan başladı (sürüm ${app.getVersion()}${app.isPackaged ? '' : ', geliştirme modu'})`
-  )
+  log.info(`Jarvis başladı (sürüm ${app.getVersion()}${app.isPackaged ? '' : ', geliştirme modu'})`)
 }
 
 /** Arayüzden gelen hata mesajı */

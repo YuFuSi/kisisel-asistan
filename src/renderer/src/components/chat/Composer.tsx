@@ -2,8 +2,7 @@ import { useRef, useState } from 'react'
 import { FileText, Loader2, Mic, Paperclip, SendHorizontal, Square, X } from 'lucide-react'
 import type { AttachedDocument } from '@shared/api'
 import { COMPOSER_INPUT_ID } from '../../lib/dom'
-import { errorMessage } from '../../lib/errors'
-import { startRecording, type Recording } from '../../lib/recorder'
+import { useDictation } from '../../lib/useDictation'
 
 interface ComposerProps {
   busy: boolean
@@ -36,11 +35,16 @@ function Composer({
   onRemoveAttachment
 }: ComposerProps): React.JSX.Element {
   const [text, setText] = useState('')
-  const [recording, setRecording] = useState<Recording | null>(null)
-  const [transcribing, setTranscribing] = useState(false)
-  const [micError, setMicError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Mikrofon: konuşulan metin kutudaki yazının sonuna eklenir, gönderilmez
+  const dictation = useDictation((spoken) => {
+    setText((previous) => (previous ? `${previous} ${spoken}` : spoken))
+    requestAnimationFrame(() => {
+      resize()
+      textareaRef.current?.focus()
+    })
+  })
 
   const canSend = !busy && !disabled && !attaching && (text.trim() !== '' || attachments.length > 0)
 
@@ -57,36 +61,6 @@ function Composer({
     onSend(text.trim())
     setText('')
     requestAnimationFrame(resize)
-  }
-
-  // Mikrofon butonu: ilk basışta kayda başlar, ikincide kaydı yazıya çevirip kutuya ekler
-  async function toggleMicrophone(): Promise<void> {
-    setMicError(null)
-    if (!recording) {
-      try {
-        setRecording(await startRecording())
-      } catch (err) {
-        setMicError(errorMessage(err))
-      }
-      return
-    }
-
-    const current = recording
-    setRecording(null)
-    setTranscribing(true)
-    try {
-      const { audio, mimeType } = await current.stop()
-      const spoken = await window.api.speech.transcribe(audio, mimeType)
-      setText((previous) => (previous ? `${previous} ${spoken}` : spoken))
-      requestAnimationFrame(() => {
-        resize()
-        textareaRef.current?.focus()
-      })
-    } catch (err) {
-      setMicError(errorMessage(err))
-    } finally {
-      setTranscribing(false)
-    }
   }
 
   return (
@@ -173,18 +147,20 @@ function Composer({
             className="flex-1 resize-none bg-transparent py-0.5 text-sm leading-6 outline-none placeholder:text-faint disabled:cursor-not-allowed"
           />
           <button
-            onClick={() => void toggleMicrophone()}
-            disabled={disabled || transcribing}
-            aria-label={recording ? 'Kaydı bitir' : 'Sesli yaz'}
-            title={recording ? 'Kaydı bitir ve yazıya çevir' : 'Mikrofonla yaz'}
+            onClick={() => void dictation.toggle()}
+            disabled={disabled || dictation.transcribing}
+            aria-label={dictation.recording ? 'Kaydı bitir' : 'Sesli yaz'}
+            title={dictation.recording ? 'Kaydı bitir ve yazıya çevir' : 'Mikrofonla yaz'}
             className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:text-line-strong ${
-              recording ? 'bg-negative text-white hover:bg-negative' : 'text-muted hover:text-ink'
+              dictation.recording
+                ? 'bg-negative text-white hover:bg-negative'
+                : 'text-muted hover:text-ink'
             }`}
           >
-            {transcribing ? (
+            {dictation.transcribing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Mic className={`h-4 w-4 ${recording ? 'animate-pulse' : ''}`} />
+              <Mic className={`h-4 w-4 ${dictation.recording ? 'animate-pulse' : ''}`} />
             )}
           </button>
           {busy ? (
@@ -209,13 +185,13 @@ function Composer({
           )}
         </div>
       </div>
-      {(recording || transcribing || micError) && (
+      {(dictation.recording || dictation.transcribing || dictation.error) && (
         <div className="mx-auto mt-2 max-w-3xl text-xs">
-          {recording && (
+          {dictation.recording && (
             <span className="text-negative">Dinliyorum... Bitirmek için mikrofona tekrar bas.</span>
           )}
-          {transcribing && <span className="text-muted">Yazıya çevriliyor...</span>}
-          {micError && <span className="text-negative select-text">{micError}</span>}
+          {dictation.transcribing && <span className="text-muted">Yazıya çevriliyor...</span>}
+          {dictation.error && <span className="text-negative select-text">{dictation.error}</span>}
         </div>
       )}
     </div>

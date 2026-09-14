@@ -345,6 +345,30 @@ export interface BackupInfo {
   size: number
 }
 
+// ---- Takvim ve sistem durumu (Ana Sayfa) ----
+
+// Google Takvim etkinliği (arayüz için sadeleştirilmiş)
+export interface CalendarItem {
+  id: string
+  title: string
+  /** Epoch milisaniye; tüm gün etkinliklerde o günün yerel başlangıcı */
+  start: number
+  /** Epoch milisaniye; tüm gün etkinliklerde bitiş günü hariçtir */
+  end: number | null
+  allDay: boolean
+  location: string | null
+}
+
+export interface SystemStatus {
+  /** Seçili yapay zeka modeli ve kullanılabilir olup olmadığı */
+  model: { label: string; model: string; ok: boolean; message: string }
+  googleConnected: boolean
+  /** Son yedeğin zamanı (epoch ms); yedek yoksa null */
+  lastBackupAt: number | null
+  /** Veri klasörünün bulunduğu diskte boş ve toplam alan (bayt); okunamazsa null */
+  disk: { free: number; total: number } | null
+}
+
 // ---- Google hesabı ----
 
 export interface GoogleStatus {
@@ -393,6 +417,14 @@ export interface Api {
   activity: {
     /** Son işlemler, en yenisi başta */
     list(limit?: number): Promise<ActivityEntry[]>
+  }
+  calendar: {
+    /** Google Takvim etkinlikleri (ISO zaman aralığı, en fazla 62 gün); hesap bağlı değilse boş liste */
+    events(from: string, to: string): Promise<CalendarItem[]>
+  }
+  system: {
+    /** Ana Sayfa'daki sistem durumu kartının bilgileri */
+    status(): Promise<SystemStatus>
   }
   documents: {
     /** Sürükle-bırak ile gelen dosyanın diskteki yolu (Electron'da File.path artık yok) */

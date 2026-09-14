@@ -27,6 +27,12 @@ const api: Api = {
   activity: {
     list: (limit) => ipcRenderer.invoke('activity:list', limit)
   },
+  calendar: {
+    events: (from, to) => ipcRenderer.invoke('calendar:events', from, to)
+  },
+  system: {
+    status: () => ipcRenderer.invoke('system:status')
+  },
   documents: {
     pathForFile: (file) => webUtils.getPathForFile(file),
     read: (conversationId, path) => ipcRenderer.invoke('documents:read', conversationId, path)
