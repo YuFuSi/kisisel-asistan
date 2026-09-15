@@ -1,6 +1,6 @@
 {
   "name": "kisisel-asistan",
-  "version": "1.0.0-beta",
+  "version": "1.1.0-beta",
   "description": "Yapay zeka destekli kişisel masaüstü asistanı",
   "main": "./out/main/index.js",
   "author": "ysfll",
