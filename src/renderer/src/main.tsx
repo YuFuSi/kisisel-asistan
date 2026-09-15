@@ -4,7 +4,12 @@ import './assets/main.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import HudApp from './HudApp'
 import ToastProvider from './components/ui/ToastProvider'
+
+// Ayrı bir electron-vite giriş noktası açmadan, aynı bundle #hud ile HUD penceresini render eder
+const isHud = window.location.hash === '#hud'
+if (isHud) document.body.classList.add('hud-mode')
 
 // Arayüzde yakalanmayan hatalar günlük dosyasına yazılsın (sorun ayıklarken gerekli)
 window.addEventListener('error', (event) => {
@@ -21,8 +26,12 @@ window.addEventListener('unhandledrejection', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ToastProvider>
-      <App />
-    </ToastProvider>
+    {isHud ? (
+      <HudApp />
+    ) : (
+      <ToastProvider>
+        <App />
+      </ToastProvider>
+    )}
   </StrictMode>
 )

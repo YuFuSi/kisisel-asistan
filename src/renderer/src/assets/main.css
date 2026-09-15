@@ -47,6 +47,11 @@ body {
   user-select: none;
 }
 
+/* HUD penceresi saydam açılır; masaüstü kartın dışından görünsün */
+body.hud-mode {
+  background-color: transparent;
+}
+
 input,
 textarea {
   user-select: text;

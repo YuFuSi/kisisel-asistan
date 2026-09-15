@@ -7,6 +7,7 @@ export interface TrayActions {
   onOpen: () => void
   onNewChat: () => void
   onToggleOpenAtLogin: (enabled: boolean) => void
+  onToggleHud: () => void
   onQuit: () => void
 }
 
@@ -25,13 +26,14 @@ export function createTray(trayActions: TrayActions): void {
 // Menüdeki onay işaretleri ayarlara bağlı olduğu için ayar değişince yeniden kurulur
 export function refreshTrayMenu(): void {
   if (!tray || !actions) return
-  const { onOpen, onNewChat, onToggleOpenAtLogin, onQuit } = actions
+  const { onOpen, onNewChat, onToggleOpenAtLogin, onToggleHud, onQuit } = actions
   const { openAtLogin } = getSettings()
 
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: "Jarvis'i aç", click: onOpen },
       { label: 'Yeni sohbet', click: onNewChat },
+      { label: 'HUD panelini aç/kapat', click: onToggleHud },
       { type: 'separator' },
       {
         label: 'Windows açılınca başlat',
