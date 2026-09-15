@@ -21,6 +21,8 @@ import { quietIconButtonClass } from '../lib/styles'
 import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
+import { noteReplyStarted } from '../lib/assistantState'
+import { onNewChatRequest, onOpenConversationRequest } from '../lib/chatRequests'
 
 const SUGGESTIONS = [
   'Bugünümü planlamama yardım et',
@@ -84,6 +86,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const sendRef = useRef<(text: string, documents?: AttachedDocument[]) => Promise<void>>(
     async () => {}
   )
+  const selectRef = useRef<(id: number) => Promise<void>>(async () => {})
 
   // Sayfa her görünür olduğunda ayarları tazele (Ayarlar'da model değişmiş olabilir)
   useEffect(() => {
@@ -156,7 +159,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         if (event.type === 'error') setError(event.error)
         // Ayar açıksa cevabı sesli oku
         if (event.type === 'done' && settingsRef.current?.speakReplies && message?.content) {
-          speakText(message.content, settingsRef.current.voiceUri)
+          speakText(message.content)
         }
       }
     })
@@ -189,6 +192,19 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
     })
   }, [openConversation])
+
+  // Ana Sayfa'daki komut kutusundan gelen istek yeni sohbette cevaplanır
+  useEffect(
+    () =>
+      onNewChatRequest((text) => {
+        openConversation(null)
+        void sendRef.current(text, [])
+      }),
+    [openConversation]
+  )
+
+  // Ana Sayfa'daki sesli sohbet kartından "Sohbette aç"
+  useEffect(() => onOpenConversationRequest((id) => void selectRef.current(id)), [])
 
   // Klavye kısayolları: Ctrl+N yeni sohbet, Ctrl+F arama, Esc cevabı durdur
   useEffect(() => {
@@ -270,6 +286,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
       setAttachments([])
       setStreaming({ conversationId: id, text: '', tools: [] })
+      noteReplyStarted(id)
       const userMessage = await window.api.chat.send(id, content)
       setMessages((list) => [...list, userMessage])
     } catch (err) {
@@ -282,6 +299,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
   useEffect(() => {
     sendRef.current = send
+    selectRef.current = selectConversation
   })
 
   // Sürüklenen veya seçilen belgeleri okuyup mesaja eklenmek üzere bekletir
@@ -474,7 +492,6 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   role={message.role}
                   content={message.content}
                   tools={message.tools}
-                  voiceUri={settings?.voiceUri ?? ''}
                   onEdit={
                     message.role === 'user' && !streamingView
                       ? (text) => void editMessage(message.id, text)
@@ -493,7 +510,6 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   content={streamingView.text}
                   tools={streamingView.tools}
                   pending
-                  voiceUri={settings?.voiceUri ?? ''}
                 />
               )}
               {approvalView && (

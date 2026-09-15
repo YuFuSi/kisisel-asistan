@@ -1,5 +1,5 @@
 appId: com.kisisel.asistan
-productName: Kişisel Asistan
+productName: Jarvis
 directories:
   buildResources: build
 files:
@@ -14,6 +14,8 @@ files:
   - '!.claude/*'
 asarUnpack:
   - resources/**
+  # Konuşma algılama ve "hey jarvis" modelleri için yerel ONNX çalıştırıcısı (.node ve .dll dosyaları)
+  - node_modules/onnxruntime-node/**
 win:
   executableName: kisisel-asistan
 copyright: Copyright © 2026 ysfll

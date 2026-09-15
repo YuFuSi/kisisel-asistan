@@ -3,6 +3,18 @@ import { listActivity } from './data/activity'
 import { listBackups } from './db/backup'
 import { backupDirectory, createBackupNow, restoreBackup } from './system/database'
 import { logRendererError, openLogDirectory } from './system/logger'
+import { getSystemStatus } from './system/status'
+import { getVoicePackStatus, installVoicePack } from './voice/packManager'
+import {
+  getVoiceState,
+  pushVoiceAudio,
+  speakWithVoice,
+  startVoiceTurn,
+  stopVoiceSession,
+  stopVoiceSpeaking,
+  voicePlaybackEnded
+} from './voice/session'
+import { fetchCalendarEvents, toCalendarItem } from './google/calendar'
 import { promises as fs } from 'node:fs'
 import { editAndResend, regenerateReply, sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
@@ -38,6 +50,7 @@ import { applySettingsPatch, getSettingsView } from './system/appSettings'
 import { suspendGlobalShortcut } from './system/shortcut'
 import type {
   AttachedDocument,
+  CalendarItem,
   DataScope,
   NotePatch,
   RepeatRule,
@@ -87,6 +100,32 @@ export function registerIpcHandlers(): void {
     restoreBackup(BrowserWindow.fromWebContents(event.sender), name)
   )
   ipcMain.handle('activity:list', (_event, limit?: number) => listActivity(limit))
+
+  // Ana Sayfa ve Takvim
+  ipcMain.handle('system:status', () => getSystemStatus())
+
+  // Jarvis sesi. Mikrofon sesi ve "çalma bitti" haberi sık geldiği için cevap beklenmez (on)
+  ipcMain.handle('voice:packStatus', () => getVoicePackStatus())
+  ipcMain.handle('voice:installPack', () => installVoicePack())
+  ipcMain.handle('voice:state', () => getVoiceState())
+  ipcMain.on('voice:pushAudio', (_event, chunk: unknown) => pushVoiceAudio(chunk))
+  ipcMain.handle('voice:startTurn', () => startVoiceTurn())
+  ipcMain.handle('voice:stopSession', () => stopVoiceSession())
+  ipcMain.handle('voice:speak', (_event, text: string) => speakWithVoice(String(text)))
+  ipcMain.handle('voice:stopSpeaking', () => stopVoiceSpeaking())
+  ipcMain.on('voice:playbackEnded', (_event, id: number) => voicePlaybackEnded(Number(id)))
+  ipcMain.handle(
+    'calendar:events',
+    async (_event, from: string, to: string): Promise<CalendarItem[]> => {
+      if (!getGoogleStatus().connected) return []
+      const start = new Date(from)
+      const end = new Date(to)
+      const days = (end.getTime() - start.getTime()) / 86_400_000
+      if (!(days > 0 && days <= 62)) throw new Error('Geçersiz takvim aralığı.')
+      const events = await fetchCalendarEvents(start, end, 250)
+      return events.map(toCalendarItem).filter((item): item is CalendarItem => item !== null)
+    }
+  )
 
   // Belgeler: kullanıcının sohbete bıraktığı dosya
   ipcMain.handle(

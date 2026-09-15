@@ -3,6 +3,7 @@ import { notifyDataChanged } from '../events'
 import { changeGlobalShortcut, isShortcutActive } from './shortcut'
 import { applyOpenAtLogin, isLoginItemSupported } from './startup'
 import { refreshTrayMenu } from './tray'
+import { refreshVoiceSession } from '../voice/session'
 import type { SettingsPatch, SettingsView } from '../../shared/api'
 
 export function getSettingsView(): SettingsView {
@@ -35,6 +36,9 @@ export function applySettingsPatch(patch: SettingsPatch): SettingsView {
     applyOpenAtLogin(next.openAtLogin)
     refreshTrayMenu()
   }
+
+  // "Hey Jarvis" açılıp kapanınca dinleme durumu hemen değişsin
+  if (typeof patch.wakeWordEnabled === 'boolean') refreshVoiceSession()
 
   notifyDataChanged('settings')
   return getSettingsView()

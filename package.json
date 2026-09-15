@@ -33,6 +33,7 @@
     "lucide-react": "^1.45.0",
     "mammoth": "^1.12.3",
     "ollama-ai-provider-v2": "^4.0.1",
+    "onnxruntime-node": "^1.22.0",
     "pdfjs-dist": "^6.3.289",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",

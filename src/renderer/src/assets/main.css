@@ -3,17 +3,19 @@
 
 /* Tasarım belirteçleri: renkler ve ölçüler tek yerden yönetilir.
    Tailwind bunlardan bg-surface, text-muted, border-line gibi sınıflar üretir. */
+/* Jarvis teması: lacivert-siyah zemin, elektrik mavisi vurgu ve camgöbeği ışıma */
 @theme {
-  --color-app: #0a0a0f;
-  --color-surface: #101017;
-  --color-elevated: #16161f;
-  --color-line: #23232e;
-  --color-line-strong: #32323f;
-  --color-ink: #ededf2;
-  --color-muted: #a1a1b0;
-  --color-faint: #6e6e80;
-  --color-accent: #7c5cff;
-  --color-accent-hover: #8f74ff;
+  --color-app: #040914;
+  --color-surface: #07101f;
+  --color-elevated: #0c1a31;
+  --color-line: #152744;
+  --color-line-strong: #21395f;
+  --color-ink: #e6eeff;
+  --color-muted: #9aabcb;
+  --color-faint: #5f7196;
+  --color-accent: #2f7dff;
+  --color-accent-hover: #4d92ff;
+  --color-glow: #3cc4ff;
   --color-positive: #34d399;
   --color-caution: #fbbf24;
   --color-negative: #f87171;
@@ -72,7 +74,7 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #45455a;
+  background: #2c4a78;
   background-clip: content-box;
   border: 3px solid transparent;
 }
@@ -81,6 +83,34 @@ textarea {
 :focus-visible {
   outline: 2px solid color-mix(in oklab, var(--color-accent) 70%, transparent);
   outline-offset: 2px;
+}
+
+/* Katmanda tanımlı ki Tailwind sınıfları (ör. hover:border-accent/50) bunları ezebilsin */
+@layer components {
+  /* Jarvis cam kartı: yarı saydam yüzey, ince mavi kenar ve hafif iç parıltı */
+  .glass-card {
+    background: linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--color-elevated) 85%, transparent),
+      color-mix(in oklab, var(--color-surface) 90%, transparent)
+    );
+    border: 1px solid color-mix(in oklab, var(--color-accent) 22%, var(--color-line));
+    border-radius: var(--radius-card);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--color-glow) 10%, transparent),
+      0 12px 32px -20px color-mix(in oklab, var(--color-accent) 55%, transparent);
+  }
+
+  /* Ana sayfa zemini: kürenin çevresinde mavi ışıma */
+  .jarvis-backdrop {
+    background:
+      radial-gradient(
+        ellipse 70% 55% at 45% 20%,
+        color-mix(in oklab, var(--color-accent) 16%, transparent),
+        transparent 70%
+      ),
+      var(--color-app);
+  }
 }
 
 /* Başlık çubuğunda pencereyi sürükleme bölgeleri */

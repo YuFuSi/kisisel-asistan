@@ -1,11 +1,10 @@
+import { useCallback } from 'react'
 import { Ban, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import type { ActivityEntry, ActivityStatus, ToolSource } from '@shared/api'
 import Skeleton from '../ui/Skeleton'
 import { formatReminderTime } from '../../lib/dates'
 import { cardClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
-
-const loadActivity = (): Promise<ActivityEntry[]> => window.api.activity.list(10)
 
 const SOURCE_LABELS: Record<ToolSource, string> = {
   chat: 'Sohbet',
@@ -42,9 +41,26 @@ function describe(entry: ActivityEntry): string {
   return [entry.summary, SOURCE_LABELS[entry.source], approval, status].filter(Boolean).join(' · ')
 }
 
+/** Bugünse sadece saat, değilse "Dün 14:20" gibi */
+function shortTime(ms: number): string {
+  const date = new Date(ms)
+  if (date.toDateString() === new Date().toDateString()) {
+    return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+  }
+  return formatReminderTime(ms)
+}
+
+interface ActivityListProps {
+  /** En fazla kaç kayıt gösterilsin */
+  limit?: number
+  /** Ana Sayfa kartı için sade görünüm */
+  compact?: boolean
+}
+
 // Asistanın son kullandığı araçlar (etkinlik kaydı); yeni işlem olunca kendiliğinden yenilenir
-function ActivityList(): React.JSX.Element {
-  const { data, error } = useLiveData(loadActivity, 'activity')
+function ActivityList({ limit = 10, compact = false }: ActivityListProps): React.JSX.Element {
+  const load = useCallback(() => window.api.activity.list(limit), [limit])
+  const { data, error } = useLiveData(load, 'activity')
 
   if (error) return <p className="text-sm text-negative select-text">{error}</p>
   if (!data) return <Skeleton className="h-24 w-full" />
@@ -53,6 +69,29 @@ function ActivityList(): React.JSX.Element {
       <p className="text-sm text-muted">
         Henüz bir işlem yok. Asistan bir araç kullandığında burada görünür.
       </p>
+    )
+  }
+
+  if (compact) {
+    return (
+      <ul className="space-y-1">
+        {data.map((entry) => (
+          <li
+            key={entry.id}
+            className="flex items-center gap-3 rounded-lg px-1 py-1.5"
+            title={entry.detail}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-elevated">
+              <StatusIcon status={entry.status} />
+            </span>
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-sm text-ink">{entry.label}</div>
+              <div className="truncate text-xs text-faint">{entry.summary || describe(entry)}</div>
+            </div>
+            <span className="shrink-0 text-[11px] text-faint">{shortTime(entry.createdAt)}</span>
+          </li>
+        ))}
+      </ul>
     )
   }
 

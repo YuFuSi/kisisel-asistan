@@ -30,6 +30,7 @@ import type {
   ChatEvent,
   ChatMessage,
   ToolActivity,
+  ToolSource,
   ToolStatus
 } from '../../shared/api'
 
@@ -56,11 +57,27 @@ const TONE_INSTRUCTIONS: Record<AssistantTone, string> = {
 // Şu an cevap yazılan sohbetler (durdurabilmek için)
 const activeChats = new Map<number, AbortController>()
 
+export interface ReplyResult {
+  message: ChatMessage | null
+  /** Kullanıcıya gösterilecek hata; başarılıysa null */
+  error: string | null
+  stopped: boolean
+}
+
+/** Sesli sohbet gibi arayüz dışından başlatılan cevaplar için ek ayarlar */
+export interface ReplyOptions {
+  /** Aracı kimin başlattığı (onay kuralları ve talimat buna göre değişir) */
+  source?: ToolSource
+  /** Cevabın her yeni parçası (ör. cümle cümle seslendirmek için) */
+  onDelta?: (text: string) => void
+  onFinish?: (result: ReplyResult) => void
+}
+
 /**
  * Sistem talimatı. `query` son kullanıcı mesajıdır: hafıza kayıtları buna göre seçilir.
  * `summary` sohbetin modele artık tam gönderilmeyen eski kısmının özetidir.
  */
-function buildInstructions(query: string, summary: string): string {
+function buildInstructions(query: string, summary: string, source: ToolSource): string {
   const settings = getSettings()
   const googleConnected = getGoogleStatus().connected
   const searchAvailable = getSecret('tavily') !== undefined
@@ -68,7 +85,7 @@ function buildInstructions(query: string, summary: string): string {
   const weekday = now.toLocaleDateString('tr-TR', { weekday: 'long' })
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const lines = [
-    'Sen kullanıcının bilgisayarında çalışan kişisel asistanısın.',
+    'Senin adın Jarvis. Kullanıcının bilgisayarında çalışan kişisel yapay zeka asistanısın.',
     'Kullanıcı hangi dilde yazarsa o dilde cevap ver; varsayılan dilin Türkçe.',
     TONE_INSTRUCTIONS[settings.tone],
     'Uygun olduğunda Markdown kullan. Emin olmadığın bilgileri uydurma, emin değilsen açıkça söyle.',
@@ -115,13 +132,24 @@ function buildInstructions(query: string, summary: string): string {
       summary
     )
   }
+
+  if (source === 'voice') {
+    lines.push(
+      '',
+      'Şu an kullanıcıyla SESLİ konuşuyorsun; cevabın yüksek sesle okunacak:',
+      '- Kısa ve doğal konuş; çoğu zaman bir-üç cümle yeter.',
+      '- Markdown, madde işareti, tablo, kod bloğu veya emoji kullanma; düz cümlelerle anlat.',
+      '- Saatleri ve sayıları okunuşu kolay yaz (ör. "saat dokuzda").'
+    )
+  }
   return lines.join('\n')
 }
 
 export function sendMessage(
   sender: WebContents,
   conversationId: number,
-  text: string
+  text: string,
+  options: ReplyOptions = {}
 ): ChatMessage {
   const content = text.trim()
   if (!content) throw new Error('Boş mesaj gönderilemez.')
@@ -134,7 +162,7 @@ export function sendMessage(
   // Başlığa eklenen belgenin metni değil, kullanıcının yazdığı kısım girsin
   setTitleIfEmpty(conversationId, splitAttachments(content).text || content)
   notifyDataChanged('conversations')
-  startReply(sender, conversationId)
+  startReply(sender, conversationId, options)
   return userMessage
 }
 
@@ -179,11 +207,16 @@ export function editAndResend(
   return userMessage
 }
 
-function startReply(sender: WebContents, conversationId: number): void {
+function startReply(sender: WebContents, conversationId: number, options: ReplyOptions = {}): void {
   const controller = new AbortController()
   activeChats.set(conversationId, controller)
   // Cevap akışı bu IPC çağrısı döndükten sonra başlasın; böylece arayüz önce kullanıcı mesajını alır
-  setImmediate(() => void streamReply(sender, conversationId, controller))
+  setImmediate(() => void streamReply(sender, conversationId, controller, options))
+}
+
+/** Bu sohbette şu an cevap yazılıyor mu */
+export function isReplying(conversationId: number): boolean {
+  return activeChats.has(conversationId)
 }
 
 export function stopChat(conversationId: number): void {
@@ -201,10 +234,19 @@ const settleTools = (tools: ToolActivity[]): ToolActivity[] =>
 async function streamReply(
   sender: WebContents,
   conversationId: number,
-  controller: AbortController
+  controller: AbortController,
+  options: ReplyOptions
 ): Promise<void> {
   const emit = (event: ChatEvent): void => {
     if (!sender.isDestroyed()) sender.send('chat:event', event)
+  }
+  const source = options.source ?? 'chat'
+  const finish = (result: ReplyResult): void => {
+    try {
+      options.onFinish?.(result)
+    } catch (err) {
+      console.error('Cevap bitiş işleyicisi hata verdi:', err)
+    }
   }
   let answer = ''
   let needsSeparator = false
@@ -238,10 +280,10 @@ async function streamReply(
     const summary = all.length > HISTORY_LIMIT ? getConversationSummary(conversationId).summary : ''
 
     // Araçlar hangi sohbette çalıştıklarını bu bağlamdan öğrenir (onay kartı göndermek için gerekli)
-    await runWithToolContext({ conversationId, sender, source: 'chat' }, async () => {
+    await runWithToolContext({ conversationId, sender, source }, async () => {
       const result = streamText({
         model: getModel(),
-        instructions: buildInstructions(query, summary),
+        instructions: buildInstructions(query, summary, source),
         messages: toModelMessages(recent),
         tools: getAssistantTools(),
         stopWhen: isStepCount(MAX_STEPS),
@@ -257,6 +299,7 @@ async function streamReply(
             needsSeparator = false
             answer += text
             emit({ conversationId, type: 'delta', text })
+            options.onDelta?.(text)
             break
           }
           case 'finish-step':
@@ -288,19 +331,15 @@ async function streamReply(
 
     const finalTools = settleTools(tools)
     if (controller.signal.aborted) {
-      emit({
-        conversationId,
-        type: 'stopped',
-        message: savePartial(conversationId, answer, finalTools)
-      })
+      const message = savePartial(conversationId, answer, finalTools)
+      emit({ conversationId, type: 'stopped', message })
+      finish({ message, error: null, stopped: true })
       return
     }
     if (!answer.trim() && finalTools.length === 0) throw new Error('Model boş bir cevap döndürdü.')
-    emit({
-      conversationId,
-      type: 'done',
-      message: addMessage(conversationId, 'assistant', answer.trim() ? answer : '', finalTools)
-    })
+    const message = addMessage(conversationId, 'assistant', answer.trim() ? answer : '', finalTools)
+    emit({ conversationId, type: 'done', message })
+    finish({ message, error: null, stopped: false })
     void nameConversation(conversationId)
     void updateSummary(conversationId)
   } catch (err) {
@@ -308,8 +347,11 @@ async function streamReply(
     const message = savePartial(conversationId, answer, settleTools(tools))
     if (controller.signal.aborted) {
       emit({ conversationId, type: 'stopped', message })
+      finish({ message, error: null, stopped: true })
     } else {
-      emit({ conversationId, type: 'error', error: describeError(err), message })
+      const error = describeError(err)
+      emit({ conversationId, type: 'error', error, message })
+      finish({ message, error, stopped: false })
     }
   } finally {
     activeChats.delete(conversationId)

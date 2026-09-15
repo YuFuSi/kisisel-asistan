@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
-import type { Api, AppCommand, ChatEvent, DataScope } from '../shared/api'
+import type { Api, AppCommand, ChatEvent, DataScope, VoiceEvent } from '../shared/api'
 
 // Arayüze sadece bu listedeki işlemler açılır; ham ipcRenderer erişimi verilmez.
 // Kanal adları src/main/ipc.ts ile birebir aynı olmalı.
@@ -26,6 +26,12 @@ const api: Api = {
   },
   activity: {
     list: (limit) => ipcRenderer.invoke('activity:list', limit)
+  },
+  calendar: {
+    events: (from, to) => ipcRenderer.invoke('calendar:events', from, to)
+  },
+  system: {
+    status: () => ipcRenderer.invoke('system:status')
   },
   documents: {
     pathForFile: (file) => webUtils.getPathForFile(file),
@@ -85,6 +91,23 @@ const api: Api = {
   },
   speech: {
     transcribe: (audio, mimeType) => ipcRenderer.invoke('speech:transcribe', audio, mimeType)
+  },
+  voice: {
+    packStatus: () => ipcRenderer.invoke('voice:packStatus'),
+    installPack: () => ipcRenderer.invoke('voice:installPack'),
+    state: () => ipcRenderer.invoke('voice:state'),
+    pushAudio: (chunk) => ipcRenderer.send('voice:pushAudio', chunk),
+    startTurn: () => ipcRenderer.invoke('voice:startTurn'),
+    stopSession: () => ipcRenderer.invoke('voice:stopSession'),
+    speak: (text) => ipcRenderer.invoke('voice:speak', text),
+    stopSpeaking: () => ipcRenderer.invoke('voice:stopSpeaking'),
+    playbackEnded: (id) => ipcRenderer.send('voice:playbackEnded', id),
+    onEvent: (listener) => {
+      const handler = (_event: IpcRendererEvent, voiceEvent: VoiceEvent): void =>
+        listener(voiceEvent)
+      ipcRenderer.on('voice:event', handler)
+      return () => ipcRenderer.removeListener('voice:event', handler)
+    }
   },
   google: {
     status: () => ipcRenderer.invoke('google:status'),

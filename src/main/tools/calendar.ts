@@ -2,26 +2,21 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import { googleRequest } from '../google/api'
 import { getGoogleStatus } from '../google/auth'
+import {
+  CALENDAR_EVENTS_URL,
+  fetchCalendarEvents,
+  type EventTime,
+  type GoogleCalendarEvent
+} from '../google/calendar'
 import { parseLocalDate, parseLocalDateTime } from '../lib/datetime'
 import { requireApproval } from './approval'
 import type { ToolModule } from './types'
 
-const CALENDAR = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+const CALENDAR = CALENDAR_EVENTS_URL
 const DEFAULT_DURATION_MS = 60 * 60_000
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-interface EventTime {
-  dateTime?: string
-  date?: string
-}
-
-interface CalendarEvent {
-  id: string
-  summary?: string
-  location?: string
-  start?: EventTime
-  end?: EventTime
-}
+type CalendarEvent = GoogleCalendarEvent
 
 const eventUrl = (id: string): string => `${CALENDAR}/${encodeURIComponent(id)}`
 
@@ -78,17 +73,8 @@ const calendarTools: ToolModule = {
         const end = new Date(start)
         end.setDate(end.getDate() + days)
 
-        const response = await googleRequest<{ items?: CalendarEvent[] }>(CALENDAR, {
-          query: {
-            timeMin: start.toISOString(),
-            timeMax: end.toISOString(),
-            singleEvents: true,
-            orderBy: 'startTime',
-            maxResults: 20,
-            timeZone
-          }
-        })
-        const etkinlikler = (response.items ?? []).map((event) => ({
+        const events = await fetchCalendarEvents(start, end, 20)
+        const etkinlikler = events.map((event) => ({
           id: event.id,
           baslik: event.summary ?? '(başlıksız)',
           baslangic: formatEventTime(event.start),
