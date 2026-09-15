@@ -45,7 +45,7 @@ const formatTime = (ms: number): string =>
   new Date(ms).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
 
 function entryTime(entry: AgendaEntry): string {
-  if (entry.kind === 'task') return 'Görev'
+  if (entry.kind === 'task') return entry.time === null ? 'Görev' : formatTime(entry.time)
   if (entry.time === null) return 'Tüm gün'
   return entry.end ? `${formatTime(entry.time)}–${formatTime(entry.end)}` : formatTime(entry.time)
 }

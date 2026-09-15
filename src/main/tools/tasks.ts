@@ -24,6 +24,12 @@ const taskTools: ToolModule = {
           .describe(
             'SADECE kullanıcı bir gün söylediyse doldur, YYYY-MM-DD biçiminde. Gün söylenmediyse bu alanı hiç gönderme.'
           ),
+        saat: z
+          .string()
+          .optional()
+          .describe(
+            'SADECE kullanıcı saatli bir görev söylediyse doldur ("14:00\'te toplantı" gibi), HH:mm biçiminde. sonTarih olmadan saat gönderme; sadece saat söylenip gün söylenmediyse (ör. "bugün 14:00") sonTarih\'i bugünün tarihiyle doldur.'
+          ),
         aciklama: z
           .string()
           .optional()
@@ -35,10 +41,11 @@ const taskTools: ToolModule = {
         const task = createTask({
           title: input.baslik,
           notes: input.aciklama ?? '',
-          dueDate: input.sonTarih ? parseLocalDate(input.sonTarih) : null
+          dueDate: input.sonTarih ? parseLocalDate(input.sonTarih) : null,
+          dueTime: input.saat ?? null
         })
         notifyDataChanged('tasks')
-        return { id: task.id, baslik: task.title, sonTarih: task.dueDate }
+        return { id: task.id, baslik: task.title, sonTarih: task.dueDate, saat: task.dueTime }
       }
     }),
 
@@ -60,6 +67,7 @@ const taskTools: ToolModule = {
             id: task.id,
             baslik: task.title,
             sonTarih: task.dueDate,
+            saat: task.dueTime,
             tamamlandi: task.doneAt !== null
           }))
         }

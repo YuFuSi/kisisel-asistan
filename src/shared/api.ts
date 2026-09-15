@@ -326,6 +326,8 @@ export interface Task {
   notes: string
   /** Yerel tarih, YYYY-MM-DD */
   dueDate: string | null
+  /** Yerel saat, HH:mm; sadece dueDate varsa anlamlı */
+  dueTime: string | null
   /** Tamamlanma zamanı (ISO); null ise bekliyor */
   doneAt: string | null
   createdAt: string
@@ -335,12 +337,14 @@ export interface TaskInput {
   title: string
   notes?: string
   dueDate?: string | null
+  dueTime?: string | null
 }
 
 export interface TaskPatch {
   title?: string
   notes?: string
   dueDate?: string | null
+  dueTime?: string | null
   done?: boolean
 }
 

@@ -29,6 +29,14 @@ const parseIso = (iso: string, addDays = 0): Date => {
   return new Date(year, month - 1, day + addDays)
 }
 
+/** "2026-09-12", "14:00" → o günün 14:00'ünün epoch ms değeri */
+const taskDueTimeMs = (iso: string, dueTime: string): number => {
+  const [hour, minute] = dueTime.split(':').map(Number)
+  const date = parseIso(iso)
+  date.setHours(hour, minute)
+  return date.getTime()
+}
+
 /** Izgaranın kapsadığı zaman aralığı; bitiş hariç (takvim sorgusu için) */
 export function gridRange(cells: DayCell[]): { from: Date; to: Date } {
   return { from: parseIso(cells[0].iso), to: parseIso(cells[cells.length - 1].iso, 1) }
@@ -98,7 +106,7 @@ export function buildAgenda(
       key: `task:${task.id}`,
       kind: 'task',
       title: task.title,
-      time: null,
+      time: task.dueTime ? taskDueTimeMs(iso, task.dueTime) : null,
       end: null,
       detail: null,
       taskId: task.id,

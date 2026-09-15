@@ -45,6 +45,20 @@ describe('görevler', () => {
     expect(() => createTask({ title: 'Test', dueDate: '15.09.2026' })).toThrow()
     expect(() => updateTask(999, { done: true })).toThrow()
   })
+
+  it('saatli görevi kabul eder, saat için tarih şartını ve biçimini denetler', () => {
+    const toplanti = createTask({ title: 'Toplantı', dueDate: '2026-09-15', dueTime: '14:00' })
+    expect(toplanti.dueTime).toBe('14:00')
+
+    expect(() => createTask({ title: 'Tarihsiz saatli', dueTime: '14:00' })).toThrow()
+    expect(() =>
+      createTask({ title: 'Yanlış saat', dueDate: '2026-09-15', dueTime: '25:00' })
+    ).toThrow()
+
+    // Tarih kaldırılınca eski saat de düşer
+    const updated = updateTask(toplanti.id, { dueDate: null })
+    expect(updated.dueTime).toBeNull()
+  })
 })
 
 describe('hatırlatmalar', () => {
