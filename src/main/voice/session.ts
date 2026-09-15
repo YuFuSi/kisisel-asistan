@@ -5,6 +5,7 @@ import { DEFAULT_ENDPOINTER, Endpointer } from '../lib/endpointer'
 import { SentenceSplitter } from '../lib/sentences'
 import { isStopRequest, parseConfirmation } from '../lib/voiceCommands'
 import { getSettings } from '../settings'
+import { BrowserWindow } from 'electron'
 import { getMainWindow } from '../system/window'
 import { isApprovalPending, onApprovalRequested, respondToApproval } from '../tools/approval'
 import {
@@ -71,9 +72,11 @@ let unsubscribeApproval: (() => void) | null = null
 const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Ana pencereye ve açıksa HUD'a birlikte gider; HUD sadece "phase" olayını kullanır.
 export function emitVoiceEvent(event: VoiceEvent): void {
-  const contents = getMainWindow()?.webContents
-  if (contents && !contents.isDestroyed()) contents.send('voice:event', event)
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.webContents.isDestroyed()) window.webContents.send('voice:event', event)
+  }
 }
 
 function setPhase(next: VoicePhase): void {

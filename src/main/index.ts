@@ -1,4 +1,4 @@
-import { app, powerMonitor } from 'electron'
+import { app, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { closeDb } from './db'
@@ -9,6 +9,7 @@ import { startReminderScheduler } from './scheduler/reminders'
 import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
+import { disposeHud, toggleHud } from './system/hud'
 import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
 import { applyOpenAtLogin, wasStartedHidden } from './system/startup'
@@ -41,6 +42,9 @@ function quitApp(): void {
   markQuitting()
   app.quit()
 }
+
+// HUD kısayolu şimdilik sabit; ana pencerenin kısayolu gibi Ayarlar'dan değiştirilemez
+const HUD_SHORTCUT = 'CommandOrControl+Shift+J'
 
 // Veri klasörü sabit: geliştirme (npm run dev / npm start) ve kurulu uygulama aynı veritabanını ve
 // şifreleme anahtarını kullansın. Kurulu uygulamanın adı (productName, şu an "Jarvis") farklı olduğu için
@@ -89,9 +93,13 @@ if (!app.requestSingleInstanceLock()) {
         sendCommand('new-chat')
       },
       onToggleOpenAtLogin: (enabled) => applySettingsPatch({ openAtLogin: enabled }),
+      onToggleHud: toggleHud,
       onQuit: quitApp
     })
     initGlobalShortcut(settings.globalShortcut, toggleFromShortcut)
+    if (!globalShortcut.register(HUD_SHORTCUT, toggleHud)) {
+      console.warn(`HUD kısayolu kaydedilemedi: ${HUD_SHORTCUT}`)
+    }
     applyOpenAtLogin(settings.openAtLogin)
     stopReminderScheduler = startReminderScheduler()
     stopBriefScheduler = startBriefScheduler()
@@ -123,6 +131,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     disposeGlobalShortcut()
+    disposeHud()
     destroyTray()
     stopReminderScheduler?.()
     stopBriefScheduler?.()
