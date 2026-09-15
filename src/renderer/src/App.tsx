@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { BarChart3, Trophy, Workflow } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import { PAGE_LABELS, type PageId } from './lib/pages'
 import TitleBar from './components/TitleBar'
@@ -7,6 +8,7 @@ import ChatPage from './pages/ChatPage'
 import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
+import ComingSoonPage from './pages/ComingSoonPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
@@ -66,6 +68,48 @@ function App(): React.JSX.Element {
           {page === 'notes' && (
             <div className="animate-fade h-full">
               <NotesPage />
+            </div>
+          )}
+          {page === 'automations' && (
+            <div className="animate-fade h-full overflow-y-auto">
+              <ComingSoonPage
+                icon={Workflow}
+                title="Otomasyonlar"
+                description="Jarvis'in sohbet beklemeden kendiliğinden yaptığı işler."
+                bullets={[
+                  'Zamanlı rutinler: "her sabah 8\'de hava, görevler ve mail özetini sesli oku"',
+                  'Hazır senaryolar: Günaydın, Gün sonu, pil azaldı uyarısı',
+                  'Sohbetten rutin kurma ve "şimdi dene" ile kuru çalıştırma'
+                ]}
+              />
+            </div>
+          )}
+          {page === 'analytics' && (
+            <div className="animate-fade h-full overflow-y-auto">
+              <ComingSoonPage
+                icon={BarChart3}
+                title="Analizler"
+                description="Asistan kullanımın hakkında istatistikler."
+                bullets={[
+                  'Tamamlanan görevler, en çok kullanılan araçlar',
+                  'Otomasyonların kazandırdığı tahmini süre',
+                  'Haftalık kullanım özeti'
+                ]}
+              />
+            </div>
+          )}
+          {page === 'achievements' && (
+            <div className="animate-fade h-full overflow-y-auto">
+              <ComingSoonPage
+                icon={Trophy}
+                title="Başarımlar"
+                description="Düzenli kullanım için küçük kutlamalar."
+                bullets={[
+                  '7 gün üst üste görev tamamlama gibi seriler',
+                  'İlk rutin, 100. komut gibi rozetler',
+                  'Tamamı yerel veriden hesaplanır, dışarı bir şey gitmez'
+                ]}
+              />
             </div>
           )}
           {page === 'settings' && (
