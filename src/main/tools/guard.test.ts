@@ -90,4 +90,48 @@ describe('araç sarmalayıcısı', () => {
     expect(listed).toMatchObject({ name: 'gorevleri_listele', status: 'done' })
     expect(failed).toMatchObject({ name: 'gorev_tamamla', status: 'error' })
   })
+
+  // Tur G kuralı: tam izinli bir rutin bile dışarıdan gelen içerikle (e-posta, web sayfası)
+  // tetiklenmişse tehlikeli bir işlemi onaysız yapamaz. Bu, otomasyon motorundan önce
+  // doğrulanması gereken tek güvenlik kuralıydı (bkz. CLAUDE.md yol haritası, adım 9).
+  describe('dış içerik güvenliği', () => {
+    it('tam izinli rutinde dışarıdan gelen içerik tehlikeli aracı onaysız çalıştırmaz; reddedilirse dosya hiç okunmaz', async () => {
+      const events: ChatEvent[] = []
+      const promise = run(
+        'belge_oku',
+        { dosyaYolu: 'C:\\gizli\\rapor.txt' },
+        context(events, { source: 'automation', allowance: 'all', external: true })
+      )
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      expect(events[0]).toMatchObject({ type: 'approval', approval: { toolName: 'belge_oku' } })
+
+      cancelApprovals(7)
+      await expect(promise).rejects.toThrow('onaylamadı')
+      expect(listActivity()[0]).toMatchObject({
+        name: 'belge_oku',
+        status: 'denied',
+        source: 'automation'
+      })
+    })
+
+    it('aynı tehlikeli araç, dışarıdan tetiklenmemiş tam izinli rutinde onaysız çalışır', async () => {
+      const events: ChatEvent[] = []
+      // Dosya gerçekte yok; onay kartı çıkmadığını (auto geçtiğini) doğrulamak yeterli,
+      // asıl okuma girişimi olmayan dosya yüzünden zaten hata verecek.
+      await expect(
+        run(
+          'belge_oku',
+          { dosyaYolu: 'C:\\olmayan-klasor\\olmayan-dosya.txt' },
+          context(events, { source: 'automation', allowance: 'all' })
+        )
+      ).rejects.toThrow()
+
+      expect(events).toHaveLength(0)
+      expect(listActivity()[0]).toMatchObject({
+        name: 'belge_oku',
+        status: 'error',
+        approval: 'auto'
+      })
+    })
+  })
 })
