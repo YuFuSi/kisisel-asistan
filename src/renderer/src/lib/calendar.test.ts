@@ -56,10 +56,28 @@ describe('buildAgenda', () => {
       title: 'Fatura öde',
       notes: '',
       dueDate: '2026-09-14',
+      dueTime: null,
       doneAt: '2026-09-14T08:00:00Z',
       createdAt: ''
     },
-    { id: 6, title: 'Tarihsiz', notes: '', dueDate: null, doneAt: null, createdAt: '' }
+    {
+      id: 6,
+      title: 'Tarihsiz',
+      notes: '',
+      dueDate: null,
+      dueTime: null,
+      doneAt: null,
+      createdAt: ''
+    },
+    {
+      id: 7,
+      title: 'Toplantı hazırlığı',
+      notes: '',
+      dueDate: '2026-09-14',
+      dueTime: '09:30',
+      doneAt: null,
+      createdAt: ''
+    }
   ]
 
   it('günün kayıtlarını tüm gün/görevler önce, sonra saat sırasıyla verir', () => {
@@ -68,10 +86,21 @@ describe('buildAgenda', () => {
       'Tatil',
       'Fatura öde',
       'Vitamin',
+      'Toplantı hazırlığı',
       'Toplantı'
     ])
     expect(agenda.find((entry) => entry.kind === 'reminder')?.detail).toBe('Her gün')
-    expect(agenda.find((entry) => entry.kind === 'task')).toMatchObject({ taskId: 5, done: true })
+    expect(agenda.find((entry) => entry.title === 'Fatura öde')).toMatchObject({
+      taskId: 5,
+      time: null,
+      done: true
+    })
+  })
+
+  it('saatli görevin epoch zamanını hesaplar ve saate göre sıralar', () => {
+    const agenda = buildAgenda('2026-09-14', [], [], tasks)
+    const toplanti = agenda.find((entry) => entry.title === 'Toplantı hazırlığı')
+    expect(toplanti).toMatchObject({ taskId: 7, time: at(2026, 9, 14, 9, 30), done: false })
   })
 
   it('birden çok güne yayılan tüm gün etkinliği bitiş gününe taşmaz', () => {

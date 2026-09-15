@@ -18,7 +18,7 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
   const cancelled = useRef(false)
 
   const done = task.doneAt !== null
-  const due = task.dueDate ? describeDueDate(task.dueDate) : null
+  const due = task.dueDate ? describeDueDate(task.dueDate, task.dueTime) : null
 
   function startEditing(): void {
     setDraft(task.title)

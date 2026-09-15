@@ -27,21 +27,26 @@ export interface DueDateInfo {
   today: boolean
 }
 
-/** "2026-09-12" → { text: 'Yarın', ... } */
-export function describeDueDate(isoDate: string): DueDateInfo {
+/** "2026-09-12", "14:00" → { text: 'Yarın 14:00', ... } */
+export function describeDueDate(isoDate: string, dueTime?: string | null): DueDateInfo {
   const [year, month, day] = isoDate.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   const now = new Date()
   const diff = dayDiff(date, now)
-  const text =
+  const dayText =
     relativeDay(date, now) ??
     date.toLocaleDateString('tr-TR', {
       day: 'numeric',
       month: 'short',
       ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {})
     })
-  return { text, overdue: diff < 0, today: diff === 0 }
+  const text = dueTime ? `${dayText} ${dueTime}` : dayText
+  // Saatli bugünkü görev, saati geçtiyse gecikmiş sayılır
+  const overdue = diff < 0 || (diff === 0 && !!dueTime && dueTime < toClockString(now))
+  return { text, overdue, today: diff === 0 }
 }
+
+const toClockString = (date: Date): string => `${pad(date.getHours())}:${pad(date.getMinutes())}`
 
 /** Epoch ms → "Yarın 10:00" veya "15 Eylül Sal 10:00" */
 export function formatReminderTime(ms: number): string {

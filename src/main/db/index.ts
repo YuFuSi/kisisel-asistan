@@ -99,6 +99,10 @@ const migrations: string[] = [
   );
 
   CREATE INDEX idx_activity_created ON activity_log(created_at);
+  `,
+  // 8: Görevlerde isteğe bağlı saat (sadece son tarih varsa anlamlı)
+  `
+  ALTER TABLE tasks ADD COLUMN due_time TEXT;
   `
 ]
 
