@@ -25,6 +25,21 @@ const TARGETS: Record<AssistantState, Motion> = {
   speaking: { speed: 0.9, intensity: 1, wave: 0.75 }
 }
 
+interface OrbColors {
+  accent: string
+  glow: string
+}
+
+// idle, tema rengini (--color-accent/--color-glow) kullanır; diğer durumların kendi rengi var
+// (dinlerken camgöbeği, düşünürken mor, çalışırken amber, konuşurken yeşil) — durum bir bakışta anlaşılsın
+const STATE_COLORS: Record<AssistantState, OrbColors> = {
+  idle: { accent: '#2f7dff', glow: '#3cc4ff' },
+  listening: { accent: '#17b8e8', glow: '#7ff0ff' },
+  thinking: { accent: '#8b5cf6', glow: '#c4a6ff' },
+  working: { accent: '#e08a12', glow: '#ffd166' },
+  speaking: { accent: '#22c55e', glow: '#8bffb8' }
+}
+
 const WIDTH_RATIO = 1.9
 const HEIGHT_RATIO = 1.15
 const SPARK_COUNT = 28
@@ -35,10 +50,24 @@ function themeColor(name: string, fallback: string): string {
   return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback
 }
 
-function rgba(hex: string, alpha: number): string {
+interface RGB {
+  r: number
+  g: number
+  b: number
+}
+
+function hexToRgb(hex: string): RGB {
   const n = parseInt(hex.slice(1), 16)
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+}
+
+function lerpRgb(a: RGB, b: RGB, t: number): RGB {
+  return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t }
+}
+
+function rgba(color: RGB, alpha: number): string {
   const a = Math.max(0, Math.min(1, alpha))
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`
+  return `rgba(${color.r}, ${color.g}, ${color.b}, ${a})`
 }
 
 // Jarvis küresi: durumuna göre hızlanan, parlayan ve dalgalanan halka (canvas ile çizilir)
@@ -61,13 +90,25 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
     canvas.width = Math.round(width * dpr)
     canvas.height = Math.round(height * dpr)
 
-    const accent = themeColor('--color-accent', '#2f7dff')
-    const glow = themeColor('--color-glow', '#3cc4ff')
-    const white = '#e8f7ff'
+    const palette: Record<AssistantState, { accent: RGB; glow: RGB }> = {
+      ...Object.fromEntries(
+        Object.entries(STATE_COLORS).map(([key, value]) => [
+          key,
+          { accent: hexToRgb(value.accent), glow: hexToRgb(value.glow) }
+        ])
+      ),
+      // idle, tema özelleştirmesine uysun diye CSS değişkeninden okunur
+      idle: {
+        accent: hexToRgb(themeColor('--color-accent', STATE_COLORS.idle.accent)),
+        glow: hexToRgb(themeColor('--color-glow', STATE_COLORS.idle.glow))
+      }
+    } as Record<AssistantState, { accent: RGB; glow: RGB }>
+    const white: RGB = { r: 232, g: 247, b: 255 }
     // Hareketi azalt tercihi açıksa küre yavaş yenilenen, dönmeyen bir görüntü olur
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const motion: Motion = { ...TARGETS[stateRef.current] }
+    const orbColor = { ...palette[stateRef.current] }
     const sparks = Array.from({ length: SPARK_COUNT }, (_, i) => ({
       angle: (i / SPARK_COUNT) * Math.PI * 2 + Math.sin(i * 12.9898) * 0.4,
       seed: ((i * 37) % 11) / 11,
@@ -84,6 +125,9 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       last = now
       const target = TARGETS[stateRef.current]
       const ease = reduced ? 1 : Math.min(dt * 3, 1)
+      const targetColor = palette[stateRef.current]
+      orbColor.accent = lerpRgb(orbColor.accent, targetColor.accent, ease)
+      orbColor.glow = lerpRgb(orbColor.glow, targetColor.glow, ease)
       motion.speed += (target.speed - motion.speed) * ease
       motion.intensity += (target.intensity - motion.intensity) * ease
       motion.wave += (target.wave - motion.wave) * ease
@@ -111,17 +155,17 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       ctx.translate(cx, cy + radius * 0.62)
       ctx.scale(1, 0.08)
       let gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, width / 2)
-      gradient.addColorStop(0, rgba(glow, 0.6 * light))
-      gradient.addColorStop(0.35, rgba(accent, 0.2 * light))
-      gradient.addColorStop(1, rgba(accent, 0))
+      gradient.addColorStop(0, rgba(orbColor.glow, 0.6 * light))
+      gradient.addColorStop(0.35, rgba(orbColor.accent, 0.2 * light))
+      gradient.addColorStop(1, rgba(orbColor.accent, 0))
       ctx.fillStyle = gradient
       ctx.fillRect(-width / 2, -width / 2, width, width)
       ctx.restore()
 
       // Dış ışıma
       gradient = ctx.createRadialGradient(cx, cy, radius * 0.7, cx, cy, radius * 1.7)
-      gradient.addColorStop(0, rgba(accent, 0.34 * light))
-      gradient.addColorStop(1, rgba(accent, 0))
+      gradient.addColorStop(0, rgba(orbColor.accent, 0.34 * light))
+      gradient.addColorStop(1, rgba(orbColor.accent, 0))
       ctx.fillStyle = gradient
       ctx.beginPath()
       ctx.arc(cx, cy, radius * 1.7, 0, Math.PI * 2)
@@ -132,7 +176,7 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       gradient = ctx.createRadialGradient(cx, cy - radius * 0.2, radius * 0.1, cx, cy, radius)
       gradient.addColorStop(0, 'rgba(6, 16, 38, 0.97)')
       gradient.addColorStop(0.75, 'rgba(5, 18, 48, 0.95)')
-      gradient.addColorStop(1, rgba(accent, 0.4))
+      gradient.addColorStop(1, rgba(orbColor.accent, 0.4))
       ctx.fillStyle = gradient
       ctx.beginPath()
       ctx.arc(cx, cy, radius * 0.985, 0, Math.PI * 2)
@@ -154,12 +198,12 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
           if (i === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         }
-        const color = k === 0 ? white : k % 2 === 0 ? glow : accent
+        const strokeColor = k === 0 ? white : k % 2 === 0 ? orbColor.glow : orbColor.accent
         ctx.lineWidth = 7
-        ctx.strokeStyle = rgba(color, 0.06 * light)
+        ctx.strokeStyle = rgba(strokeColor, 0.06 * light)
         ctx.stroke()
         ctx.lineWidth = k === 0 ? 2.2 : 1.1
-        ctx.strokeStyle = rgba(color, (k === 0 ? 0.85 : 0.45) * light)
+        ctx.strokeStyle = rgba(strokeColor, (k === 0 ? 0.85 : 0.45) * light)
         ctx.stroke()
       }
 
@@ -168,7 +212,7 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
         const a = spark.angle + t * 0.25 * spark.direction
         const r = radius * (1.03 + 0.07 * Math.sin(t * 1.3 + spark.seed * 10))
         const flicker = 0.35 + 0.65 * Math.abs(Math.sin(t * 2 + spark.seed * 20))
-        ctx.fillStyle = rgba(glow, 0.7 * flicker * light)
+        ctx.fillStyle = rgba(orbColor.glow, 0.7 * flicker * light)
         ctx.beginPath()
         ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.1 + spark.seed * 1.2, 0, Math.PI * 2)
         ctx.fill()
@@ -191,10 +235,10 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.lineWidth = 10
-      ctx.strokeStyle = rgba(glow, 0.14 * light)
+      ctx.strokeStyle = rgba(orbColor.glow, 0.14 * light)
       ctx.stroke()
       ctx.lineWidth = 3.2
-      ctx.strokeStyle = rgba(glow, 0.95)
+      ctx.strokeStyle = rgba(orbColor.glow, 0.95)
       ctx.stroke()
       ctx.globalCompositeOperation = 'source-over'
 

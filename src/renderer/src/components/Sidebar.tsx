@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  BarChart3,
   Brain,
   CalendarDays,
   House,
@@ -8,6 +9,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Trophy,
+  Workflow,
   type LucideIcon
 } from 'lucide-react'
 import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
@@ -19,6 +22,9 @@ const ITEMS: { id: PageId; icon: LucideIcon }[] = [
   { id: 'tasks', icon: ListTodo },
   { id: 'calendar', icon: CalendarDays },
   { id: 'notes', icon: Brain },
+  { id: 'automations', icon: Workflow },
+  { id: 'analytics', icon: BarChart3 },
+  { id: 'achievements', icon: Trophy },
   { id: 'settings', icon: Settings }
 ]
 
