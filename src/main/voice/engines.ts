@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import vadModelPath from '../../../resources/voice/silero_vad.onnx?asset'
 import { getSettings } from '../settings'
 import { resolveVoicePaths, type VoicePaths } from './pack'
@@ -12,6 +12,13 @@ import { WhisperServer } from './whisper'
 // Motorlar ilk kullanıldıklarında yüklenir; paket sonradan kurulursa yollar yeniden okunur.
 
 export const voiceDirectory = (): string => join(app.getPath('userData'), 'voice')
+
+// onnxruntime-node asar arşivinin içini native olarak okuyamaz (Electron'un fs yaması sadece
+// Node API'lerini kapsar); paketlenmiş uygulamada gerçek dosya app.asar.unpacked altındadır.
+const nativeReadablePath = (assetPath: string): string =>
+  app.isPackaged
+    ? assetPath.replace(`${sep}app.asar${sep}`, `${sep}app.asar.unpacked${sep}`)
+    : assetPath
 
 let whisper: WhisperServer | null = null
 let piper: PiperVoice | null = null
@@ -79,7 +86,7 @@ export function getWakeWordDetector(): Promise<WakeWordDetector> {
 
 export function getVad(): Promise<SileroVad> {
   if (!vad) {
-    vad = SileroVad.load(vadModelPath).catch((err: unknown) => {
+    vad = SileroVad.load(nativeReadablePath(vadModelPath)).catch((err: unknown) => {
       vad = null
       throw err
     })
