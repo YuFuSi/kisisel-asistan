@@ -46,7 +46,8 @@ const defaults: AppSettings = {
   voiceBargeIn: false,
   // Test edildi (2026-09-14): length_scale 0,75-0,80 arası gerçek hızı ~1,24x yapıyor, doğallık bozulmuyor
   speechRate: 1.3,
-  speechVolume: 1
+  speechVolume: 1,
+  semanticSearchEnabled: false
 }
 
 function readValue(key: string): string | undefined {
@@ -160,6 +161,9 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
       throw new Error('Ses seviyesi 0 ile 1 arasında olmalı.')
     }
     next.speechVolume = Math.round(value * 100) / 100
+  }
+  if (typeof patch.semanticSearchEnabled === 'boolean') {
+    next.semanticSearchEnabled = patch.semanticSearchEnabled
   }
 
   writeValue(SETTINGS_KEY, JSON.stringify(next))

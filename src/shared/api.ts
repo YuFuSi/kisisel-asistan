@@ -210,6 +210,9 @@ export interface AppSettings {
   speechRate: number
   /** Ses seviyesi (0-1) */
   speechVolume: number
+  /** Hafıza ve notlarda anahtar kelime yerine anlamsal (embedding) arama kullanılsın mı.
+   * Açmadan önce Ollama'da "bge-m3" modelinin indirilmiş olması gerekir. */
+  semanticSearchEnabled: boolean
 }
 
 export interface SettingsPatch {
@@ -237,6 +240,7 @@ export interface SettingsPatch {
   voiceBargeIn?: boolean
   speechRate?: number
   speechVolume?: number
+  semanticSearchEnabled?: boolean
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
