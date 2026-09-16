@@ -3,6 +3,7 @@ import type { WebContents } from 'electron'
 import { generateText, streamText } from 'ai'
 import { closeDb, initDatabase } from '../db'
 import { createConversation, listMessages } from '../data/conversations'
+import { createMemory } from '../data/memories'
 import { getSettings, updateSettings } from '../settings'
 import { editAndResend, regenerateReply, sendMessage, stopChat } from './chat'
 import type { ChatEvent } from '../../shared/api'
@@ -192,6 +193,37 @@ describe('sendMessage', () => {
     const call = mockStreamText.mock.calls[0][0] as { instructions: string }
     expect(call.instructions).toContain('Google hesabı bağlı değil')
     expect(call.instructions).not.toContain('Gmail ve Google Takvim araçların var')
+  })
+
+  it('hafıza kayıtları talimata eklenir (anlamsal arama kapalıyken de)', async () => {
+    createMemory('Kahvesini şekersiz içer')
+    mockStreamText.mockReturnValue({
+      stream: streamOf([{ type: 'text-delta', text: 'Tamam.' }])
+    } as never)
+
+    const conversation = createConversation()
+    const events: ChatEvent[] = []
+    sendMessage(fakeSender(events), conversation.id, 'Selam')
+
+    await waitFor(() => events.some((e) => e.type === 'done'))
+    const call = mockStreamText.mock.calls[0][0] as { instructions: string }
+    expect(call.instructions).toContain('Kahvesini şekersiz içer')
+  })
+
+  it('anlamsal arama açıkken de (embedding eksik olsa bile) hafıza kayıtları talimata eklenir', async () => {
+    updateSettings({ semanticSearchEnabled: true })
+    createMemory('Kahvesini şekersiz içer')
+    mockStreamText.mockReturnValue({
+      stream: streamOf([{ type: 'text-delta', text: 'Tamam.' }])
+    } as never)
+
+    const conversation = createConversation()
+    const events: ChatEvent[] = []
+    sendMessage(fakeSender(events), conversation.id, 'Selam')
+
+    await waitFor(() => events.some((e) => e.type === 'done'))
+    const call = mockStreamText.mock.calls[0][0] as { instructions: string }
+    expect(call.instructions).toContain('Kahvesini şekersiz içer')
   })
 })
 

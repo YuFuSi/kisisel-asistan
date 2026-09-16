@@ -11,10 +11,8 @@ import {
   setGeneratedTitle,
   setTitleIfEmpty
 } from '../data/conversations'
-import { listMemories } from '../data/memories'
 import { notifyDataChanged } from '../events'
 import { toLocalIso } from '../lib/datetime'
-import { rankMemories } from '../lib/memoryRank'
 import { cleanTitle } from '../lib/title'
 import { summarizeToolOutput, toModelMessages } from '../lib/toolHistory'
 import { getSecret, getSettings } from '../settings'
@@ -25,6 +23,7 @@ import { cancelApprovals } from '../tools/approval'
 import { runWithToolContext } from '../tools/context'
 import { getModel, getModelOptions } from './providers'
 import { describeError } from './errors'
+import { rankMemoriesForChat } from './memoryEmbeddings'
 import type {
   AssistantTone,
   ChatEvent,
@@ -77,7 +76,11 @@ export interface ReplyOptions {
  * Sistem talimatı. `query` son kullanıcı mesajıdır: hafıza kayıtları buna göre seçilir.
  * `summary` sohbetin modele artık tam gönderilmeyen eski kısmının özetidir.
  */
-function buildInstructions(query: string, summary: string, source: ToolSource): string {
+async function buildInstructions(
+  query: string,
+  summary: string,
+  source: ToolSource
+): Promise<string> {
   const settings = getSettings()
   const googleConnected = getGoogleStatus().connected
   const searchAvailable = getSecret('tavily') !== undefined
@@ -117,7 +120,7 @@ function buildInstructions(query: string, summary: string, source: ToolSource): 
     lines.push('', 'Kullanıcının kendisi hakkında yazdıkları:', settings.aboutMe)
   }
 
-  const memories = rankMemories(listMemories(), query, MEMORY_LIMIT)
+  const memories = await rankMemoriesForChat(query, MEMORY_LIMIT)
   if (memories.length > 0) {
     lines.push(
       '',
@@ -282,9 +285,10 @@ async function streamReply(
 
     // Araçlar hangi sohbette çalıştıklarını bu bağlamdan öğrenir (onay kartı göndermek için gerekli)
     await runWithToolContext({ conversationId, sender, source }, async () => {
+      const instructions = await buildInstructions(query, summary, source)
       const result = streamText({
         model: getModel(),
-        instructions: buildInstructions(query, summary, source),
+        instructions,
         messages: toModelMessages(recent),
         tools: getAssistantTools(),
         stopWhen: isStepCount(MAX_STEPS),

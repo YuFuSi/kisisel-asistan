@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeDb, initDatabase } from '../db'
-import { blobToFloats, embedText, floatsToBlob } from './embeddings'
+import { embedText } from './embeddings'
 
 beforeEach(() => {
   initDatabase(':memory:')
@@ -56,14 +56,5 @@ describe('embedText', () => {
       vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ embeddings: [] }) })
     )
     await expect(embedText('merhaba')).rejects.toThrow('boş sonuç')
-  })
-})
-
-describe('floatsToBlob / blobToFloats', () => {
-  it('bir vektörü baytlara çevirip geri okuyunca aynı değerleri verir', () => {
-    const original = new Float32Array([1.5, -2.25, 0, 3.75])
-    const blob = floatsToBlob(original)
-    const restored = blobToFloats(blob)
-    expect(Array.from(restored)).toEqual(Array.from(original))
   })
 })

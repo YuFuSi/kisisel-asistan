@@ -1,4 +1,5 @@
 import { getDb } from '../db'
+import { blobToFloats } from '../lib/embeddingBlob'
 import { findSimilarMemory } from '../lib/memoryRank'
 import type { Memory } from '../../shared/api'
 
@@ -6,6 +7,14 @@ interface MemoryRow {
   id: number
   content: string
   created_at: string
+}
+
+interface MemoryRowWithEmbedding extends MemoryRow {
+  embedding: Buffer | null
+}
+
+export interface MemoryWithEmbedding extends Memory {
+  embedding: Float32Array | null
 }
 
 // Hafıza her sohbette talimata eklendiği için kayıtlar kısa tutulur
@@ -74,4 +83,15 @@ export function setMemoryEmbedding(id: number, embedding: Buffer): void {
       "UPDATE memories SET embedding = ?, embedding_updated_at = datetime('now') WHERE id = ?"
     )
     .run(embedding, id)
+}
+
+/** Tüm kayıtları gömme vektörleriyle birlikte döndürür (anlamsal sıralama için) */
+export function listMemoriesWithEmbeddings(): MemoryWithEmbedding[] {
+  const rows = getDb()
+    .prepare('SELECT * FROM memories ORDER BY id')
+    .all() as MemoryRowWithEmbedding[]
+  return rows.map((row) => ({
+    ...toMemory(row),
+    embedding: row.embedding ? blobToFloats(row.embedding) : null
+  }))
 }
