@@ -36,6 +36,7 @@ import { readDocumentPart } from './lib/documents'
 import { showDailyBrief } from './scheduler/brief'
 import { allowDocument } from './tools/documents'
 import { backfillMemoryEmbeddings, scheduleMemoryEmbedding } from './ai/memoryEmbeddings'
+import { backfillNoteEmbeddings, scheduleNoteEmbedding } from './ai/noteEmbeddings'
 import { createMemory, deleteMemory, listMemories, updateMemory } from './data/memories'
 import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import {
@@ -241,12 +242,21 @@ export function registerIpcHandlers(): void {
   // Notlar
   ipcMain.handle('notes:list', () => listNotes())
   ipcMain.handle('notes:create', (_event, input: NotePatch) =>
-    changing('notes', () => createNote(input))
+    changing('notes', () => {
+      const note = createNote(input)
+      scheduleNoteEmbedding(note.id, note.title, note.content)
+      return note
+    })
   )
   ipcMain.handle('notes:update', (_event, id: number, patch: NotePatch) =>
-    changing('notes', () => updateNote(id, patch))
+    changing('notes', () => {
+      const note = updateNote(id, patch)
+      scheduleNoteEmbedding(note.id, note.title, note.content)
+      return note
+    })
   )
   ipcMain.handle('notes:remove', (_event, id: number) => changing('notes', () => deleteNote(id)))
+  ipcMain.handle('notes:backfillEmbeddings', () => backfillNoteEmbeddings())
 
   // Hafıza
   ipcMain.handle('memories:list', () => listMemories())

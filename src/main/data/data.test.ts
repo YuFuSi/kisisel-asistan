@@ -20,7 +20,13 @@ import {
   listMemoriesMissingEmbedding,
   setMemoryEmbedding
 } from './memories'
-import { createNote, searchNotes, updateNote } from './notes'
+import {
+  createNote,
+  listNotesMissingEmbedding,
+  searchNotes,
+  setNoteEmbedding,
+  updateNote
+} from './notes'
 import { createReminder, listPendingReminders, snoozeReminder, takeDueReminders } from './reminders'
 import { createTask, listTasks, updateTask } from './tasks'
 
@@ -99,6 +105,17 @@ describe('notlar', () => {
       title: 'Fikirler',
       content: 'Uygulama'
     })
+  })
+
+  it("yeni notların embedding'i başta eksik sayılır", () => {
+    const note = createNote({ title: 'Fikirler' })
+    expect(listNotesMissingEmbedding().map((n) => n.id)).toContain(note.id)
+  })
+
+  it('embedding yazılınca eksik listesinden çıkar', () => {
+    const note = createNote({ title: 'Fikirler' })
+    setNoteEmbedding(note.id, Buffer.from(new Float32Array([1, 2, 3]).buffer))
+    expect(listNotesMissingEmbedding().map((n) => n.id)).not.toContain(note.id)
   })
 })
 

@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import { createNote, searchNotes } from '../data/notes'
+import { scheduleNoteEmbedding, searchNotesSemantic } from '../ai/noteEmbeddings'
+import { createNote } from '../data/notes'
 import { notifyDataChanged } from '../events'
 import type { ToolModule } from './types'
 
@@ -22,6 +23,7 @@ const noteTools: ToolModule = {
       }),
       execute: async ({ baslik, icerik }) => {
         const note = createNote({ title: baslik, content: icerik })
+        scheduleNoteEmbedding(note.id, note.title, note.content)
         notifyDataChanged('notes')
         return { id: note.id, baslik: note.title }
       }
@@ -29,12 +31,12 @@ const noteTools: ToolModule = {
 
     notlarda_ara: tool({
       description:
-        'Kullanıcının notlarında kelimeyle arama yapar. Kullanıcı daha önce kaydettiği bir şeyi sorarsa kullan.',
+        'Kullanıcının notlarında arama yapar. Kullanıcı daha önce kaydettiği bir şeyi sorarsa kullan.',
       inputSchema: z.object({
         sorgu: z.string().describe('Aranacak kelime veya kelimeler')
       }),
       execute: async ({ sorgu }) => ({
-        notlar: searchNotes(sorgu).map((note) => ({
+        notlar: (await searchNotesSemantic(sorgu)).map((note) => ({
           id: note.id,
           baslik: note.title || 'Başlıksız not',
           icerik:
