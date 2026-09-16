@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { closeDb } from './db'
 import { registerIpcHandlers } from './ipc'
+import { startBatteryScheduler } from './scheduler/battery'
 import { startBriefScheduler } from './scheduler/brief'
 import { safeCheckpoint, startMaintenance } from './scheduler/maintenance'
 import { startProactiveScheduler } from './scheduler/proactive'
@@ -28,6 +29,7 @@ let stopReminderScheduler: (() => void) | null = null
 let stopBriefScheduler: (() => void) | null = null
 let stopMaintenance: (() => void) | null = null
 let stopProactiveScheduler: (() => void) | null = null
+let stopBatteryScheduler: (() => void) | null = null
 
 // Global kısayol: pencere öndeyse gizle, değilse göster ve sohbet kutusuna odaklan
 function toggleFromShortcut(): void {
@@ -107,6 +109,7 @@ if (!app.requestSingleInstanceLock()) {
     stopBriefScheduler = startBriefScheduler()
     stopMaintenance = startMaintenance()
     stopProactiveScheduler = startProactiveScheduler()
+    stopBatteryScheduler = startBatteryScheduler()
     // "Hey Jarvis" açıksa modeller yüklenir ve arayüz mikrofonu dinlemeye başlar
     initVoiceSession()
   })
@@ -140,6 +143,7 @@ if (!app.requestSingleInstanceLock()) {
     stopBriefScheduler?.()
     stopMaintenance?.()
     stopProactiveScheduler?.()
+    stopBatteryScheduler?.()
     // Arka plandaki whisper ve Piper programları da kapansın
     disposeVoiceSession()
     closeDb()
