@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { briefNotificationText, isBriefDue, parseClockTime } from './brief'
+import type { DailyBrief } from '../ai/brief'
+import { briefNotificationText, briefSpokenText, isBriefDue, parseClockTime } from './brief'
+
+function brief(overrides: Partial<DailyBrief> = {}): DailyBrief {
+  return {
+    tarih: '16 Eylül Çarşamba',
+    hava: null,
+    gorevler: [],
+    hatirlatmalar: [],
+    etkinlikler: null,
+    okunmamisEposta: null,
+    uyarilar: [],
+    ...overrides
+  }
+}
 
 describe('parseClockTime', () => {
   it('geçerli saati dakikaya çevirir', () => {
@@ -46,5 +60,44 @@ describe('briefNotificationText', () => {
     expect(
       briefNotificationText({ tasks: 0, events: null, unreadMails: null, temperature: null })
     ).toBe('Bekleyen görev yok. Ayrıntılı özet için tıkla.')
+  })
+})
+
+describe('briefSpokenText', () => {
+  it('bilinen bilgileri doğal cümlelere çevirir', () => {
+    const text = briefSpokenText(
+      brief({
+        hava: {
+          yer: 'İstanbul',
+          sicaklik: 21.6,
+          durum: 'Parçalı bulutlu',
+          enDusuk: 18,
+          enYuksek: 24,
+          yagisIhtimali: 10
+        },
+        gorevler: [{ baslik: 'Fatura öde', sonTarih: null, gecikmis: false }],
+        etkinlikler: [{ baslik: 'Toplantı', saat: '10:00' }],
+        okunmamisEposta: 3
+      })
+    )
+    expect(text).toBe(
+      'Günaydın! Bugün 16 Eylül Çarşamba. Hava 22 derece, Parçalı bulutlu. 1 bekleyen görevin var. Bugün 1 etkinliğin var. 3 okunmamış e-postan var.'
+    )
+  })
+
+  it('bilgi yoksa boş/sıfır durumları doğal şekilde söyler', () => {
+    const text = briefSpokenText(brief())
+    expect(text).toBe('Günaydın! Bugün 16 Eylül Çarşamba. Bekleyen görevin yok.')
+  })
+
+  it('Google bağlı değilse etkinlik ve e-posta cümlelerini hiç eklemez', () => {
+    const text = briefSpokenText(brief({ etkinlikler: null, okunmamisEposta: null }))
+    expect(text).not.toContain('etkinlik')
+    expect(text).not.toContain('e-posta')
+  })
+
+  it('okunmamış e-posta sıfırsa cümleyi eklemez', () => {
+    const text = briefSpokenText(brief({ okunmamisEposta: 0 }))
+    expect(text).not.toContain('e-posta')
   })
 })

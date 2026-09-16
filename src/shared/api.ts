@@ -189,6 +189,8 @@ export interface AppSettings {
   briefTime: string
   /** Özetteki hava durumu için şehir; boşsa hava durumu eklenmez */
   briefCity: string
+  /** Sabah özeti gösterilince ayrıca sesli de okunsun mu (Jarvis'in ilk gerçek otomasyonu) */
+  briefSpoken: boolean
   /** Kullanıcının kendini anlattığı metin; her sohbette asistana verilir */
   aboutMe: string
   tone: AssistantTone
@@ -224,6 +226,7 @@ export interface SettingsPatch {
   briefEnabled?: boolean
   briefTime?: string
   briefCity?: string
+  briefSpoken?: boolean
   aboutMe?: string
   tone?: AssistantTone
   temperature?: number | null

@@ -1,10 +1,11 @@
 import { Notification } from 'electron'
 import icon from '../../../resources/icon.png?asset'
 import { collectDailyBrief } from '../ai/brief'
-import { briefNotificationText, isBriefDue } from '../lib/brief'
+import { briefNotificationText, briefSpokenText, isBriefDue } from '../lib/brief'
 import { toLocalDate } from '../lib/datetime'
 import { getSettings, getStoredValue, setStoredValue } from '../settings'
 import { sendCommand, showMainWindow } from '../system/window'
+import { speakWithVoice } from '../voice/session'
 
 const CHECK_INTERVAL_MS = 60_000
 const LAST_SHOWN_KEY = 'briefLastShown'
@@ -36,6 +37,15 @@ export async function showDailyBrief(): Promise<void> {
     if (visibleNotification === notification) visibleNotification = null
   })
   notification.show()
+
+  // Jarvis'in ilk gerçek otomasyonu: zamanı gelince kendiliğinden konuşur, tıklama beklemez
+  if (getSettings().briefSpoken) {
+    try {
+      speakWithVoice(briefSpokenText(brief))
+    } catch (err) {
+      console.error('Sabah özeti sesli okunamadı:', err)
+    }
+  }
 }
 
 /** Her dakika sabah özeti saatinin gelip gelmediğine bakar. Durdurmak için dönen fonksiyon çağrılır. */

@@ -1,3 +1,4 @@
+import type { DailyBrief } from '../ai/brief'
 import { toLocalDate } from './datetime'
 
 /** "08:00" gibi saat metnini dakikaya çevirir; geçersizse null */
@@ -36,4 +37,33 @@ export function briefNotificationText(counts: BriefCounts): string {
   if (counts.unreadMails !== null) parts.push(`${counts.unreadMails} okunmamış e-posta`)
   if (counts.temperature !== null) parts.push(`${Math.round(counts.temperature)}°C`)
   return `${parts.join(' · ')}. Ayrıntılı özet için tıkla.`
+}
+
+/** Sabah özetini sesli okumak için doğal, kısa Türkçe cümlelere çevirir */
+export function briefSpokenText(brief: DailyBrief): string {
+  const parts: string[] = [`Günaydın! Bugün ${brief.tarih}.`]
+
+  if (brief.hava) {
+    parts.push(`Hava ${Math.round(brief.hava.sicaklik)} derece, ${brief.hava.durum}.`)
+  }
+
+  parts.push(
+    brief.gorevler.length === 0
+      ? 'Bekleyen görevin yok.'
+      : `${brief.gorevler.length} bekleyen görevin var.`
+  )
+
+  if (brief.etkinlikler !== null) {
+    parts.push(
+      brief.etkinlikler.length === 0
+        ? 'Bugün takvimde bir etkinlik yok.'
+        : `Bugün ${brief.etkinlikler.length} etkinliğin var.`
+    )
+  }
+
+  if (brief.okunmamisEposta !== null && brief.okunmamisEposta > 0) {
+    parts.push(`${brief.okunmamisEposta} okunmamış e-postan var.`)
+  }
+
+  return parts.join(' ')
 }
