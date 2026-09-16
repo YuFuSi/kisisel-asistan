@@ -20,9 +20,13 @@ function App(): React.JSX.Element {
   // Jarvis sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
   useEffect(() => initVoiceClient(), [])
 
-  // Global kısayol veya tepsi menüsünden gelince sohbet sayfasına geç ve yazı kutusuna odaklan
+  // Global kısayol, tepsi menüsü veya bir bildirime tıklanınca gelen komutlar
   useEffect(() => {
-    return window.api.events.onCommand(() => {
+    return window.api.events.onCommand((command) => {
+      if (command === 'open-tasks') {
+        setPage('tasks')
+        return
+      }
       setPage('chat')
       focusComposer()
     })

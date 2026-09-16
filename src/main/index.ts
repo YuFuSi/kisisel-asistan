@@ -5,6 +5,7 @@ import { closeDb } from './db'
 import { registerIpcHandlers } from './ipc'
 import { startBriefScheduler } from './scheduler/brief'
 import { safeCheckpoint, startMaintenance } from './scheduler/maintenance'
+import { startProactiveScheduler } from './scheduler/proactive'
 import { startReminderScheduler } from './scheduler/reminders'
 import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
@@ -26,6 +27,7 @@ import {
 let stopReminderScheduler: (() => void) | null = null
 let stopBriefScheduler: (() => void) | null = null
 let stopMaintenance: (() => void) | null = null
+let stopProactiveScheduler: (() => void) | null = null
 
 // Global kısayol: pencere öndeyse gizle, değilse göster ve sohbet kutusuna odaklan
 function toggleFromShortcut(): void {
@@ -104,6 +106,7 @@ if (!app.requestSingleInstanceLock()) {
     stopReminderScheduler = startReminderScheduler()
     stopBriefScheduler = startBriefScheduler()
     stopMaintenance = startMaintenance()
+    stopProactiveScheduler = startProactiveScheduler()
     // "Hey Jarvis" açıksa modeller yüklenir ve arayüz mikrofonu dinlemeye başlar
     initVoiceSession()
   })
@@ -136,6 +139,7 @@ if (!app.requestSingleInstanceLock()) {
     stopReminderScheduler?.()
     stopBriefScheduler?.()
     stopMaintenance?.()
+    stopProactiveScheduler?.()
     // Arka plandaki whisper ve Piper programları da kapansın
     disposeVoiceSession()
     closeDb()

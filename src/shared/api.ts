@@ -469,7 +469,7 @@ export interface GoogleStatus {
 // ---- Uygulama komutları (tepsi menüsü ve global kısayoldan arayüze) ----
 
 // daily-brief: sabah özeti bildirimine tıklanınca yeni sohbette özet istenir
-export type AppCommand = 'focus-chat' | 'new-chat' | 'daily-brief'
+export type AppCommand = 'focus-chat' | 'new-chat' | 'daily-brief' | 'open-tasks'
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
 /** Sohbete eklenen belgenin okunan ilk parçası */
