@@ -33,6 +33,14 @@ export function listPendingReminders(): Reminder[] {
   return rows.map(toReminder)
 }
 
+/** Bekleyen ve çalmış tüm hatırlatmalar (proaktif gözlem gibi çalmışları da görmesi gereken işler için) */
+export function listReminders(): Reminder[] {
+  const rows = getDb()
+    .prepare('SELECT * FROM reminders ORDER BY remind_at, id')
+    .all() as ReminderRow[]
+  return rows.map(toReminder)
+}
+
 export function createReminder(
   message: string,
   remindAt: number,

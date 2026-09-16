@@ -1,8 +1,9 @@
-import type { Task } from '../../shared/api'
+import type { Reminder, Task } from '../../shared/api'
 import { toLocalDate } from './datetime'
 
 const STALE_DAYS = 3
 const STALE_MS = STALE_DAYS * 24 * 60 * 60 * 1000
+const STALE_REMINDER_MS = 24 * 60 * 60 * 1000
 
 // SQLite "datetime('now')" UTC döndürür ama işaretsizdir (ör. "2026-09-16 07:47:00");
 // işaretsiz bırakılırsa JS bunu yerel saat sanıp yanlış yaşlandırır.
@@ -42,4 +43,39 @@ export function staleTaskNotificationText(info: StaleTaskInfo): ProactiveNotific
 /** Bildirim bugün zaten gösterildiyse tekrar gösterilmez */
 export function isProactiveNudgeDue(now: Date, lastShownDate: string | null): boolean {
   return lastShownDate !== toLocalDate(now)
+}
+
+export interface StaleReminderInfo {
+  count: number
+  oldest: Reminder
+}
+
+/**
+ * Tek seferlik (repeat: 'none') bir hatırlatma çaldıktan (sentAt dolu) 24 saat sonra hâlâ
+ * silinmemişse bulur. Tekrarlayan hatırlatmalar hariç: onlar sürekli "çalmış" durumda olabilir,
+ * bu normal ve bir sorun değil.
+ */
+export function findStaleFiredReminders(
+  reminders: Reminder[],
+  now: Date,
+  staleMs = STALE_REMINDER_MS
+): StaleReminderInfo | null {
+  const stale = reminders.filter(
+    (reminder): reminder is Reminder & { sentAt: number } =>
+      reminder.repeat === 'none' &&
+      reminder.sentAt !== null &&
+      now.getTime() - reminder.sentAt >= staleMs
+  )
+  if (stale.length === 0) return null
+  const oldest = stale.reduce((a, b) => (a.sentAt < b.sentAt ? a : b))
+  return { count: stale.length, oldest }
+}
+
+export function staleReminderNotificationText(info: StaleReminderInfo): ProactiveNotification {
+  const title = 'Unutulmuş bir hatırlatma var'
+  const body =
+    info.count === 1
+      ? `"${info.oldest.message}" hatırlatması çaldı ama hâlâ duruyor. Silmeyi mi unuttun?`
+      : `"${info.oldest.message}" dahil ${info.count} hatırlatma çaldı ama hâlâ duruyor.`
+  return { title, body }
 }

@@ -27,7 +27,13 @@ import {
   setNoteEmbedding,
   updateNote
 } from './notes'
-import { createReminder, listPendingReminders, snoozeReminder, takeDueReminders } from './reminders'
+import {
+  createReminder,
+  listPendingReminders,
+  listReminders,
+  snoozeReminder,
+  takeDueReminders
+} from './reminders'
 import { createTask, listTasks, updateTask } from './tasks'
 
 // Her test boş, bellekte çalışan bir veritabanıyla başlar
@@ -85,6 +91,17 @@ describe('hatırlatmalar', () => {
 
   it('boş metni reddeder', () => {
     expect(() => createReminder('  ', Date.now())).toThrow()
+  })
+
+  it('listReminders çalmış olanları da döner, listPendingReminders döndürmez', () => {
+    const now = Date.now()
+    const gecmis = createReminder('Doktoru ara', now - 1000)
+    createReminder('Toplantı', now + 60_000)
+    takeDueReminders(now)
+
+    expect(listPendingReminders().map((r) => r.id)).not.toContain(gecmis.id)
+    expect(listReminders().map((r) => r.id)).toContain(gecmis.id)
+    expect(listReminders()).toHaveLength(2)
   })
 })
 
