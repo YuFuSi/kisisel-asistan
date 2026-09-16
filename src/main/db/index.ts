@@ -103,6 +103,15 @@ const migrations: string[] = [
   // 8: Görevlerde isteğe bağlı saat (sadece son tarih varsa anlamlı)
   `
   ALTER TABLE tasks ADD COLUMN due_time TEXT;
+  `,
+  // 9: Anlamsal arama için embedding sütunları (BLOB: Float32Array baytları).
+  // NULL = henüz hesaplanmadı. embedding_updated_at, içerik değişip embedding'in
+  // eskidiğini anlamak için ayrı tutulur (created_at/updated_at ile karıştırılmasın).
+  `
+  ALTER TABLE memories ADD COLUMN embedding BLOB;
+  ALTER TABLE memories ADD COLUMN embedding_updated_at TEXT;
+  ALTER TABLE notes ADD COLUMN embedding BLOB;
+  ALTER TABLE notes ADD COLUMN embedding_updated_at TEXT;
   `
 ]
 
