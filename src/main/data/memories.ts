@@ -58,3 +58,20 @@ export function updateMemory(id: number, content: string): Memory {
 export function deleteMemory(id: number): void {
   getDb().prepare('DELETE FROM memories WHERE id = ?').run(id)
 }
+
+/** Embedding'i henüz hesaplanmamış (NULL) kayıtlar — geriye dönük doldurma için */
+export function listMemoriesMissingEmbedding(): Memory[] {
+  const rows = getDb()
+    .prepare('SELECT * FROM memories WHERE embedding IS NULL ORDER BY id')
+    .all() as MemoryRow[]
+  return rows.map(toMemory)
+}
+
+/** Bir kaydın gömme (embedding) vektörünü yazar */
+export function setMemoryEmbedding(id: number, embedding: Buffer): void {
+  getDb()
+    .prepare(
+      "UPDATE memories SET embedding = ?, embedding_updated_at = datetime('now') WHERE id = ?"
+    )
+    .run(embedding, id)
+}
