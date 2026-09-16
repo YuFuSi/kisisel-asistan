@@ -15,6 +15,7 @@ import ConversationList from '../components/chat/ConversationList'
 import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
 import ApprovalCard from '../components/chat/ApprovalCard'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { errorMessage } from '../lib/errors'
 import { focusConversationSearch } from '../lib/dom'
 import { quietIconButtonClass } from '../lib/styles'
@@ -68,6 +69,8 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streaming, setStreaming] = useState<Streaming | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Silinmek üzere onay bekleyen sohbetin kimliği (null ise onay kutusu kapalı)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
   // Asistanın beklediği onay (uygulama/dosya açma gibi riskli işlemler için)
   const [approval, setApproval] = useState<{
     conversationId: number
@@ -238,7 +241,6 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   }
 
   async function deleteConversation(id: number): Promise<void> {
-    if (!window.confirm('Bu sohbet silinsin mi?')) return
     try {
       await window.api.conversations.remove(id)
       if (activeIdRef.current === id) openConversation(null)
@@ -391,7 +393,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         onQueryChange={setQuery}
         onSelect={(id) => void selectConversation(id)}
         onNew={() => openConversation(null)}
-        onDelete={(id) => void deleteConversation(id)}
+        onDelete={(id) => setPendingDeleteId(id)}
         onRename={(id, title) => void renameConversation(id, title)}
         onPin={(id, pinned) => void pinConversation(id, pinned)}
         onExport={(id) => void exportConversation(id)}
@@ -549,6 +551,19 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
           }}
         />
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Bu sohbet silinsin mi?"
+        tone="danger"
+        confirmLabel="Sil"
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          const id = pendingDeleteId
+          setPendingDeleteId(null)
+          if (id !== null) void deleteConversation(id)
+        }}
+      />
     </div>
   )
 }
