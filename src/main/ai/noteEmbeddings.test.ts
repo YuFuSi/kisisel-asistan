@@ -119,6 +119,17 @@ describe('searchNotesSemantic', () => {
     expect(result[0].id).toBe(a.id)
   })
 
+  it("sonuçlarda embedding alanı taşımaz (IPC ile renderer'a sızmasın)", async () => {
+    updateSettings({ semanticSearchEnabled: true })
+    const a = createNote({ title: 'Araba lastiği değişimi', content: 'Lastik masrafı 4000 TL' })
+    setNoteEmbedding(a.id, floatsToBlob(new Float32Array([1, 0, 0])))
+    mockEmbedText.mockResolvedValue(new Float32Array([1, 0, 0]))
+
+    const result = await searchNotesSemantic('sorgu')
+
+    expect(result[0]).not.toHaveProperty('embedding')
+  })
+
   it("sorgu embedding'i hesaplanamazsa hata fırlatmaz, anahtar kelimeye düşer", async () => {
     updateSettings({ semanticSearchEnabled: true })
     const a = createNote({ title: 'İstanbul gezisi', content: 'Şişli ve Kadıköy' })

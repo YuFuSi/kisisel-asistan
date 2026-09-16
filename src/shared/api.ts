@@ -590,6 +590,8 @@ export interface Api {
     remove(id: number): Promise<void>
     /** Embedding'i eksik notları hesaplayıp doldurur; kaç kaydın işlendiğini döndürür */
     backfillEmbeddings(): Promise<number>
+    /** Notlarda arama (anlamsal arama açıksa anlam benzerliğine göre) */
+    search(query: string): Promise<Note[]>
   }
   memories: {
     list(): Promise<Memory[]>
@@ -598,6 +600,8 @@ export interface Api {
     remove(id: number): Promise<void>
     /** Embedding'i eksik kayıtları hesaplayıp doldurur; kaç kaydın işlendiğini döndürür */
     backfillEmbeddings(): Promise<number>
+    /** Hafızada arama (anlamsal arama açıksa anlam benzerliğine göre) */
+    search(query: string): Promise<Memory[]>
   }
   speech: {
     /** Ses kaydını yazıya çevirir */
