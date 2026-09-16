@@ -35,8 +35,16 @@ import { conversationToMarkdown, suggestFileName } from './lib/markdownExport'
 import { readDocumentPart } from './lib/documents'
 import { showDailyBrief } from './scheduler/brief'
 import { allowDocument } from './tools/documents'
-import { backfillMemoryEmbeddings, scheduleMemoryEmbedding } from './ai/memoryEmbeddings'
-import { backfillNoteEmbeddings, scheduleNoteEmbedding } from './ai/noteEmbeddings'
+import {
+  backfillMemoryEmbeddings,
+  scheduleMemoryEmbedding,
+  searchMemoriesSemantic
+} from './ai/memoryEmbeddings'
+import {
+  backfillNoteEmbeddings,
+  scheduleNoteEmbedding,
+  searchNotesSemantic
+} from './ai/noteEmbeddings'
 import { createMemory, deleteMemory, listMemories, updateMemory } from './data/memories'
 import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import {
@@ -257,6 +265,7 @@ export function registerIpcHandlers(): void {
   )
   ipcMain.handle('notes:remove', (_event, id: number) => changing('notes', () => deleteNote(id)))
   ipcMain.handle('notes:backfillEmbeddings', () => backfillNoteEmbeddings())
+  ipcMain.handle('notes:search', (_event, query: string) => searchNotesSemantic(query))
 
   // Hafıza
   ipcMain.handle('memories:list', () => listMemories())
@@ -278,4 +287,5 @@ export function registerIpcHandlers(): void {
     changing('memories', () => deleteMemory(id))
   )
   ipcMain.handle('memories:backfillEmbeddings', () => backfillMemoryEmbeddings())
+  ipcMain.handle('memories:search', (_event, query: string) => searchMemoriesSemantic(query))
 }

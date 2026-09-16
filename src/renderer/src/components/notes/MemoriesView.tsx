@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Brain, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Brain, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { Memory, SettingsView } from '@shared/api'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
@@ -15,6 +15,9 @@ import { useLiveData } from '../../lib/useLiveData'
 const loadMemories = (): Promise<Memory[]> => window.api.memories.list()
 const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
 
+// Yazmayı bıraktıktan bu kadar süre sonra arama gönderilir
+const SEARCH_DELAY_MS = 400
+
 function MemoriesView(): React.JSX.Element {
   const memories = useLiveData(loadMemories, 'memories')
   const settings = useLiveData(loadSettings, 'settings')
@@ -22,8 +25,45 @@ function MemoriesView(): React.JSX.Element {
   // Düzenlenen kayıt ve yeni metni
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null)
   const [indexing, setIndexing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Memory[] | null>(null)
+  const [searching, setSearching] = useState(false)
   const toast = useToast()
   const error = memories.error
+
+  // memories:search hem anlamsal hem (ayar kapalıysa) anahtar kelime aramasını kendi içinde
+  // yönetir; burada tek yapılacak sorguyu durulunca göndermek.
+  useEffect(() => {
+    const trimmed = searchQuery.trim()
+    if (!trimmed) return
+    let active = true
+    const timer = setTimeout(() => {
+      setSearching(true)
+      window.api.memories
+        .search(trimmed)
+        .then(
+          (results) => {
+            if (active) setSearchResults(results)
+          },
+          (err: unknown) => {
+            if (active) {
+              toast.error(errorMessage(err))
+              setSearchResults(null)
+            }
+          }
+        )
+        .finally(() => {
+          if (active) setSearching(false)
+        })
+    }, SEARCH_DELAY_MS)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [searchQuery, toast])
+
+  const isSearching = searchQuery.trim().length > 0
+  const displayedMemories = isSearching ? (searchResults ?? []) : (memories.data ?? [])
 
   async function backfillEmbeddings(): Promise<void> {
     setIndexing(true)
@@ -88,6 +128,20 @@ function MemoriesView(): React.JSX.Element {
           </div>
         )}
 
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              settings.data?.semanticSearchEnabled ? 'Anlamıyla ara...' : 'Hafızada ara...'
+            }
+            style={{ paddingLeft: '2.25rem' }}
+            className={inputClass}
+          />
+        </div>
+        {searching && <p className="px-1 text-xs text-faint">Aranıyor...</p>}
+
         <form onSubmit={(e) => void add(e)} className="flex gap-2">
           <input
             value={draft}
@@ -106,11 +160,13 @@ function MemoriesView(): React.JSX.Element {
           </button>
         </form>
 
-        {memories.data && memories.data.length === 0 && (
-          <p className="px-1 py-2 text-sm text-faint">Henüz kayıtlı bilgi yok.</p>
+        {memories.data && displayedMemories.length === 0 && (
+          <p className="px-1 py-2 text-sm text-faint">
+            {isSearching ? 'Eşleşen kayıt yok.' : 'Henüz kayıtlı bilgi yok.'}
+          </p>
         )}
         <ul className="space-y-1">
-          {memories.data?.map((memory) =>
+          {displayedMemories.map((memory) =>
             editing?.id === memory.id ? (
               <li key={memory.id} className="px-1 py-1">
                 <input

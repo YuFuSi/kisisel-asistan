@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import type { Note, SettingsView } from '@shared/api'
 import NoteEditor from './NoteEditor'
@@ -12,6 +12,10 @@ import { useLiveData } from '../../lib/useLiveData'
 const loadNotes = (): Promise<Note[]> => window.api.notes.list()
 const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
 
+// Yazmayı bıraktıktan bu kadar süre sonra anlamsal arama gönderilir (NoteEditor'daki otomatik
+// kayıt gecikmesiyle aynı fikir: her tuş vuruşunda değil, durulunca istek at)
+const SEARCH_DELAY_MS = 400
+
 const firstLine = (text: string): string => text.split('\n').find((line) => line.trim()) ?? ''
 
 function NotesView(): React.JSX.Element {
@@ -20,7 +24,10 @@ function NotesView(): React.JSX.Element {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const [indexing, setIndexing] = useState(false)
+  const [semanticResults, setSemanticResults] = useState<Note[] | null>(null)
+  const [searching, setSearching] = useState(false)
   const toast = useToast()
+  const semanticSearchEnabled = settings.data?.semanticSearchEnabled ?? false
 
   async function backfillEmbeddings(): Promise<void> {
     setIndexing(true)
@@ -36,11 +43,44 @@ function NotesView(): React.JSX.Element {
     }
   }
 
+  // Anlamsal arama açıksa, yazmayı bırakınca sorguyu backend'e gönderip anlam benzerliğine göre
+  // sıralanmış sonuçları göster; kapalıysa mevcut anahtar-kelime filtresi (aşağıda) devrede kalır.
+  useEffect(() => {
+    if (!semanticSearchEnabled || !query.trim()) return
+    let active = true
+    const timer = setTimeout(() => {
+      setSearching(true)
+      window.api.notes
+        .search(query.trim())
+        .then(
+          (results) => {
+            if (active) setSemanticResults(results)
+          },
+          (err: unknown) => {
+            if (active) {
+              toast.error(errorMessage(err))
+              setSemanticResults(null)
+            }
+          }
+        )
+        .finally(() => {
+          if (active) setSearching(false)
+        })
+    }, SEARCH_DELAY_MS)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [query, semanticSearchEnabled, toast])
+
   const all = notes.data ?? []
   const q = query.trim().toLocaleLowerCase('tr-TR')
-  const filtered = q
-    ? all.filter((n) => `${n.title}\n${n.content}`.toLocaleLowerCase('tr-TR').includes(q))
-    : all
+  const filtered =
+    semanticSearchEnabled && q && semanticResults !== null
+      ? semanticResults
+      : q
+        ? all.filter((n) => `${n.title}\n${n.content}`.toLocaleLowerCase('tr-TR').includes(q))
+        : all
   const selected = all.find((n) => n.id === selectedId) ?? null
   const error = notes.error
 
@@ -80,11 +120,12 @@ function NotesView(): React.JSX.Element {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Notlarda ara..."
+              placeholder={semanticSearchEnabled ? 'Anlamıyla ara...' : 'Notlarda ara...'}
               style={{ paddingLeft: '2.25rem' }}
               className={inputClass}
             />
           </div>
+          {searching && <p className="px-1 text-xs text-faint">Aranıyor...</p>}
           {settings.data?.semanticSearchEnabled && (
             <div className="space-y-1.5 rounded-lg border border-line bg-surface px-2.5 py-2">
               <p className="text-xs text-muted">

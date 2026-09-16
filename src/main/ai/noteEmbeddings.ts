@@ -8,7 +8,18 @@ import { floatsToBlob } from '../lib/embeddingBlob'
 import { sortBySimilarity } from '../lib/semanticSearch'
 import { getSettings } from '../settings'
 import type { Note } from '../../shared/api'
+import type { NoteWithEmbedding } from '../data/notes'
 import { embedText } from './embeddings'
+
+// listNotesWithEmbeddings'ten gelen kayıtlar embedding (Float32Array) taşıyor; IPC üzerinden
+// renderer'a giden hiçbir yol bu ham veriyi taşımamalı. Dönüş öncesi her zaman soyulur.
+const stripEmbedding = (note: NoteWithEmbedding): Note => ({
+  id: note.id,
+  title: note.title,
+  content: note.content,
+  createdAt: note.createdAt,
+  updatedAt: note.updatedAt
+})
 
 /** Bir notun gömme vektörünü hesaplayıp veritabanına yazar. Ayar kapalıysa hiçbir şey yapmaz. */
 export async function embedNote(id: number, title: string, content: string): Promise<void> {
@@ -53,7 +64,7 @@ export async function searchNotesSemantic(query: string, limit = 10): Promise<No
 
   try {
     const queryEmbedding = await embedText(query)
-    return sortBySimilarity(notes, queryEmbedding).slice(0, limit)
+    return sortBySimilarity(notes, queryEmbedding).slice(0, limit).map(stripEmbedding)
   } catch (err) {
     console.error('Anlamsal not araması başarısız, anahtar kelimeye düşülüyor:', err)
     return searchNotes(query, limit)
