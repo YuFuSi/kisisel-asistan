@@ -35,6 +35,7 @@ import { conversationToMarkdown, suggestFileName } from './lib/markdownExport'
 import { readDocumentPart } from './lib/documents'
 import { showDailyBrief } from './scheduler/brief'
 import { allowDocument } from './tools/documents'
+import { backfillMemoryEmbeddings, scheduleMemoryEmbedding } from './ai/memoryEmbeddings'
 import { createMemory, deleteMemory, listMemories, updateMemory } from './data/memories'
 import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
 import {
@@ -250,12 +251,21 @@ export function registerIpcHandlers(): void {
   // Hafıza
   ipcMain.handle('memories:list', () => listMemories())
   ipcMain.handle('memories:create', (_event, content: string) =>
-    changing('memories', () => createMemory(content))
+    changing('memories', () => {
+      const memory = createMemory(content)
+      scheduleMemoryEmbedding(memory.id, memory.content)
+      return memory
+    })
   )
   ipcMain.handle('memories:update', (_event, id: number, content: string) =>
-    changing('memories', () => updateMemory(id, content))
+    changing('memories', () => {
+      const memory = updateMemory(id, content)
+      scheduleMemoryEmbedding(memory.id, memory.content)
+      return memory
+    })
   )
   ipcMain.handle('memories:remove', (_event, id: number) =>
     changing('memories', () => deleteMemory(id))
   )
+  ipcMain.handle('memories:backfillEmbeddings', () => backfillMemoryEmbeddings())
 }

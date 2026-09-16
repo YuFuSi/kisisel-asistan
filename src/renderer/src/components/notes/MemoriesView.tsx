@@ -1,21 +1,43 @@
 import { useState } from 'react'
 import { Brain, Pencil, Plus, Trash2 } from 'lucide-react'
-import type { Memory } from '@shared/api'
+import type { Memory, SettingsView } from '@shared/api'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import { iconButtonClass, inputClass, primaryButtonClass } from '../../lib/styles'
+import {
+  iconButtonClass,
+  inputClass,
+  primaryButtonClass,
+  secondaryButtonClass
+} from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadMemories = (): Promise<Memory[]> => window.api.memories.list()
+const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
 
 function MemoriesView(): React.JSX.Element {
   const memories = useLiveData(loadMemories, 'memories')
+  const settings = useLiveData(loadSettings, 'settings')
   const [draft, setDraft] = useState('')
   // Düzenlenen kayıt ve yeni metni
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null)
+  const [indexing, setIndexing] = useState(false)
   const toast = useToast()
   const error = memories.error
+
+  async function backfillEmbeddings(): Promise<void> {
+    setIndexing(true)
+    try {
+      const count = await window.api.memories.backfillEmbeddings()
+      toast.success(
+        count === 0 ? 'Zaten güncel, indekslenecek kayıt yok.' : `${count} kayıt indekslendi.`
+      )
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setIndexing(false)
+    }
+  }
 
   async function run(action: () => Promise<unknown>): Promise<boolean> {
     try {
@@ -50,6 +72,21 @@ function MemoriesView(): React.JSX.Element {
           dediğinde buraya eklenir; çok benzer bir bilgi zaten varsa yenisiyle güncellenir. Bir
           bilgiye tıklayarak düzeltebilir veya silebilirsin.
         </p>
+
+        {settings.data?.semanticSearchEnabled && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5">
+            <p className="text-sm text-muted">
+              Anlamsal arama açık. Mevcut kayıtların hâlâ indekslenmemiş olabilir.
+            </p>
+            <button
+              onClick={() => void backfillEmbeddings()}
+              disabled={indexing}
+              className={secondaryButtonClass}
+            >
+              {indexing ? 'İndeksleniyor...' : 'İndeksle'}
+            </button>
+          </div>
+        )}
 
         <form onSubmit={(e) => void add(e)} className="flex gap-2">
           <input

@@ -1,5 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod'
+import { scheduleMemoryEmbedding } from '../ai/memoryEmbeddings'
 import { createMemory, deleteMemory, listMemories } from '../data/memories'
 import { notifyDataChanged } from '../events'
 import type { ToolModule } from './types'
@@ -25,6 +26,7 @@ const memoryTools: ToolModule = {
       execute: async (input) => {
         const before = listMemories().length
         const memory = createMemory(input.bilgi)
+        scheduleMemoryEmbedding(memory.id, memory.content)
         notifyDataChanged('memories')
         return {
           kaydedildi: true,

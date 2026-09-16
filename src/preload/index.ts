@@ -87,7 +87,8 @@ const api: Api = {
     list: () => ipcRenderer.invoke('memories:list'),
     create: (content) => ipcRenderer.invoke('memories:create', content),
     update: (id, content) => ipcRenderer.invoke('memories:update', id, content),
-    remove: (id) => ipcRenderer.invoke('memories:remove', id)
+    remove: (id) => ipcRenderer.invoke('memories:remove', id),
+    backfillEmbeddings: () => ipcRenderer.invoke('memories:backfillEmbeddings')
   },
   speech: {
     transcribe: (audio, mimeType) => ipcRenderer.invoke('speech:transcribe', audio, mimeType)

@@ -14,7 +14,12 @@ import {
   setGeneratedTitle,
   setTitleIfEmpty
 } from './conversations'
-import { createMemory, listMemories } from './memories'
+import {
+  createMemory,
+  listMemories,
+  listMemoriesMissingEmbedding,
+  setMemoryEmbedding
+} from './memories'
 import { createNote, searchNotes, updateNote } from './notes'
 import { createReminder, listPendingReminders, snoozeReminder, takeDueReminders } from './reminders'
 import { createTask, listTasks, updateTask } from './tasks'
@@ -102,6 +107,17 @@ describe('hafıza', () => {
     createMemory('Kahvesini şekersiz içer')
     createMemory('  KAHVESİNİ ŞEKERSİZ İÇER ')
     expect(listMemories()).toHaveLength(1)
+  })
+
+  it("yeni kayıtların embedding'i başta eksik sayılır", () => {
+    const memory = createMemory('Kahvesini şekersiz içer')
+    expect(listMemoriesMissingEmbedding().map((m) => m.id)).toContain(memory.id)
+  })
+
+  it('embedding yazılınca eksik listesinden çıkar', () => {
+    const memory = createMemory('Kahvesini şekersiz içer')
+    setMemoryEmbedding(memory.id, Buffer.from(new Float32Array([1, 2, 3]).buffer))
+    expect(listMemoriesMissingEmbedding().map((m) => m.id)).not.toContain(memory.id)
   })
 })
 

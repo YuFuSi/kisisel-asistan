@@ -594,6 +594,8 @@ export interface Api {
     create(content: string): Promise<Memory>
     update(id: number, content: string): Promise<Memory>
     remove(id: number): Promise<void>
+    /** Embedding'i eksik kayıtları hesaplayıp doldurur; kaç kaydın işlendiğini döndürür */
+    backfillEmbeddings(): Promise<number>
   }
   speech: {
     /** Ses kaydını yazıya çevirir */
