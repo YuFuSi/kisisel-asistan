@@ -40,17 +40,3 @@ export async function embedText(text: string): Promise<Float32Array> {
   }
   return new Float32Array(vector)
 }
-
-/** Bir gömme vektörünü veritabanında saklamak için baytlara çevirir. */
-export function floatsToBlob(vector: Float32Array): Buffer {
-  return Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength)
-}
-
-/** Veritabanından okunan baytları gömme vektörüne çevirir. */
-export function blobToFloats(blob: Buffer): Float32Array {
-  return new Float32Array(
-    blob.buffer,
-    blob.byteOffset,
-    blob.byteLength / Float32Array.BYTES_PER_ELEMENT
-  )
-}

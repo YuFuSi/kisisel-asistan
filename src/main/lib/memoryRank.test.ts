@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { findSimilarMemory, memorySimilarity, rankMemories } from './memoryRank'
+import {
+  findSimilarMemory,
+  memorySimilarity,
+  rankMemories,
+  rankMemoriesBySimilarity
+} from './memoryRank'
 
 const memories = [
   { id: 1, content: 'Kahvesini şekersiz içer' },
@@ -50,5 +55,30 @@ describe('rankMemories', () => {
     expect(ranked).toHaveLength(2)
     // Kalan yer en yeni kayıtla dolar
     expect(ranked[1].id).toBe(4)
+  })
+})
+
+describe('rankMemoriesBySimilarity', () => {
+  const withEmbeddings = [
+    { id: 1, content: 'Kahvesini şekersiz içer', embedding: new Float32Array([1, 0, 0]) },
+    { id: 2, content: 'Kızının adı Elif', embedding: new Float32Array([0, 1, 0]) },
+    { id: 3, content: 'Pazartesi günleri spora gider', embedding: new Float32Array([0.9, 0.1, 0]) },
+    { id: 4, content: 'İstanbul Kadıköy’de yaşıyor', embedding: null }
+  ]
+
+  it('sınırın altındaysa hepsini döndürür', () => {
+    expect(rankMemoriesBySimilarity(withEmbeddings, new Float32Array([1, 0, 0]), 10)).toHaveLength(
+      4
+    )
+  })
+
+  it('sorgu vektörüne en yakın kayıtları öne alır', () => {
+    const ranked = rankMemoriesBySimilarity(withEmbeddings, new Float32Array([1, 0, 0]), 2)
+    expect(ranked.map((m) => m.id)).toEqual([1, 3])
+  })
+
+  it("embedding'i eksik kaydı dışlamaz ama en sona atar", () => {
+    const ranked = rankMemoriesBySimilarity(withEmbeddings, new Float32Array([0, 1, 0]), 4)
+    expect(ranked.at(-1)?.id).toBe(4)
   })
 })

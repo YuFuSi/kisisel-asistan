@@ -1,5 +1,7 @@
 // Hafıza kayıtlarını benzerlik ve alakaya göre işleyen yardımcılar. electron import etmez.
 
+import { cosineSimilarity } from './cosine'
+
 interface MemoryLike {
   id: number
   content: string
@@ -101,6 +103,29 @@ export function rankMemories<T extends MemoryLike>(
     for (const stem of memoryStems(memory.content)) if (queryStems.has(stem)) score++
     return { memory, score }
   })
+  scored.sort((a, b) => b.score - a.score || b.memory.id - a.memory.id)
+  return scored.slice(0, limit).map((item) => item.memory)
+}
+
+interface MemoryLikeWithEmbedding extends MemoryLike {
+  embedding: Float32Array | null
+}
+
+/**
+ * rankMemories'in anlamsal (embedding) karşılığı: kayıt sayısı sınırı aşıyorsa, sorgu vektörüne
+ * kosinüs benzerliği en yüksek kayıtları öne alır. Embedding'i olmayan (henüz indekslenmemiş)
+ * kayıtlar en sona düşer, tamamen dışarıda bırakılmaz.
+ */
+export function rankMemoriesBySimilarity<T extends MemoryLikeWithEmbedding>(
+  memories: T[],
+  queryEmbedding: Float32Array,
+  limit: number
+): T[] {
+  if (memories.length <= limit) return memories
+  const scored = memories.map((memory) => ({
+    memory,
+    score: memory.embedding ? cosineSimilarity(memory.embedding, queryEmbedding) : -Infinity
+  }))
   scored.sort((a, b) => b.score - a.score || b.memory.id - a.memory.id)
   return scored.slice(0, limit).map((item) => item.memory)
 }
