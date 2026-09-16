@@ -4,9 +4,12 @@ import { listReminders } from '../data/reminders'
 import { listTasks } from '../data/tasks'
 import { toLocalDate } from '../lib/datetime'
 import {
+  backlogGrowthNotificationText,
+  detectBacklogGrowth,
   findStaleFiredReminders,
   findStaleTasks,
   isProactiveNudgeDue,
+  isWeeklyNudgeDue,
   staleReminderNotificationText,
   staleTaskNotificationText,
   type ProactiveNotification
@@ -14,13 +17,14 @@ import {
 import { getStoredValue, setStoredValue } from '../settings'
 import { sendCommand, showMainWindow } from '../system/window'
 
-// Otomasyon motorunu (Tur J) beklemeden sabit kurallar: uzun süredir bekleyen bir görev veya
-// unutulmuş bir hatırlatma varsa günde bir kez bildirim gösterir. Otomasyon motorunun küçük bir
-// önizlemesi. Her kural kendi "son gösterildi" anahtarıyla ayrı gater; biri o gün gösterilse
-// diğerinin gösterilmesini engellemez.
+// Otomasyon motorunu (Tur J) beklemeden sabit kurallar: uzun süredir bekleyen bir görev, unutulmuş
+// bir hatırlatma veya sürekli büyüyen bir görev listesi varsa bildirim gösterir. Otomasyon
+// motorunun küçük bir önizlemesi. Her kural kendi "son gösterildi" anahtarıyla ayrı gater; biri
+// gösterilse diğerlerinin gösterilmesini engellemez.
 const CHECK_INTERVAL_MS = 60_000
 const STALE_TASK_KEY = 'proactiveStaleTaskLastShown'
 const STALE_REMINDER_KEY = 'proactiveStaleReminderLastShown'
+const BACKLOG_GROWTH_KEY = 'proactiveBacklogGrowthLastShown'
 
 // Aynı anda gösterilmiş bildirimleri tıklanana kadar canlı tutar (yoksa GC'lenip tıklama olayını
 // kaçırabilir); notification.close() ile kendiliğinden temizlenir.
@@ -67,15 +71,30 @@ function checkStaleReminders(now: Date): void {
   }
 }
 
+function checkBacklogGrowth(now: Date): void {
+  if (!isWeeklyNudgeDue(now, getStoredValue(BACKLOG_GROWTH_KEY) ?? null)) return
+
+  const growth = detectBacklogGrowth(listTasks(), now)
+  if (!growth) return
+
+  setStoredValue(BACKLOG_GROWTH_KEY, toLocalDate(now))
+  try {
+    showProactiveNudge(backlogGrowthNotificationText(growth), () => sendCommand('open-tasks'))
+  } catch (err) {
+    console.error('Proaktif bildirim gösterilemedi (büyüyen görev listesi):', err)
+  }
+}
+
 /**
- * Her dakika uzun süredir bekleyen görev veya unutulmuş hatırlatma olup olmadığına bakar;
- * her kural için günde en fazla bir kez bildirir.
+ * Her dakika uzun süredir bekleyen görev, unutulmuş hatırlatma veya sürekli büyüyen görev listesi
+ * olup olmadığına bakar; her kural kendi sıklığında (günlük veya haftalık) en fazla bir kez bildirir.
  */
 export function startProactiveScheduler(): () => void {
   const check = (): void => {
     const now = new Date()
     checkStaleTasks(now)
     checkStaleReminders(now)
+    checkBacklogGrowth(now)
   }
 
   check()

@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  backlogGrowthNotificationText,
+  detectBacklogGrowth,
   findStaleFiredReminders,
   findStaleTasks,
   isProactiveNudgeDue,
+  isWeeklyNudgeDue,
   staleReminderNotificationText,
   staleTaskNotificationText
 } from './proactive'
@@ -142,5 +145,47 @@ describe('isProactiveNudgeDue', () => {
 
   it('bugün zaten gösterildiyse yanlış döner', () => {
     expect(isProactiveNudgeDue(new Date('2026-09-16T10:00:00'), '2026-09-16')).toBe(false)
+  })
+})
+
+describe('isWeeklyNudgeDue', () => {
+  it('hiç gösterilmediyse doğru döner', () => {
+    expect(isWeeklyNudgeDue(new Date('2026-09-16T10:00:00'), null)).toBe(true)
+  })
+
+  it('7 günden az zaman geçtiyse yanlış döner', () => {
+    expect(isWeeklyNudgeDue(new Date('2026-09-16T10:00:00'), '2026-09-10')).toBe(false)
+  })
+
+  it('tam 7 gün geçtiyse doğru döner', () => {
+    expect(isWeeklyNudgeDue(new Date('2026-09-17T10:00:00'), '2026-09-10')).toBe(true)
+  })
+})
+
+describe('detectBacklogGrowth', () => {
+  it('açık görev sayısı eşiğin altındaysa tetiklenmez', () => {
+    const now = new Date('2026-09-20T08:00:00Z')
+    const tasks = [task({ id: 1 }), task({ id: 2 })]
+    expect(detectBacklogGrowth(tasks, now)).toBeNull()
+  })
+
+  it('açık görev sayısı yeterli ama son 7 günde tamamlanan varsa tetiklenmez', () => {
+    const now = new Date('2026-09-20T08:00:00Z')
+    const tasks = [1, 2, 3, 4, 5].map((id) => task({ id }))
+    tasks.push(task({ id: 6, doneAt: new Date('2026-09-19T08:00:00Z').toISOString() }))
+    expect(detectBacklogGrowth(tasks, now)).toBeNull()
+  })
+
+  it('açık görev sayısı yeterli ve son 7 günde hiç tamamlanan yoksa tetiklenir', () => {
+    const now = new Date('2026-09-20T08:00:00Z')
+    const tasks = [1, 2, 3, 4, 5].map((id) => task({ id }))
+    tasks.push(task({ id: 6, doneAt: new Date('2026-08-01T08:00:00Z').toISOString() }))
+    expect(detectBacklogGrowth(tasks, now)).toEqual({ openCount: 5 })
+  })
+})
+
+describe('backlogGrowthNotificationText', () => {
+  it('açık görev sayısını mesaja ekler', () => {
+    expect(backlogGrowthNotificationText({ openCount: 7 }).body).toContain('7 açık görevin')
   })
 })
