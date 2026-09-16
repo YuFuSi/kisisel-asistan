@@ -1,11 +1,15 @@
 import { Notification } from 'electron'
 import icon from '../../../resources/icon.png?asset'
+import { listMemoriesMissingEmbedding } from '../data/memories'
+import { listNotesMissingEmbedding } from '../data/notes'
 import { listReminders } from '../data/reminders'
 import { listTasks } from '../data/tasks'
 import { toLocalDate } from '../lib/datetime'
 import {
   backlogGrowthNotificationText,
   detectBacklogGrowth,
+  detectEmbeddingBacklog,
+  embeddingBacklogNotificationText,
   findStaleFiredReminders,
   findStaleTasks,
   isProactiveNudgeDue,
@@ -14,17 +18,18 @@ import {
   staleTaskNotificationText,
   type ProactiveNotification
 } from '../lib/proactive'
-import { getStoredValue, setStoredValue } from '../settings'
+import { getSettings, getStoredValue, setStoredValue } from '../settings'
 import { sendCommand, showMainWindow } from '../system/window'
 
 // Otomasyon motorunu (Tur J) beklemeden sabit kurallar: uzun süredir bekleyen bir görev, unutulmuş
-// bir hatırlatma veya sürekli büyüyen bir görev listesi varsa bildirim gösterir. Otomasyon
-// motorunun küçük bir önizlemesi. Her kural kendi "son gösterildi" anahtarıyla ayrı gater; biri
-// gösterilse diğerlerinin gösterilmesini engellemez.
+// bir hatırlatma, sürekli büyüyen bir görev listesi veya indekslenmemiş kayıt birikmesi varsa
+// bildirim gösterir. Otomasyon motorunun küçük bir önizlemesi. Her kural kendi "son gösterildi"
+// anahtarıyla ayrı gater; biri gösterilse diğerlerinin gösterilmesini engellemez.
 const CHECK_INTERVAL_MS = 60_000
 const STALE_TASK_KEY = 'proactiveStaleTaskLastShown'
 const STALE_REMINDER_KEY = 'proactiveStaleReminderLastShown'
 const BACKLOG_GROWTH_KEY = 'proactiveBacklogGrowthLastShown'
+const EMBEDDING_BACKLOG_KEY = 'proactiveEmbeddingBacklogLastShown'
 
 // Aynı anda gösterilmiş bildirimleri tıklanana kadar canlı tutar (yoksa GC'lenip tıklama olayını
 // kaçırabilir); notification.close() ile kendiliğinden temizlenir.
@@ -85,9 +90,26 @@ function checkBacklogGrowth(now: Date): void {
   }
 }
 
+function checkEmbeddingBacklog(now: Date): void {
+  if (!getSettings().semanticSearchEnabled) return
+  if (!isProactiveNudgeDue(now, getStoredValue(EMBEDDING_BACKLOG_KEY) ?? null)) return
+
+  const missingCount = listMemoriesMissingEmbedding().length + listNotesMissingEmbedding().length
+  const backlog = detectEmbeddingBacklog(missingCount)
+  if (!backlog) return
+
+  setStoredValue(EMBEDDING_BACKLOG_KEY, toLocalDate(now))
+  try {
+    showProactiveNudge(embeddingBacklogNotificationText(backlog), () => {})
+  } catch (err) {
+    console.error('Proaktif bildirim gösterilemedi (indekslenmemiş kayıt):', err)
+  }
+}
+
 /**
- * Her dakika uzun süredir bekleyen görev, unutulmuş hatırlatma veya sürekli büyüyen görev listesi
- * olup olmadığına bakar; her kural kendi sıklığında (günlük veya haftalık) en fazla bir kez bildirir.
+ * Her dakika uzun süredir bekleyen görev, unutulmuş hatırlatma, sürekli büyüyen görev listesi
+ * veya indekslenmemiş kayıt birikmesi olup olmadığına bakar; her kural kendi sıklığında (günlük
+ * veya haftalık) en fazla bir kez bildirir.
  */
 export function startProactiveScheduler(): () => void {
   const check = (): void => {
@@ -95,6 +117,7 @@ export function startProactiveScheduler(): () => void {
     checkStaleTasks(now)
     checkStaleReminders(now)
     checkBacklogGrowth(now)
+    checkEmbeddingBacklog(now)
   }
 
   check()
