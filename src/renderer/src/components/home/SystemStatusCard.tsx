@@ -2,28 +2,15 @@ import { useEffect, useState } from 'react'
 import { Activity, Archive, Cpu, HardDrive, Mail, Mic, Wifi, type LucideIcon } from 'lucide-react'
 import type { SystemStatus } from '@shared/api'
 import HomeCard from './HomeCard'
+import { StatusDot } from '../ui/Badge'
+import Tooltip from '../ui/Tooltip'
 import { formatReminderTime } from '../../lib/dates'
 import { useClock, useMicrophoneAvailable, useOnline } from '../../lib/deviceStatus'
+import { LEVEL_TEXT_CLASS, type Level } from '../../lib/statusLevel'
 
 // Model ve disk bilgisi bu aralıkla yenilenir
 const REFRESH_MS = 60_000
 const DAY_MS = 86_400_000
-
-type Level = 'ok' | 'warn' | 'bad' | 'unknown'
-
-const DOT_CLASS: Record<Level, string> = {
-  ok: 'bg-positive',
-  warn: 'bg-caution',
-  bad: 'bg-negative',
-  unknown: 'bg-faint'
-}
-
-const TEXT_CLASS: Record<Level, string> = {
-  ok: 'text-positive',
-  warn: 'text-caution',
-  bad: 'text-negative',
-  unknown: 'text-faint'
-}
 
 interface Row {
   icon: LucideIcon
@@ -123,14 +110,27 @@ function SystemStatusCard(): React.JSX.Element {
   return (
     <HomeCard title="Sistem durumu" icon={Activity}>
       <ul className="space-y-2.5">
-        {rows.map(({ icon: Icon, label, value, level, title }) => (
-          <li key={label} className="flex items-center gap-3 text-sm" title={title}>
-            <Icon className="h-4 w-4 shrink-0 text-muted" />
-            <span className="min-w-0 flex-1 truncate text-ink">{label}</span>
-            <span className={`truncate text-xs ${TEXT_CLASS[level]}`}>{value}</span>
-            <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[level]}`} />
-          </li>
-        ))}
+        {rows.map(({ icon: Icon, label, value, level, title }) => {
+          const labelRow = (
+            <>
+              <Icon className="h-4 w-4 shrink-0 text-muted" />
+              <span className="min-w-0 flex-1 truncate text-ink">{label}</span>
+            </>
+          )
+          return (
+            <li key={label} className="flex items-center gap-3 text-sm">
+              {title ? (
+                <Tooltip content={title} side="bottom">
+                  <span className="flex min-w-0 flex-1 items-center gap-3">{labelRow}</span>
+                </Tooltip>
+              ) : (
+                labelRow
+              )}
+              <span className={`truncate text-xs ${LEVEL_TEXT_CLASS[level]}`}>{value}</span>
+              <StatusDot level={level} />
+            </li>
+          )
+        })}
       </ul>
     </HomeCard>
   )
