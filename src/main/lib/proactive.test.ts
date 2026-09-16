@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { findStaleTasks, isProactiveNudgeDue, staleTaskNotificationText } from './proactive'
-import type { Task } from '../../shared/api'
+import {
+  findStaleFiredReminders,
+  findStaleTasks,
+  isProactiveNudgeDue,
+  staleReminderNotificationText,
+  staleTaskNotificationText
+} from './proactive'
+import type { Reminder, Task } from '../../shared/api'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -13,6 +19,17 @@ function task(overrides: Partial<Task> = {}): Task {
     dueTime: null,
     doneAt: null,
     createdAt: '2026-09-10 08:00:00',
+    ...overrides
+  }
+}
+
+function reminder(overrides: Partial<Reminder> = {}): Reminder {
+  return {
+    id: 1,
+    message: 'Hatırlatma',
+    remindAt: new Date('2026-09-10T08:00:00Z').getTime(),
+    sentAt: new Date('2026-09-10T08:00:00Z').getTime(),
+    repeat: 'none',
     ...overrides
   }
 }
@@ -61,6 +78,59 @@ describe('staleTaskNotificationText', () => {
     const info = { count: 3, oldest: task({ title: 'Faturayı öde' }) }
     expect(staleTaskNotificationText(info).body).toContain('3 görev')
     expect(staleTaskNotificationText(info).body).toContain('dahil')
+  })
+})
+
+describe('findStaleFiredReminders', () => {
+  it('24 saatten yeni çalmış hatırlatmayı saymaz', () => {
+    const now = new Date('2026-09-11T00:00:00Z')
+    expect(
+      findStaleFiredReminders(
+        [reminder({ sentAt: new Date('2026-09-10T08:00:00Z').getTime() })],
+        now
+      )
+    ).toBeNull()
+  })
+
+  it('tam 24 saat önce çalmış tek seferlik hatırlatmayı eski sayar', () => {
+    const now = new Date('2026-09-11T08:00:00Z')
+    const stale = reminder({ id: 5, sentAt: new Date('2026-09-10T08:00:00Z').getTime() })
+    expect(findStaleFiredReminders([stale], now)).toEqual({ count: 1, oldest: stale })
+  })
+
+  it('henüz çalmamış hatırlatmayı (sentAt null) yok sayar', () => {
+    const now = new Date('2026-09-20T08:00:00Z')
+    expect(findStaleFiredReminders([reminder({ sentAt: null })], now)).toBeNull()
+  })
+
+  it('tekrarlayan hatırlatmayı yok sayar (sürekli "çalmış" olması normal)', () => {
+    const now = new Date('2026-09-20T08:00:00Z')
+    const gunluk = reminder({
+      repeat: 'daily',
+      sentAt: new Date('2026-09-01T08:00:00Z').getTime()
+    })
+    expect(findStaleFiredReminders([gunluk], now)).toBeNull()
+  })
+
+  it('birden fazla eski hatırlatma varsa en eskisini ve sayıyı döner', () => {
+    const now = new Date('2026-09-20T08:00:00Z')
+    const yeni = reminder({ id: 1, sentAt: new Date('2026-09-19T08:00:00Z').getTime() })
+    const enEski = reminder({ id: 2, sentAt: new Date('2026-09-01T08:00:00Z').getTime() })
+    expect(findStaleFiredReminders([yeni, enEski], now)).toEqual({ count: 2, oldest: enEski })
+  })
+})
+
+describe('staleReminderNotificationText', () => {
+  it('tek hatırlatmada mesajı tekil cümlede kullanır', () => {
+    const info = { count: 1, oldest: reminder({ message: 'Vitamin al' }) }
+    expect(staleReminderNotificationText(info).body).toContain('"Vitamin al"')
+    expect(staleReminderNotificationText(info).body).not.toContain('dahil')
+  })
+
+  it('birden fazla hatırlatmada sayıyı ve "dahil" ifadesini ekler', () => {
+    const info = { count: 3, oldest: reminder({ message: 'Vitamin al' }) }
+    expect(staleReminderNotificationText(info).body).toContain('3 hatırlatma')
+    expect(staleReminderNotificationText(info).body).toContain('dahil')
   })
 })
 
