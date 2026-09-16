@@ -121,3 +121,24 @@ export function backlogGrowthNotificationText(info: BacklogGrowthInfo): Proactiv
     body: `${info.openCount} açık görevin var ve son 7 gündür hiçbirini tamamlamadın. Listeye göz atmak ister misin?`
   }
 }
+
+export interface EmbeddingBacklogInfo {
+  missingCount: number
+}
+
+/**
+ * Anlamsal arama açıkken embedding'i eksik (henüz indekslenmemiş) hafıza/not kaydı var mı.
+ * Ollama kapalı kalması gibi durumlarda arka plandaki otomatik indeksleme birikip kalabilir.
+ */
+export function detectEmbeddingBacklog(missingCount: number): EmbeddingBacklogInfo | null {
+  return missingCount > 0 ? { missingCount } : null
+}
+
+export function embeddingBacklogNotificationText(
+  info: EmbeddingBacklogInfo
+): ProactiveNotification {
+  return {
+    title: 'Anlamsal arama güncel değil',
+    body: `${info.missingCount} kayıt henüz indekslenmedi. Hafıza Merkezi veya Notlar'daki "İndeksle" düğmesine basmayı unutma.`
+  }
+}
