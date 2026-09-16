@@ -15,6 +15,7 @@ import calendarTools from './calendar'
 import clipboardTools from './clipboard'
 import documentTools from './documents'
 import briefTools from './brief'
+import visionTools from './vision'
 import { requireApproval } from './approval'
 import { getToolContext, runWithToolContext, type ToolCallState } from './context'
 import { needsApproval } from './permissions'
@@ -35,7 +36,8 @@ export const modules: ToolModule[] = [
   calendarTools,
   clipboardTools,
   documentTools,
-  briefTools
+  briefTools,
+  visionTools
 ]
 
 type ToolDefinition = ToolSet[string]
