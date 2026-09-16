@@ -6,6 +6,7 @@ import QuickAccess from '../components/home/QuickAccess'
 import QuoteCard from '../components/home/QuoteCard'
 import SystemStatusCard from '../components/home/SystemStatusCard'
 import Orb from '../components/jarvis/Orb'
+import { StatusDot } from '../components/ui/Badge'
 import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
 import { useClock } from '../lib/deviceStatus'
 import type { PageId } from '../lib/pages'
@@ -69,9 +70,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
             {greeting(now.getHours())}, nasıl yardımcı olabilirim?
           </p>
           <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3 py-1 text-xs text-muted">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${busy ? 'animate-pulse bg-glow' : 'bg-positive'}`}
-            />
+            <StatusDot level={busy ? 'active' : 'ok'} pulse={busy} className="h-1.5 w-1.5" />
             {STATE_LABELS[state]}
           </span>
           <p className="mt-2 text-xs text-faint">{voiceHint(voice)}</p>
