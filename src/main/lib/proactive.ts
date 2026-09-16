@@ -4,6 +4,8 @@ import { toLocalDate } from './datetime'
 const STALE_DAYS = 3
 const STALE_MS = STALE_DAYS * 24 * 60 * 60 * 1000
 const STALE_REMINDER_MS = 24 * 60 * 60 * 1000
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+const BACKLOG_MIN_OPEN = 5
 
 // SQLite "datetime('now')" UTC döndürür ama işaretsizdir (ör. "2026-09-16 07:47:00");
 // işaretsiz bırakılırsa JS bunu yerel saat sanıp yanlış yaşlandırır.
@@ -78,4 +80,44 @@ export function staleReminderNotificationText(info: StaleReminderInfo): Proactiv
       ? `"${info.oldest.message}" hatırlatması çaldı ama hâlâ duruyor. Silmeyi mi unuttun?`
       : `"${info.oldest.message}" dahil ${info.count} hatırlatma çaldı ama hâlâ duruyor.`
   return { title, body }
+}
+
+/** Haftalık bildirim son gösterildiğinden bu yana en az 7 gün geçtiyse tekrar gösterilebilir */
+export function isWeeklyNudgeDue(now: Date, lastShownDate: string | null): boolean {
+  if (!lastShownDate) return true
+  const last = new Date(`${lastShownDate}T00:00:00`)
+  return now.getTime() - last.getTime() >= WEEK_MS
+}
+
+export interface BacklogGrowthInfo {
+  openCount: number
+}
+
+/**
+ * Görev listesi sadece büyüyor mu: son 7 günde hiç görev tamamlanmamış ama açık (tamamlanmamış)
+ * görev sayısı en az 5 ise. Mevcut "3 gündür bekleyen tek görev" kuralından farklı olarak tek bir
+ * eski kayda değil, genel bir birikme eğilimine bakar.
+ */
+export function detectBacklogGrowth(
+  tasks: Task[],
+  now: Date,
+  windowMs = WEEK_MS,
+  minOpen = BACKLOG_MIN_OPEN
+): BacklogGrowthInfo | null {
+  const openCount = tasks.filter((task) => task.doneAt === null).length
+  if (openCount < minOpen) return null
+
+  const completedInWindow = tasks.filter(
+    (task) => task.doneAt !== null && now.getTime() - new Date(task.doneAt).getTime() < windowMs
+  ).length
+  if (completedInWindow > 0) return null
+
+  return { openCount }
+}
+
+export function backlogGrowthNotificationText(info: BacklogGrowthInfo): ProactiveNotification {
+  return {
+    title: 'Görev listen büyüyor',
+    body: `${info.openCount} açık görevin var ve son 7 gündür hiçbirini tamamlamadın. Listeye göz atmak ister misin?`
+  }
 }
