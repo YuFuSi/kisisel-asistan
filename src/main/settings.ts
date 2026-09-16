@@ -35,6 +35,7 @@ const defaults: AppSettings = {
   briefEnabled: false,
   briefTime: '08:00',
   briefCity: '',
+  briefSpoken: false,
   aboutMe: '',
   tone: 'dengeli',
   temperature: null,
@@ -110,6 +111,7 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
     next.briefTime = patch.briefTime.trim()
   }
   if (typeof patch.briefCity === 'string') next.briefCity = patch.briefCity.trim()
+  if (typeof patch.briefSpoken === 'boolean') next.briefSpoken = patch.briefSpoken
   if (typeof patch.aboutMe === 'string') {
     const about = patch.aboutMe.trim()
     if (about.length > ABOUT_ME_LIMIT) {

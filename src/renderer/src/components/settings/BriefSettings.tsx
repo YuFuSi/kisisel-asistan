@@ -38,6 +38,13 @@ function BriefSettings({ settings, onUpdate }: BriefSettingsProps): React.JSX.El
         onChange={(checked) => void onUpdate({ briefEnabled: checked })}
       />
 
+      <Toggle
+        label="Sesli de okusun"
+        description="Bildirimle birlikte Jarvis özeti kendiliğinden sesli okur; tıklamana gerek kalmaz."
+        checked={settings.briefSpoken}
+        onChange={(checked) => void onUpdate({ briefSpoken: checked })}
+      />
+
       <div className="grid grid-cols-[auto_1fr] gap-4">
         <Field label="Saat" hint="Uygulama o saatte kapalıysa açılınca gösterilir.">
           <input
