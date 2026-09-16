@@ -1,23 +1,40 @@
 import { useState } from 'react'
 import { Plus, Search } from 'lucide-react'
-import type { Note } from '@shared/api'
+import type { Note, SettingsView } from '@shared/api'
 import NoteEditor from './NoteEditor'
 import Skeleton from '../ui/Skeleton'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import { inputClass } from '../../lib/styles'
+import { inputClass, secondaryButtonClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadNotes = (): Promise<Note[]> => window.api.notes.list()
+const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
 
 const firstLine = (text: string): string => text.split('\n').find((line) => line.trim()) ?? ''
 
 function NotesView(): React.JSX.Element {
   const notes = useLiveData(loadNotes, 'notes')
+  const settings = useLiveData(loadSettings, 'settings')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [query, setQuery] = useState('')
+  const [indexing, setIndexing] = useState(false)
   const toast = useToast()
+
+  async function backfillEmbeddings(): Promise<void> {
+    setIndexing(true)
+    try {
+      const count = await window.api.notes.backfillEmbeddings()
+      toast.success(
+        count === 0 ? 'Zaten güncel, indekslenecek not yok.' : `${count} not indekslendi.`
+      )
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setIndexing(false)
+    }
+  }
 
   const all = notes.data ?? []
   const q = query.trim().toLocaleLowerCase('tr-TR')
@@ -68,6 +85,20 @@ function NotesView(): React.JSX.Element {
               className={inputClass}
             />
           </div>
+          {settings.data?.semanticSearchEnabled && (
+            <div className="space-y-1.5 rounded-lg border border-line bg-surface px-2.5 py-2">
+              <p className="text-xs text-muted">
+                Anlamsal arama açık, notlar indekslenmemiş olabilir.
+              </p>
+              <button
+                onClick={() => void backfillEmbeddings()}
+                disabled={indexing}
+                className={`${secondaryButtonClass} w-full text-xs`}
+              >
+                {indexing ? 'İndeksleniyor...' : 'İndeksle'}
+              </button>
+            </div>
+          )}
         </div>
 
         <ul className="flex-1 overflow-y-auto px-2 pb-3">

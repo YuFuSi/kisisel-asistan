@@ -81,7 +81,8 @@ const api: Api = {
     list: () => ipcRenderer.invoke('notes:list'),
     create: (input) => ipcRenderer.invoke('notes:create', input),
     update: (id, patch) => ipcRenderer.invoke('notes:update', id, patch),
-    remove: (id) => ipcRenderer.invoke('notes:remove', id)
+    remove: (id) => ipcRenderer.invoke('notes:remove', id),
+    backfillEmbeddings: () => ipcRenderer.invoke('notes:backfillEmbeddings')
   },
   memories: {
     list: () => ipcRenderer.invoke('memories:list'),

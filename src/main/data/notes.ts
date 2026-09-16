@@ -1,4 +1,5 @@
 import { getDb } from '../db'
+import { blobToFloats } from '../lib/embeddingBlob'
 import type { Note, NotePatch } from '../../shared/api'
 
 interface NoteRow {
@@ -7,6 +8,14 @@ interface NoteRow {
   content: string
   created_at: string
   updated_at: string
+}
+
+interface NoteRowWithEmbedding extends NoteRow {
+  embedding: Buffer | null
+}
+
+export interface NoteWithEmbedding extends Note {
+  embedding: Float32Array | null
 }
 
 const toNote = (row: NoteRow): Note => ({
@@ -63,4 +72,28 @@ export function searchNotes(query: string, limit = 10): Note[] {
       })
     : notes
   return matches.slice(0, limit)
+}
+
+/** Embedding'i henüz hesaplanmamış (NULL) notlar — geriye dönük doldurma için */
+export function listNotesMissingEmbedding(): Note[] {
+  const rows = getDb()
+    .prepare('SELECT * FROM notes WHERE embedding IS NULL ORDER BY id')
+    .all() as NoteRow[]
+  return rows.map(toNote)
+}
+
+/** Bir notun gömme (embedding) vektörünü yazar */
+export function setNoteEmbedding(id: number, embedding: Buffer): void {
+  getDb()
+    .prepare("UPDATE notes SET embedding = ?, embedding_updated_at = datetime('now') WHERE id = ?")
+    .run(embedding, id)
+}
+
+/** Tüm notları gömme vektörleriyle birlikte döndürür (anlamsal arama için) */
+export function listNotesWithEmbeddings(): NoteWithEmbedding[] {
+  const rows = getDb().prepare('SELECT * FROM notes ORDER BY id').all() as NoteRowWithEmbedding[]
+  return rows.map((row) => ({
+    ...toNote(row),
+    embedding: row.embedding ? blobToFloats(row.embedding) : null
+  }))
 }

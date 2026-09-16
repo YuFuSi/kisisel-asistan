@@ -588,6 +588,8 @@ export interface Api {
     create(input: NotePatch): Promise<Note>
     update(id: number, patch: NotePatch): Promise<Note>
     remove(id: number): Promise<void>
+    /** Embedding'i eksik notları hesaplayıp doldurur; kaç kaydın işlendiğini döndürür */
+    backfillEmbeddings(): Promise<number>
   }
   memories: {
     list(): Promise<Memory[]>
