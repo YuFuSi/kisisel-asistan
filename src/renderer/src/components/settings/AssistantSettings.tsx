@@ -8,6 +8,7 @@ import {
 } from '@shared/api'
 import { compactInputClass, inputClass } from '../../lib/styles'
 import Field from './Field'
+import Toggle from './Toggle'
 
 interface AssistantSettingsProps {
   settings: SettingsView
@@ -109,6 +110,13 @@ function AssistantSettings({ settings, onUpdate }: AssistantSettingsProps): Reac
           ))}
         </select>
       </Field>
+
+      <Toggle
+        label="Anlamsal arama (bge-m3)"
+        description="Hafıza ve notlarda anahtar kelime yerine anlam benzerliğine göre arama yapar; farklı kelimelerle sorduğunda da ilgili kaydı bulur. Ollama'da bge-m3 modelinin indirilmiş olması gerekir (terminalde: ollama pull bge-m3)."
+        checked={settings.semanticSearchEnabled}
+        onChange={(checked) => void onUpdate({ semanticSearchEnabled: checked })}
+      />
     </div>
   )
 }
