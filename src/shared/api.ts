@@ -325,7 +325,14 @@ export type ChatEvent =
 // ---- Görevler, hatırlatmalar, notlar, hafıza ----
 
 export type DataScope =
-  'tasks' | 'reminders' | 'notes' | 'memories' | 'settings' | 'conversations' | 'activity'
+  | 'tasks'
+  | 'reminders'
+  | 'notes'
+  | 'memories'
+  | 'settings'
+  | 'conversations'
+  | 'activity'
+  | 'automations'
 
 export interface Task {
   id: number
@@ -374,6 +381,62 @@ export interface Reminder {
   repeat: RepeatRule
 }
 
+/**
+ * Bir otomasyonun (rutin) çalışma zamanı ne kadar özgür bırakıldığı.
+ * none: yazma dahil her değişiklik onay ister. write: uygulama içi değişiklikler onaysız.
+ * all: tehlikeli işlemler de onaysız (dışarıdan gelen içerikle tetiklenenler hariç).
+ */
+export type RoutineAllowance = 'none' | 'write' | 'all'
+
+/** Kullanıcının sohbet gibi normal bir istek yerine zamanı gelince kendiliğinden çalışan rutin */
+export interface Automation {
+  id: number
+  name: string
+  /** Çalışınca asistana normal bir istek gibi verilen serbest metin talimat */
+  prompt: string
+  /** Yerel saat, HH:mm */
+  timeOfDay: string
+  repeat: RepeatRule
+  allowance: RoutineAllowance
+  /** Kapalıysa zamanlayıcı hiç bakmaz; tek seferlik bir rutin çalışınca kendiliğinden kapanır */
+  enabled: boolean
+  /** Epoch milisaniye */
+  nextRunAt: number
+  lastRunAt: number | null
+  createdAt: string
+}
+
+export interface AutomationInput {
+  name: string
+  prompt: string
+  timeOfDay: string
+  repeat?: RepeatRule
+  allowance?: RoutineAllowance
+}
+
+export interface AutomationPatch {
+  name?: string
+  prompt?: string
+  timeOfDay?: string
+  repeat?: RepeatRule
+  allowance?: RoutineAllowance
+  enabled?: boolean
+}
+
+/** Bir otomasyonun tek bir çalıştırılışının geçmiş kaydı */
+export interface AutomationRun {
+  id: number
+  automationId: number
+  /** Epoch milisaniye */
+  startedAt: number
+  finishedAt: number | null
+  status: 'running' | 'done' | 'error'
+  /** Asistanın çalıştırma sonunda ürettiği özet metin */
+  summary: string
+  /** İzin yetersizliği nedeniyle atlanan araç çağrıları */
+  skippedTools: { tool: string; label: string }[]
+}
+
 export interface Note {
   id: number
   title: string
@@ -405,10 +468,13 @@ export type ToolRisk = 'read' | 'write' | 'dangerous'
 /** Aracı başlatan: sohbet, rutin (otomasyon), sesli komut veya uzaktan (ör. telefon) */
 export type ToolSource = 'chat' | 'automation' | 'voice' | 'remote'
 
-export type ActivityStatus = 'done' | 'error' | 'denied' | 'timeout'
+export type ActivityStatus = 'done' | 'error' | 'denied' | 'timeout' | 'skipped'
 
-/** Onay durumu: kullanıcı onayladı veya rutin izniyle onaysız çalıştı; onay gerekmediyse null */
-export type ActivityApproval = 'approved' | 'auto' | null
+/**
+ * Onay durumu: kullanıcı onayladı veya rutin izniyle onaysız çalıştı; onay gerekmediyse null.
+ * skipped: otomasyonun izin seviyesi yetmediği için (pencere açılıp beklenmeden) atlandı.
+ */
+export type ActivityApproval = 'approved' | 'auto' | 'skipped' | null
 
 // "Son işlemler" listesindeki bir kayıt
 export interface ActivityEntry {
@@ -476,7 +542,9 @@ export interface GoogleStatus {
 // ---- Uygulama komutları (tepsi menüsü ve global kısayoldan arayüze) ----
 
 // daily-brief: sabah özeti bildirimine tıklanınca yeni sohbette özet istenir
-export type AppCommand = 'focus-chat' | 'new-chat' | 'daily-brief' | 'open-tasks'
+// open-automations: bir otomasyon bildirimine tıklanınca Otomasyonlar sayfası açılır
+export type AppCommand =
+  'focus-chat' | 'new-chat' | 'daily-brief' | 'open-tasks' | 'open-automations'
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
 /** Sohbete eklenen belgenin okunan ilk parçası */

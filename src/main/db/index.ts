@@ -112,6 +112,39 @@ const migrations: string[] = [
   ALTER TABLE memories ADD COLUMN embedding_updated_at TEXT;
   ALTER TABLE notes ADD COLUMN embedding BLOB;
   ALTER TABLE notes ADD COLUMN embedding_updated_at TEXT;
+  `,
+  // 10: Otomasyon motoru (Tur J). Kullanıcının kurduğu, zaman tabanlı ve serbest metin
+  // talimatlı rutinler. repeat: 'none' olan bir kere çalışınca silinmez, enabled=0 olur
+  // (geçmişi automation_runs'ta görünür kalsın diye). automation_id yabancı anahtar
+  // CASCADE: otomasyon silinince geçmişi de silinir (activity_log'un aksine, burada
+  // otomasyonsuz bir çalıştırma kaydının anlamı yok).
+  `
+  CREATE TABLE automations (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT NOT NULL,
+    prompt       TEXT NOT NULL,
+    time_of_day  TEXT NOT NULL,
+    repeat       TEXT NOT NULL DEFAULT 'none',
+    allowance    TEXT NOT NULL DEFAULT 'none',
+    enabled      INTEGER NOT NULL DEFAULT 1,
+    next_run_at  INTEGER NOT NULL,
+    last_run_at  INTEGER,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX idx_automations_due ON automations(enabled, next_run_at);
+
+  CREATE TABLE automation_runs (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    automation_id  INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+    started_at     INTEGER NOT NULL,
+    finished_at    INTEGER,
+    status         TEXT NOT NULL,
+    summary        TEXT NOT NULL DEFAULT '',
+    skipped_tools  TEXT NOT NULL DEFAULT '[]'
+  );
+
+  CREATE INDEX idx_automation_runs_automation ON automation_runs(automation_id, started_at);
   `
 ]
 
