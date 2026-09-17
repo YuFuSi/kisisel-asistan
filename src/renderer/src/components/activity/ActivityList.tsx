@@ -17,7 +17,8 @@ const STATUS_LABELS: Record<ActivityStatus, string> = {
   done: 'Tamamlandı',
   error: 'Hata',
   denied: 'Onaylanmadı',
-  timeout: 'Onay süresi doldu'
+  timeout: 'Onay süresi doldu',
+  skipped: 'İzin yetersiz, atlandı'
 }
 
 function StatusIcon({ status }: { status: ActivityStatus }): React.JSX.Element {
@@ -28,6 +29,7 @@ function StatusIcon({ status }: { status: ActivityStatus }): React.JSX.Element {
     case 'error':
       return <XCircle className={`${className} text-negative`} />
     case 'denied':
+    case 'skipped':
       return <Ban className={`${className} text-caution`} />
     case 'timeout':
       return <Clock className={`${className} text-caution`} />

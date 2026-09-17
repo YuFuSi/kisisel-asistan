@@ -1,11 +1,6 @@
-import type { ToolRisk, ToolSource } from '../../shared/api'
+import type { RoutineAllowance, ToolRisk, ToolSource } from '../../shared/api'
 
-/**
- * Kullanıcının bir rutine verdiği izin.
- * none: değişiklik yapan her işlem onay ister. write: uygulama içi değişiklikler onaysız.
- * all: tehlikeli işlemler de onaysız (dışarıdan gelen içerikle tetiklenenler hariç).
- */
-export type RoutineAllowance = 'none' | 'write' | 'all'
+export type { RoutineAllowance }
 
 export interface PermissionRequest {
   risk: ToolRisk
