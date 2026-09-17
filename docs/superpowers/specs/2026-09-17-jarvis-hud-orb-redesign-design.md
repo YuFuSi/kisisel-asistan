@@ -27,7 +27,7 @@ Mevcut `Orb.tsx` canvas 2D yaklaşımı korunur (yeni bir render teknolojisi/kü
 |---|---|---|---|
 | **idle (beklemede)** | Dolgun küre | **Dönmez.** Sadece nefes alır gibi çok hafif büyüyüp küçülür (ölçek pulsu, ör. 4 sn periyot). | Yavaş, sürekli çok renkli akış (temel döngü) |
 | **listening (dinliyor)** | Küre → halkaya açılır (yumuşak morph) | Parçacıklar **40 frekans bandına** bölünür, her bant gerçek mikrofon giriş seviyesine (mevcut `getInputLevel`/AnalyserNode altyapısı) göre içe/dışa hareket eder — gerçek bir ekolayzer gibi. | Temel akışa ek olarak dinlerken hafif canlanma |
-| **thinking/working (düşünüyor/çalışıyor)** | Halka | Parçacıklar **kaotik şekilde savrulup geri toplanır** (ilk tercih; ince ayara açık — uygulama sırasında gerçek üründe hissi kötü gelirse "akan veri çizgileri" alternatifine dönülebilir). | Temel akışa ek olarak daha sıcak/turuncu-kehribar tonlara hafif kayma |
+| **thinking/working (düşünüyor/çalışıyor)** | Halka | **Hibrit:** parçacıklar spiral yönünde (içe/dışa akan veri çizgisi düzeni) hareket eder, üzerine hafif rastgele titreşim/sapma biner. Salt kaos "hata" gibi okunma riski taşıdığı, salt düzenli spiral de soğuk kalabileceği için ikisi birleştirildi. | Temel akışa ek olarak daha sıcak/turuncu-kehribar tonlara hafif kayma |
 | **speaking (konuşuyor)** | Halka | Parçacıklar gerçek **TTS çıkış ses seviyesine** (mevcut oynatma seviyesi altyapısı) göre nabız atar. | Temel akışa ek olarak daha canlı/doygun |
 
 ### Renk sistemi
