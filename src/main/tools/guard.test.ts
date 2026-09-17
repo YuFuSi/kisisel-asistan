@@ -3,7 +3,6 @@ import type { WebContents } from 'electron'
 import { closeDb, initDatabase } from '../db'
 import { listActivity } from '../data/activity'
 import { listTasks } from '../data/tasks'
-import { cancelApprovals } from './approval'
 import { runWithToolContext, type ToolContext } from './context'
 import { getAssistantTools } from './index'
 import type { ChatEvent } from '../../shared/api'
@@ -51,20 +50,34 @@ describe('araç sarmalayıcısı', () => {
     ])
   })
 
-  it('rutinde izin yoksa onay ister; reddedilirse iş yapılmaz ve kayda "denied" yazılır', async () => {
+  it('rutinde izin yoksa değişiklik pencere açılıp beklemeden atlanır, kayda "skipped" yazılır', async () => {
     const events: ChatEvent[] = []
-    const promise = run(
-      'gorev_ekle',
-      { baslik: 'Rutin görevi' },
-      context(events, { source: 'automation' })
-    )
-    await new Promise((resolve) => setTimeout(resolve, 5))
-    expect(events[0]).toMatchObject({ type: 'approval', approval: { toolName: 'gorev_ekle' } })
+    await expect(
+      run('gorev_ekle', { baslik: 'Rutin görevi' }, context(events, { source: 'automation' }))
+    ).rejects.toThrow('atlandı')
 
-    cancelApprovals(7)
-    await expect(promise).rejects.toThrow('onaylamadı')
+    // Hiçbir onay kartı istenmedi (pencere yok/beklenmedi)
+    expect(events).toHaveLength(0)
     expect(listTasks()).toHaveLength(0)
-    expect(listActivity()[0]).toMatchObject({ status: 'denied', source: 'automation' })
+    expect(listActivity()[0]).toMatchObject({
+      status: 'skipped',
+      approval: 'skipped',
+      source: 'automation'
+    })
+  })
+
+  it('pencere/sender hiç yokken bile (gerçek bir otomasyon çalıştırması gibi) izin yetersizliği düzgün atlanır', async () => {
+    const events: ChatEvent[] = []
+    await expect(
+      run(
+        'gorev_ekle',
+        { baslik: 'Otomasyon görevi' },
+        { conversationId: -1, source: 'automation' }
+      )
+    ).rejects.toThrow('atlandı')
+    expect(events).toHaveLength(0)
+    expect(listTasks()).toHaveLength(0)
+    expect(listActivity()[0]).toMatchObject({ status: 'skipped', conversationId: -1 })
   })
 
   it('rutin izni varsa değişikliği onaysız yapar', async () => {
@@ -95,21 +108,20 @@ describe('araç sarmalayıcısı', () => {
   // tetiklenmişse tehlikeli bir işlemi onaysız yapamaz. Bu, otomasyon motorundan önce
   // doğrulanması gereken tek güvenlik kuralıydı (bkz. CLAUDE.md yol haritası, adım 9).
   describe('dış içerik güvenliği', () => {
-    it('tam izinli rutinde dışarıdan gelen içerik tehlikeli aracı onaysız çalıştırmaz; reddedilirse dosya hiç okunmaz', async () => {
+    it('tam izinli rutinde dışarıdan gelen içerik tehlikeli aracı onaysız çalıştırmaz; atlanır, dosya hiç okunmaz', async () => {
       const events: ChatEvent[] = []
-      const promise = run(
-        'belge_oku',
-        { dosyaYolu: 'C:\\gizli\\rapor.txt' },
-        context(events, { source: 'automation', allowance: 'all', external: true })
-      )
-      await new Promise((resolve) => setTimeout(resolve, 5))
-      expect(events[0]).toMatchObject({ type: 'approval', approval: { toolName: 'belge_oku' } })
+      await expect(
+        run(
+          'belge_oku',
+          { dosyaYolu: 'C:\\gizli\\rapor.txt' },
+          context(events, { source: 'automation', allowance: 'all', external: true })
+        )
+      ).rejects.toThrow('atlandı')
 
-      cancelApprovals(7)
-      await expect(promise).rejects.toThrow('onaylamadı')
+      expect(events).toHaveLength(0)
       expect(listActivity()[0]).toMatchObject({
         name: 'belge_oku',
-        status: 'denied',
+        status: 'skipped',
         source: 'automation'
       })
     })
