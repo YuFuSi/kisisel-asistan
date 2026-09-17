@@ -7,6 +7,7 @@ import QuoteCard from '../components/home/QuoteCard'
 import SystemStatusCard from '../components/home/SystemStatusCard'
 import Orb from '../components/jarvis/Orb'
 import { StatusDot } from '../components/ui/Badge'
+import Button from '../components/ui/Button'
 import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
 import { useClock } from '../lib/deviceStatus'
 import type { PageId } from '../lib/pages'
@@ -91,22 +92,26 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
               )}
               <div className="flex flex-wrap gap-4 pt-1">
                 {conversationId !== null && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={MessageSquare}
                     onClick={() => onOpenConversation(conversationId)}
-                    className="inline-flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover"
+                    className="!px-0 !py-0 text-accent hover:bg-transparent hover:text-accent-hover"
                   >
-                    <MessageSquare className="h-3.5 w-3.5" />
                     Sohbette aç
-                  </button>
+                  </Button>
                 )}
                 {voice.sessionActive && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={Square}
                     onClick={toggleVoiceSession}
-                    className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-ink"
+                    className="!px-0 !py-0 hover:bg-transparent"
                   >
-                    <Square className="h-3 w-3 fill-current" />
                     Sesli sohbeti bitir
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -126,11 +131,17 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
         </section>
 
         <aside className="flex min-w-0 flex-col gap-4">
-          <HomeCard title="Son işlemler" icon={History}>
-            <ActivityList limit={5} compact />
-          </HomeCard>
-          <SystemStatusCard />
-          <QuoteCard date={now} />
+          <div className="animate-enter" style={{ animationDelay: '0ms' }}>
+            <HomeCard title="Son işlemler" icon={History}>
+              <ActivityList limit={5} compact />
+            </HomeCard>
+          </div>
+          <div className="animate-enter" style={{ animationDelay: '60ms' }}>
+            <SystemStatusCard />
+          </div>
+          <div className="animate-enter" style={{ animationDelay: '120ms' }}>
+            <QuoteCard date={now} />
+          </div>
         </aside>
       </div>
     </div>

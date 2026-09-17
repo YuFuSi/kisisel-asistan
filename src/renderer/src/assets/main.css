@@ -139,7 +139,7 @@ textarea {
 }
 
 .animate-enter {
-  animation: enter-up 180ms ease-out;
+  animation: enter-up 180ms ease-out backwards;
 }
 
 @keyframes enter-fade {
