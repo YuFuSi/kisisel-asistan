@@ -76,7 +76,7 @@ export interface ReplyOptions {
  * Sistem talimatı. `query` son kullanıcı mesajıdır: hafıza kayıtları buna göre seçilir.
  * `summary` sohbetin modele artık tam gönderilmeyen eski kısmının özetidir.
  */
-async function buildInstructions(
+export async function buildInstructions(
   query: string,
   summary: string,
   source: ToolSource
@@ -144,6 +144,16 @@ async function buildInstructions(
       '- Kısa ve doğal konuş; çoğu zaman bir-üç cümle yeter.',
       '- Markdown, madde işareti, tablo, kod bloğu veya emoji kullanma; düz cümlelerle anlat.',
       '- Saatleri ve sayıları okunuşu kolay yaz (ör. "saat dokuzda").'
+    )
+  }
+
+  if (source === 'automation') {
+    lines.push(
+      '',
+      'Bu istek kullanıcının önceden kurduğu bir rutin yüzünden kendiliğinden çalışıyor;',
+      'kimseyle karşılıklı konuşmuyorsun, soru sorup cevap bekleyemezsin. Elindeki bilgiyle',
+      'araçlarını kullanarak işi yap, sonunda ne yaptığını kısaca özetle. Bir aracın izin',
+      'yetersizliği nedeniyle çalışmadığını görürsen bunu özetinde belirt, tekrar deneme.'
     )
   }
   return lines.join('\n')
