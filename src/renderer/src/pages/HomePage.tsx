@@ -64,13 +64,13 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
             title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
             className="max-w-full cursor-pointer rounded-[40%] focus-visible:outline-offset-[-24px]"
           >
-            <Orb state={state} size={220} />
+            <Orb state={state} size={320} />
           </button>
           <h1 className="-mt-2 text-4xl font-semibold tracking-tight text-ink">Jarvis</h1>
           <p className="mt-2 text-base text-muted">
             {greeting(now.getHours())}, nasıl yardımcı olabilirim?
           </p>
-          <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3 py-1 text-xs text-muted">
+          <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-surface/60 px-3 py-1 font-mono text-[11px] tracking-[0.15em] text-accent uppercase">
             <StatusDot level={busy ? 'active' : 'ok'} pulse={busy} className="h-1.5 w-1.5" />
             {STATE_LABELS[state]}
           </span>
