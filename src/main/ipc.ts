@@ -54,12 +54,23 @@ import {
   snoozeReminder
 } from './data/reminders'
 import { createTask, deleteTask, listTasks, updateTask } from './data/tasks'
+import {
+  createAutomation,
+  deleteAutomation,
+  listAutomationRuns,
+  listAutomations,
+  requireAutomation,
+  updateAutomation
+} from './data/automations'
+import { executeAutomation } from './scheduler/automations'
 import { notifyDataChanged } from './events'
 import { setSecret } from './settings'
 import { applySettingsPatch, getSettingsView } from './system/appSettings'
 import { suspendGlobalShortcut } from './system/shortcut'
 import type {
   AttachedDocument,
+  AutomationInput,
+  AutomationPatch,
   CalendarItem,
   DataScope,
   NotePatch,
@@ -232,6 +243,24 @@ export function registerIpcHandlers(): void {
     changing('tasks', () => updateTask(id, patch))
   )
   ipcMain.handle('tasks:remove', (_event, id: number) => changing('tasks', () => deleteTask(id)))
+
+  // Otomasyonlar (rutinler)
+  ipcMain.handle('automations:list', () => listAutomations())
+  ipcMain.handle('automations:create', (_event, input: AutomationInput) =>
+    changing('automations', () => createAutomation(input))
+  )
+  ipcMain.handle('automations:update', (_event, id: number, patch: AutomationPatch) =>
+    changing('automations', () => updateAutomation(id, patch))
+  )
+  ipcMain.handle('automations:remove', (_event, id: number) =>
+    changing('automations', () => deleteAutomation(id))
+  )
+  ipcMain.handle('automations:runNow', (_event, id: number) =>
+    executeAutomation(requireAutomation(id))
+  )
+  ipcMain.handle('automations:listRuns', (_event, automationId: number) =>
+    listAutomationRuns(automationId)
+  )
 
   // Hatırlatmalar
   ipcMain.handle('reminders:list', () => listPendingReminders())
