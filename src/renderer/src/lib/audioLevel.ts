@@ -56,7 +56,7 @@ export function getAudioSpectrum(kind: LevelKind, bands: number): number[] {
   return new Array(bands).fill(0)
 }
 
-/** Ham 0-255 frekans verisini `bands` sayıda 0-1 aralığına ortalanmış dilime böler */
+/** Ham 0-255 frekans verisini `bands` sayıda 0-1 aralığına ortalanmış dilime böler; `data.length` `bands`'e bölünemezse sondaki kalanlar yok sayılır */
 export function binSpectrum(data: Uint8Array, bands: number): number[] {
   const bandSize = Math.floor(data.length / bands)
   const result: number[] = []
