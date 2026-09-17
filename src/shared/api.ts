@@ -388,6 +388,12 @@ export interface Reminder {
  */
 export type RoutineAllowance = 'none' | 'write' | 'all'
 
+export const ALLOWANCE_LABELS: Record<RoutineAllowance, string> = {
+  none: 'Salt okunur',
+  write: 'Yazma izinli',
+  all: 'Tam izinli'
+}
+
 /** Kullanıcının sohbet gibi normal bir istek yerine zamanı gelince kendiliğinden çalışan rutin */
 export interface Automation {
   id: number

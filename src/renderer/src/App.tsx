@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, Trophy, Workflow } from 'lucide-react'
+import { BarChart3, Trophy } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import { PAGE_LABELS, type PageId } from './lib/pages'
 import TitleBar from './components/TitleBar'
@@ -8,6 +8,7 @@ import ChatPage from './pages/ChatPage'
 import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
+import AutomationsPage from './pages/AutomationsPage'
 import ComingSoonPage from './pages/ComingSoonPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
@@ -25,6 +26,10 @@ function App(): React.JSX.Element {
     return window.api.events.onCommand((command) => {
       if (command === 'open-tasks') {
         setPage('tasks')
+        return
+      }
+      if (command === 'open-automations') {
+        setPage('automations')
         return
       }
       setPage('chat')
@@ -76,16 +81,7 @@ function App(): React.JSX.Element {
           )}
           {page === 'automations' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <ComingSoonPage
-                icon={Workflow}
-                title="Otomasyonlar"
-                description="Jarvis'in sohbet beklemeden kendiliğinden yaptığı işler."
-                bullets={[
-                  'Zamanlı rutinler: "her sabah 8\'de hava, görevler ve mail özetini sesli oku"',
-                  'Hazır senaryolar: Günaydın, Gün sonu, pil azaldı uyarısı',
-                  'Sohbetten rutin kurma ve "şimdi dene" ile kuru çalıştırma'
-                ]}
-              />
+              <AutomationsPage />
             </div>
           )}
           {page === 'analytics' && (
