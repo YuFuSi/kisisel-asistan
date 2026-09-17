@@ -116,8 +116,9 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
 
       const cx = width / 2
       const cy = height / 2
-      const cosR = Math.cos(t * 0.15)
-      const sinR = Math.sin(t * 0.15)
+      const rotationAngle = t * 0.15 * morph
+      const cosR = Math.cos(rotationAngle)
+      const sinR = Math.sin(rotationAngle)
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, width, height)
