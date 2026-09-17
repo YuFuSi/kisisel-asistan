@@ -49,7 +49,7 @@ export function resolveReminderTime(value: string, repeat: RepeatRule, now: numb
 }
 
 // Türkçe karakterleri ve ayraçları sadeleştirir: "Hafta_İçi" → "hafta ici"
-const simplify = (value: string): string =>
+export const simplify = (value: string): string =>
   value
     .toLocaleLowerCase('tr-TR')
     .replace(/ı/g, 'i')
