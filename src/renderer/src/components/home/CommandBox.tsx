@@ -3,13 +3,13 @@ import {
   BellPlus,
   FolderSearch,
   ListPlus,
-  Loader2,
   Mic,
   SendHorizontal,
   Sparkles,
   Sun,
   type LucideIcon
 } from 'lucide-react'
+import Button from '../ui/Button'
 import { useDictation } from '../../lib/useDictation'
 
 export const HOME_COMMAND_ID = 'home-command'
@@ -83,30 +83,26 @@ function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
           className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] text-ink outline-none placeholder:text-faint"
         />
         {text.trim() && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={SendHorizontal}
             onClick={() => submit()}
             aria-label="Gönder"
             title="Gönder"
-            className="rounded-full p-2 text-muted transition-colors hover:text-ink"
-          >
-            <SendHorizontal className="h-4 w-4" />
-          </button>
+            className="!p-2 text-muted hover:bg-transparent hover:text-ink"
+          />
         )}
-        <button
+        <Button
+          variant={dictation.recording ? 'danger' : 'primary'}
+          icon={Mic}
+          loading={dictation.transcribing}
           onClick={() => void dictation.toggle()}
           disabled={dictation.transcribing}
           aria-label={dictation.recording ? 'Kaydı bitir' : 'Sesle söyle'}
           title={dictation.recording ? 'Kaydı bitir ve yazıya çevir' : 'Sesle söyle'}
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:opacity-60 ${
-            dictation.recording ? 'bg-negative' : 'bg-accent hover:bg-accent-hover'
-          }`}
-        >
-          {dictation.transcribing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Mic className={`h-4 w-4 ${dictation.recording ? 'animate-pulse' : ''}`} />
-          )}
-        </button>
+          className={`h-10 w-10 !rounded-full !p-0 ${dictation.recording ? 'animate-pulse' : ''}`}
+        />
       </div>
 
       {(dictation.recording || dictation.transcribing || dictation.error) && (

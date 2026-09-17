@@ -93,7 +93,7 @@ function QuickAccess({ onNavigate }: QuickAccessProps): React.JSX.Element {
           <button
             key={page}
             onClick={() => onNavigate(page)}
-            className="glass-card group flex flex-col items-start gap-4 p-4 text-left transition-colors hover:border-accent/50"
+            className="glass-card group flex flex-col items-start gap-4 p-4 text-left transition-colors transition-transform duration-150 hover:border-accent/50 active:scale-[0.98]"
           >
             <Icon className={`h-6 w-6 ${color}`} />
             <div className="flex w-full items-end justify-between gap-2">
