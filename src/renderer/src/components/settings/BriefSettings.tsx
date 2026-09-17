@@ -4,7 +4,7 @@ import { errorMessage } from '../../lib/errors'
 import { compactInputClass, inputClass, secondaryButtonClass } from '../../lib/styles'
 import { useToast } from '../../lib/toast'
 import Field from './Field'
-import Toggle from './Toggle'
+import Toggle from '../ui/Toggle'
 
 interface BriefSettingsProps {
   settings: SettingsView

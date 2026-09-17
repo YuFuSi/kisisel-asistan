@@ -1,7 +1,7 @@
 import type { SettingsPatch, SettingsView } from '@shared/api'
 import Field from './Field'
 import ShortcutRecorder from './ShortcutRecorder'
-import Toggle from './Toggle'
+import Toggle from '../ui/Toggle'
 
 interface AppBehaviorSettingsProps {
   settings: SettingsView
