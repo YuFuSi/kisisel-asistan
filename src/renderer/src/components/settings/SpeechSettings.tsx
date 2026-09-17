@@ -10,7 +10,7 @@ import {
 } from '@shared/api'
 import Field from './Field'
 import SecretField from './SecretField'
-import Toggle from './Toggle'
+import Toggle from '../ui/Toggle'
 import { errorMessage } from '../../lib/errors'
 import { cardClass, inputClass, primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
 import { useToast } from '../../lib/toast'

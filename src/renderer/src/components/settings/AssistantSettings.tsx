@@ -8,7 +8,7 @@ import {
 } from '@shared/api'
 import { compactInputClass, inputClass } from '../../lib/styles'
 import Field from './Field'
-import Toggle from './Toggle'
+import Toggle from '../ui/Toggle'
 
 interface AssistantSettingsProps {
   settings: SettingsView
