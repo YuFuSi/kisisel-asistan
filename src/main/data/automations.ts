@@ -111,7 +111,7 @@ export function listAutomations(): Automation[] {
   return rows.map(toAutomation)
 }
 
-function requireAutomation(id: number): Automation {
+export function requireAutomation(id: number): Automation {
   const row = getDb().prepare('SELECT * FROM automations WHERE id = ?').get(id) as
     AutomationRow | undefined
   if (!row) throw new Error(`${id} numaralı rutin bulunamadı.`)

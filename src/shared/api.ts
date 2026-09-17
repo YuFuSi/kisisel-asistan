@@ -643,6 +643,15 @@ export interface Api {
     update(id: number, patch: TaskPatch): Promise<Task>
     remove(id: number): Promise<void>
   }
+  automations: {
+    list(): Promise<Automation[]>
+    create(input: AutomationInput): Promise<Automation>
+    update(id: number, patch: AutomationPatch): Promise<Automation>
+    remove(id: number): Promise<void>
+    /** Zamanını beklemeden hemen çalıştırır ("şimdi çalıştır") */
+    runNow(id: number): Promise<AutomationRun>
+    listRuns(automationId: number): Promise<AutomationRun[]>
+  }
   reminders: {
     /** Henüz gösterilmemiş hatırlatmalar */
     list(): Promise<Reminder[]>

@@ -70,6 +70,14 @@ const api: Api = {
     update: (id, patch) => ipcRenderer.invoke('tasks:update', id, patch),
     remove: (id) => ipcRenderer.invoke('tasks:remove', id)
   },
+  automations: {
+    list: () => ipcRenderer.invoke('automations:list'),
+    create: (input) => ipcRenderer.invoke('automations:create', input),
+    update: (id, patch) => ipcRenderer.invoke('automations:update', id, patch),
+    remove: (id) => ipcRenderer.invoke('automations:remove', id),
+    runNow: (id) => ipcRenderer.invoke('automations:runNow', id),
+    listRuns: (automationId) => ipcRenderer.invoke('automations:listRuns', automationId)
+  },
   reminders: {
     list: () => ipcRenderer.invoke('reminders:list'),
     create: (message, remindAt, repeat) =>
