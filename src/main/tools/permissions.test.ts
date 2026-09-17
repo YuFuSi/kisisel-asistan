@@ -58,19 +58,16 @@ describe('requireApproval ve izinler', () => {
     expect(call.approval).toBe('auto')
   })
 
-  it('dışarıdan gelen içerikte tam izinli rutin de onay kartı gösterir', async () => {
+  it('dışarıdan gelen içerikte tam izinli rutin de onay gerektirir; otomasyon pencere açmadan atlar', async () => {
     const events: ChatEvent[] = []
     const call: ToolCallState = { name: 'eposta_gonder', risk: 'dangerous' }
-    const promise = runWithToolContext(
-      context(events, { source: 'automation', allowance: 'all', external: true, call }),
-      () => requireApproval({ toolName: 'eposta_gonder', label: 'Gönderilsin mi?', summary: 'X' })
-    )
-    await new Promise((resolve) => setTimeout(resolve, 5))
-    expect(events[0]?.type).toBe('approval')
-    // Kartı reddetmek yerine sohbet iptal edilmiş gibi bitir
-    const { cancelApprovals } = await import('./approval')
-    cancelApprovals(1)
-    await expect(promise).rejects.toThrow('onaylamadı')
-    expect(call.approval).toBe('denied')
+    await expect(
+      runWithToolContext(
+        context(events, { source: 'automation', allowance: 'all', external: true, call }),
+        () => requireApproval({ toolName: 'eposta_gonder', label: 'Gönderilsin mi?', summary: 'X' })
+      )
+    ).rejects.toThrow('atlandı')
+    expect(events).toHaveLength(0)
+    expect(call.approval).toBe('skipped')
   })
 })

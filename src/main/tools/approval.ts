@@ -15,6 +15,17 @@ interface PendingApproval {
 
 const pending = new Map<string, PendingApproval>()
 
+/**
+ * Bir otomasyonun izin seviyesi bir aracın onay gereksinimini karşılamadığında fırlatılır.
+ * Gerçek bir hata değil: pencere açılıp beklenmez, çalıştırma geçmişine "atlandı" diye kaydedilir.
+ */
+export class AutomationApprovalSkipped extends Error {
+  constructor(public readonly toolLabel: string) {
+    super(`"${toolLabel}" izin yetersizliği nedeniyle atlandı.`)
+    this.name = 'AutomationApprovalSkipped'
+  }
+}
+
 type ApprovalListener = (conversationId: number, approval: ToolApproval) => void
 // Onay istendiğinde haber alanlar (ör. sesli sohbet onayı sesle sorar)
 const approvalListeners = new Set<ApprovalListener>()
@@ -52,9 +63,18 @@ export async function requireApproval(request: Omit<ToolApproval, 'id'>): Promis
     return
   }
 
+  // Otomasyonlar hiçbir zaman pencere açılıp beklemez: izin yetmiyorsa adım atlanır ve kaydedilir
+  if (context.source === 'automation') {
+    if (call) call.approval = 'skipped'
+    throw new AutomationApprovalSkipped(request.label)
+  }
+
+  const sender = context.sender
+  if (!sender) throw new Error('Onay istenemedi: pencere bağlamı bulunamadı.')
+
   const approval: ToolApproval = { ...request, id: randomUUID() }
   const send = (event: ChatEvent): void => {
-    if (!context.sender.isDestroyed()) context.sender.send('chat:event', event)
+    if (!sender.isDestroyed()) sender.send('chat:event', event)
   }
 
   const outcome = await new Promise<Outcome>((resolve) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WebContents } from 'electron'
 import {
+  AutomationApprovalSkipped,
   cancelApprovals,
   pendingApprovalCount,
   requireApproval,
@@ -57,5 +58,24 @@ describe('requireApproval', () => {
 
   it('sohbet bağlamı yoksa onay istenemez', async () => {
     await expect(requireApproval(request)).rejects.toThrow('bağlam')
+  })
+
+  it('otomasyon: izin yetmiyorsa pencere açılıp beklemeden hemen atlanır', async () => {
+    await expect(
+      runWithToolContext({ conversationId: -1, source: 'automation', allowance: 'none' }, () =>
+        requireApproval(request)
+      )
+    ).rejects.toThrow(AutomationApprovalSkipped)
+    // Beklenen bir onay kaydı oluşmadı (pencere yok, zaten atlandı)
+    expect(pendingApprovalCount()).toBe(0)
+  })
+
+  it('otomasyon: tam izin ve dışarıdan tetiklenmemişse sensiz de sorunsuz geçer', async () => {
+    await expect(
+      runWithToolContext(
+        { conversationId: -1, source: 'automation', allowance: 'all', external: false },
+        () => requireApproval(request)
+      )
+    ).resolves.toBeUndefined()
   })
 })

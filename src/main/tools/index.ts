@@ -71,7 +71,10 @@ function guardTool(
         summary: describeToolInput(input),
         detail,
         status,
-        approval: call.approval === 'approved' || call.approval === 'auto' ? call.approval : null,
+        approval:
+          call.approval === 'approved' || call.approval === 'auto' || call.approval === 'skipped'
+            ? call.approval
+            : null,
         conversationId: parent.conversationId
       })
 
@@ -99,7 +102,9 @@ function guardTool(
       return output
     } catch (err) {
       const status: ActivityStatus =
-        call.approval === 'denied' || call.approval === 'timeout' ? call.approval : 'error'
+        call.approval === 'denied' || call.approval === 'timeout' || call.approval === 'skipped'
+          ? call.approval
+          : 'error'
       record(status, err instanceof Error ? err.message : String(err))
       throw err
     }

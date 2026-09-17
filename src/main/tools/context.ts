@@ -8,14 +8,15 @@ import type { ToolRisk, ToolSource } from '../../shared/api'
 export interface ToolCallState {
   name: string
   risk: ToolRisk
-  approval?: 'approved' | 'denied' | 'timeout' | 'auto'
+  approval?: 'approved' | 'denied' | 'timeout' | 'auto' | 'skipped'
 }
 
 // Bir araç çalışırken hangi sohbete ait olduğunu ve arayüze nasıl mesaj göndereceğini bilmesi gerekir.
 // AsyncLocalStorage, aynı anda birden fazla sohbet cevap yazsa bile her araca kendi bağlamını verir.
 export interface ToolContext {
   conversationId: number
-  sender: WebContents
+  /** Canlı bir sohbet/ses penceresi yoksa (ör. otomasyon çalıştırması) yok */
+  sender?: WebContents
   /** Aracı kim başlattı; onay kuralları buna göre değişir */
   source: ToolSource
   /** Rutinlerde kullanıcının verdiği izin */
