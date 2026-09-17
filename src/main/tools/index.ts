@@ -3,6 +3,7 @@ import { recordActivity } from '../activity'
 import { describeToolInput } from '../lib/activityText'
 import { summarizeToolOutput } from '../lib/toolHistory'
 import taskTools from './tasks'
+import automationTools from './automations'
 import reminderTools from './reminders'
 import noteTools from './notes'
 import memoryTools from './memory'
@@ -25,6 +26,7 @@ import type { ActivityStatus, ToolRisk } from '../../shared/api'
 // Asistanın kullanabildiği tüm yetenekler. Yeni bir modül eklemek için buraya eklemek yeterli.
 export const modules: ToolModule[] = [
   taskTools,
+  automationTools,
   reminderTools,
   noteTools,
   memoryTools,

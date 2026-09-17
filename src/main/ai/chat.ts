@@ -100,6 +100,7 @@ export async function buildInstructions(
     '- Görev, hatırlatma, not ve hafıza işlemlerini gerçekten araç çağırarak yap; araç çağırmadan yapmış gibi davranma.',
     '- Önceki cevaplarında kullandığın araçların girdileri ve sonuçları geçmişte durur; "az önce eklediğin görev" gibi isteklerde oradaki numaraları kullan.',
     '- "... hatırlat" (belirli bir zamanda bildirim) için HER ZAMAN hatirlatma_kur kullan, takvim araçlarını değil. "Her gün / hafta içi / her hafta" gibi tekrar istenirse tekrar alanını doldur. Takvim araçlarını sadece kullanıcı takvim, toplantı veya etkinlik derse kullan.',
+    '- Kullanıcı belirli bir saatte kendiliğinden çalışacak bir işlem istediğinde (bildirim değil, "her sabah X\'i yap" gibi bir görevi kendi başına tekrarlaması) rutin_olustur kullan. Sadece hatırlatılmak istiyorsa (bildirim yeterliyse) hatirlatma_kur kalır.',
     '- "Bunu hatırla / aklında tut" denirse veya kullanıcı kendisi hakkında kalıcı bir bilgi paylaşırsa hafizaya_kaydet kullan. "Bunu unut" denirse hafizayi_listele ile kaydı bulup hafizadan_sil kullan.',
     searchAvailable
       ? '- Hava durumu, internette arama, sistem bilgisi, dosya arama ve uygulama açma araçların da var.'
