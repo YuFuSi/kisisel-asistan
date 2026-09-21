@@ -66,8 +66,8 @@ function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="flex items-center gap-3 rounded-full border border-accent/40 bg-surface/80 py-2 pr-2 pl-5 shadow-[0_0_40px_-14px_var(--color-accent)] transition-colors focus-within:border-glow/70">
-        <Sparkles className="h-4 w-4 shrink-0 text-glow" />
+      <div className="flex items-center gap-3 rounded-full border border-line-strong bg-surface py-2 pr-2 pl-5 transition-colors focus-within:border-accent/70">
+        <Sparkles className="h-4 w-4 shrink-0 text-accent" />
         <input
           id={HOME_COMMAND_ID}
           ref={inputRef}
@@ -108,7 +108,7 @@ function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
       {(dictation.recording || dictation.transcribing || dictation.error) && (
         <p className="mt-2 text-center text-xs">
           {dictation.recording && (
-            <span className="text-glow">Dinliyorum... Bitirmek için mikrofona tekrar bas.</span>
+            <span className="text-accent">Dinliyorum... Bitirmek için mikrofona tekrar bas.</span>
           )}
           {dictation.transcribing && <span className="text-muted">Yazıya çevriliyor...</span>}
           {dictation.error && <span className="text-negative select-text">{dictation.error}</span>}

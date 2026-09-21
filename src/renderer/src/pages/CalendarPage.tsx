@@ -31,7 +31,7 @@ const loadReminders = (): Promise<Reminder[]> => window.api.reminders.list()
 
 const DOT_CLASS: Record<AgendaKind, string> = {
   event: 'bg-accent',
-  reminder: 'bg-glow',
+  reminder: 'bg-caution',
   task: 'bg-positive'
 }
 
@@ -210,7 +210,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
           </p>
         )}
 
-        <div className="glass-card mt-4 p-3">
+        <div className="card mt-4 p-3">
           <div className="grid grid-cols-7 gap-1 pb-2">
             {WEEKDAY_LABELS.map((label) => (
               <div key={label} className="text-center text-xs text-faint">
@@ -265,7 +265,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
         </div>
       </section>
 
-      <aside className="glass-card flex min-w-0 flex-col self-start p-4">
+      <aside className="card flex min-w-0 flex-col self-start p-4">
         <h2 className="text-sm font-medium text-ink capitalize">{selectedTitle}</h2>
 
         {agenda.length === 0 ? (
@@ -290,7 +290,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
                     )}
                   </button>
                 ) : entry.kind === 'reminder' ? (
-                  <Bell className="mt-0.5 h-4 w-4 shrink-0 text-glow" />
+                  <Bell className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                 ) : (
                   <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                 )}

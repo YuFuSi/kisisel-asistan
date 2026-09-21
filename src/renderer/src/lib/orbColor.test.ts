@@ -7,7 +7,7 @@ function hueOf(color: string): number {
 
 describe('orbHsla', () => {
   it('idle durumunda taban vurgu tonunu kullanır', () => {
-    expect(orbHsla('idle', 70, 0.5)).toBe('hsla(231, 100%, 70%, 0.5)')
+    expect(orbHsla('idle', 70, 0.5)).toBe('hsla(231, 72%, 70%, 0.5)')
   })
 
   it('durum tonu tabana eklenir', () => {
@@ -22,6 +22,6 @@ describe('orbHsla', () => {
   })
 
   it('alpha verilmezse tam opaktır', () => {
-    expect(orbHsla('idle', 50)).toBe('hsla(231, 100%, 50%, 1)')
+    expect(orbHsla('idle', 50)).toBe('hsla(231, 72%, 50%, 1)')
   })
 })

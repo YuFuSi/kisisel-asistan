@@ -28,7 +28,7 @@ function Modal({ open, onClose, children }: ModalProps): React.JSX.Element | nul
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="glass-card animate-enter w-full max-w-sm p-5">{children}</div>
+      <div className="card animate-enter w-full max-w-sm p-5 shadow-float">{children}</div>
     </div>,
     document.body
   )

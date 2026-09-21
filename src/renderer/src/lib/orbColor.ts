@@ -19,5 +19,5 @@ export function orbHsla(
   hueOffset = 0
 ): string {
   const hue = Math.round((BASE_HUE + STATE_HUE_SHIFT[state] + hueOffset + 360) % 360)
-  return `hsla(${hue}, 100%, ${lightness}%, ${alpha})`
+  return `hsla(${hue}, 72%, ${lightness}%, ${alpha})`
 }
