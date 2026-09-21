@@ -1,5 +1,6 @@
 import Orb from '../jarvis/Orb'
 import { ORB_INTENSITIES, ORB_THEMES, setOrbPrefs, useOrbPrefs } from '../../lib/orbPrefs'
+import { playSfx, setSfxEnabled, useSfxEnabled } from '../../lib/soundEffects'
 import Field from './Field'
 
 const chip = (active: boolean): string =>
@@ -12,6 +13,7 @@ const chip = (active: boolean): string =>
 // Kürenin renk teması ve yoğunluğu; canlı önizleme ile
 function OrbSettings(): React.JSX.Element {
   const prefs = useOrbPrefs()
+  const sfx = useSfxEnabled()
   return (
     <div className="flex flex-wrap items-center gap-8">
       <div className="shrink-0">
@@ -34,6 +36,25 @@ function OrbSettings(): React.JSX.Element {
                 {theme.label}
               </button>
             ))}
+          </div>
+        </Field>
+        <Field
+          label="Ses efektleri"
+          hint="Cevap bitince, hata olunca, onay beklerken ve bildirimde kısa sesler."
+        >
+          <div className="flex gap-2">
+            <button onClick={() => setSfxEnabled(true)} className={chip(sfx)}>
+              Açık
+            </button>
+            <button onClick={() => setSfxEnabled(false)} className={chip(!sfx)}>
+              Kapalı
+            </button>
+            <button
+              onClick={() => playSfx('done')}
+              className="rounded-[10px] px-3 py-1.5 text-sm text-muted hover:text-ink"
+            >
+              Dene
+            </button>
           </div>
         </Field>
         <Field label="Yoğunluk" hint="İç ışığın parlaklığı ve akış hızı.">

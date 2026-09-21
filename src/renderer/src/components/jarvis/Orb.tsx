@@ -8,6 +8,7 @@ import {
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { createSphereRenderer } from '../../lib/orbGl'
+import { playSfx } from '../../lib/soundEffects'
 import { orbHslaShift, orbRgb, STATE_HUE_SHIFT } from '../../lib/orbColor'
 import { orbLook } from '../../lib/orbPrefs'
 import type { WorkStep } from '../../lib/workSteps'
@@ -735,6 +736,7 @@ function Orb({
       }}
       onPointerDown={() => {
         tapRef.current += 1
+        playSfx('tap')
       }}
     />
   )

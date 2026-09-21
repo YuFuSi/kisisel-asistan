@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { VoicePhase } from '@shared/api'
+import { playSfx } from './soundEffects'
 import { upsertStep, type WorkStep } from './workSteps'
 
 /** Jarvis küresinin ve menüdeki durum göstergesinin gösterdiği durum */
@@ -63,6 +64,10 @@ function trackSteps(event: { type: string; activity?: Parameters<typeof upsertSt
 function setEmotion(kind: Emotion | null): void {
   emotion = kind ? { kind, seq: ++emotionSeq } : null
   emotionListeners.forEach((listener) => listener())
+  // Sesli sohbette Jarvis zaten konuşuyor; sadece yazılı akışta efekt çal
+  if (kind === 'error') playSfx('error')
+  else if (kind === 'unsure') playSfx('approval')
+  else if (kind === 'success' && voicePhase === 'off') playSfx('done')
 }
 // Cevap yazılan sohbetler ve her birinde o an çalışan araçlar
 const replies = new Map<number, Set<string>>()
@@ -185,6 +190,7 @@ let noticeSeq = 0
 
 export function noteNotification(): void {
   noticeSeq += 1
+  playSfx('notice')
   noticeListeners.forEach((listener) => listener())
 }
 
