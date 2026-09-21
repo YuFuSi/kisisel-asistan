@@ -38,7 +38,7 @@ function HudApp(): React.JSX.Element {
   const state = stateFromPhase(phase)
 
   return (
-    <div className="drag-region flex h-full w-full items-center gap-3 rounded-2xl border border-line bg-surface/90 px-4 py-3 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur">
+    <div className="drag-region flex h-full w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 shadow-float">
       <Orb state={state} size={56} />
       <div className="min-w-0 flex-1 leading-tight">
         <div className="truncate text-sm font-medium text-ink">Jarvis</div>

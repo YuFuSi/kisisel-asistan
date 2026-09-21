@@ -4,13 +4,14 @@ import {
   ChevronRight,
   ListTodo,
   MessageSquare,
-  Zap,
+  Sun,
   type LucideIcon
 } from 'lucide-react'
 import type { Conversation, Memory, Note, Reminder, Task } from '@shared/api'
 import { toIsoDate } from '../../lib/dates'
 import type { PageId } from '../../lib/pages'
 import { useLiveData } from '../../lib/useLiveData'
+import HomeCard from './HomeCard'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadTasks = (): Promise<Task[]> => window.api.tasks.list()
@@ -26,7 +27,6 @@ interface QuickAccessProps {
 interface Shortcut {
   page: PageId
   icon: LucideIcon
-  color: string
   title: string
   detail: string | null
 }
@@ -49,7 +49,6 @@ function QuickAccess({ onNavigate }: QuickAccessProps): React.JSX.Element {
     {
       page: 'tasks',
       icon: ListTodo,
-      color: 'text-positive',
       title: 'Görevler',
       detail: tasks
         ? `${pending.length} bekleyen${dueToday > 0 ? ` · ${dueToday} bugün` : ''}`
@@ -58,7 +57,6 @@ function QuickAccess({ onNavigate }: QuickAccessProps): React.JSX.Element {
     {
       page: 'calendar',
       icon: CalendarDays,
-      color: 'text-accent',
       title: 'Takvim',
       detail: reminders
         ? remindersToday > 0
@@ -69,44 +67,37 @@ function QuickAccess({ onNavigate }: QuickAccessProps): React.JSX.Element {
     {
       page: 'notes',
       icon: Brain,
-      color: 'text-glow',
       title: 'Hafıza Merkezi',
       detail: memories && notes ? `${memories.length} bilgi · ${notes.length} not` : null
     },
     {
       page: 'chat',
       icon: MessageSquare,
-      color: 'text-caution',
       title: 'Asistan',
       detail: conversations ? `${conversations.length} sohbet` : null
     }
   ]
 
   return (
-    <section className="w-full">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink">
-        <Zap className="h-4 w-4 text-glow" />
-        Hızlı erişim
-      </h2>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {shortcuts.map(({ page, icon: Icon, color, title, detail }) => (
-          <button
-            key={page}
-            onClick={() => onNavigate(page)}
-            className="glass-card group flex flex-col items-start gap-4 p-4 text-left transition-colors transition-transform duration-150 hover:border-accent/50 active:scale-[0.98]"
-          >
-            <Icon className={`h-6 w-6 ${color}`} />
-            <div className="flex w-full items-end justify-between gap-2">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-ink">{title}</div>
-                <div className="truncate text-xs text-muted">{detail ?? '...'}</div>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink" />
-            </div>
-          </button>
+    <HomeCard title="Bugün" icon={Sun}>
+      <ul className="-mx-2 space-y-0.5">
+        {shortcuts.map(({ page, icon: Icon, title, detail }) => (
+          <li key={page}>
+            <button
+              onClick={() => onNavigate(page)}
+              className="group flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-elevated"
+            >
+              <Icon className="h-4 w-4 shrink-0 text-faint group-hover:text-accent" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-ink">{title}</span>
+                <span className="block truncate text-xs text-muted">{detail ?? '...'}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-faint transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </li>
         ))}
-      </div>
-    </section>
+      </ul>
+    </HomeCard>
   )
 }
 

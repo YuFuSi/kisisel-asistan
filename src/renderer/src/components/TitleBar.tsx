@@ -35,8 +35,8 @@ function TitleBar({ page }: TitleBarProps): React.JSX.Element {
       style={{ paddingRight: 150 }}
     >
       <Logo className="h-5 w-5" />
-      <span className="text-[13px] font-semibold tracking-[0.3em] text-ink">JARVIS</span>
-      <span className="text-faint">·</span>
+      <span className="text-sm font-semibold tracking-tight text-ink">Jarvis</span>
+      <span className="text-line-strong">/</span>
       <span className="min-w-0 truncate text-sm text-muted">{page}</span>
 
       <div className="ml-auto flex shrink-0 items-center gap-3 text-muted">

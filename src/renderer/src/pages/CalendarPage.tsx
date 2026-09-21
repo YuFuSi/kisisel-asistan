@@ -236,7 +236,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
                 >
                   <span
                     className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                      cell.today ? 'bg-accent font-semibold text-white' : ''
+                      cell.today ? 'bg-accent font-semibold text-app' : ''
                     }`}
                   >
                     {cell.day}

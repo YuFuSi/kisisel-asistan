@@ -164,7 +164,7 @@ function NotesView(): React.JSX.Element {
                     isSelected ? 'bg-elevated' : 'hover:bg-elevated/60'
                   }`}
                 >
-                  <div className={`truncate text-sm ${isSelected ? 'text-white' : 'text-ink'}`}>
+                  <div className={`truncate text-sm ${isSelected ? 'text-ink' : 'text-ink'}`}>
                     {note.title || 'Başlıksız not'}
                   </div>
                   <div className="truncate text-xs text-faint">

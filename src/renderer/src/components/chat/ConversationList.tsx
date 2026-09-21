@@ -215,7 +215,7 @@ function ConversationList({
                   className="min-w-0 flex-1 px-3 py-2 text-left"
                 >
                   <span
-                    className={`flex items-center gap-1.5 text-sm ${isActive ? 'text-white' : 'text-muted'}`}
+                    className={`flex items-center gap-1.5 text-sm ${isActive ? 'text-ink' : 'text-muted'}`}
                   >
                     {conversation.pinned && (
                       <Pin className="h-3 w-3 shrink-0 fill-current text-accent" />

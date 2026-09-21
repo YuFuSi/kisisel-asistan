@@ -1,66 +1,37 @@
 import { useEffect, useRef } from 'react'
 import { STATE_LABELS, type AssistantState } from '../../lib/assistantState'
-import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
-import { orbHsl } from '../../lib/orbColor'
+import { getAudioLevel } from '../../lib/audioLevel'
+import { orbHsla } from '../../lib/orbColor'
 
 interface OrbProps {
   state: AssistantState
-  /** Kürenin yaklaşık çapı (px) */
+  /** Tuvalin kenarı (px); küre bunun yaklaşık yarısı kadardır, halkalara yer kalır */
   size?: number
 }
 
-// idle: dönmez, sadece nefes alır. Diğerleri halkaya açılır ve döner.
-const RING_STATES = new Set<AssistantState>(['listening', 'thinking', 'working', 'speaking'])
-const PARTICLE_COUNT = 900
-const SMALL_PARTICLE_COUNT = 140
-const HUE_CYCLE_SECONDS = 40
+// Hızlı ince ayar için tüm sayılar burada
+const SPHERE_RATIO = 0.27
+const BREATH_SECONDS = 5
+const BREATH_AMOUNT = 0.02
+const EASE_PER_SECOND = 3
+const SMALL_SIZE = 120
 
-interface Particle {
-  /** Küre üzerindeki hedef konum (birim küre) */
-  sx: number
-  sy: number
-  sz: number
-  /** Halka üzerindeki hedef konum (aynı parçacık, farklı form) */
-  rx: number
-  ry: number
-  rz: number
-  seed: number
-  phase: number
-  band: number
+interface Params {
+  ring: number
+  arcs: number
+  ripple: number
 }
 
-function buildParticles(count: number): Particle[] {
-  const particles: Particle[] = []
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5))
-  for (let i = 0; i < count; i++) {
-    const y = 1 - (i / (count - 1)) * 2
-    const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y))
-    const theta = goldenAngle * i
-    const sx = Math.cos(theta) * radiusAtY
-    const sz = Math.sin(theta) * radiusAtY
-
-    const ringAngle = ((i / count) * Math.PI * 2 * 7) % (Math.PI * 2)
-    const ringRadius = 0.72 + (Math.sin(i * 12.9898) * 0.5 + 0.5) * 0.3 - 0.15
-    const rx = Math.cos(ringAngle) * ringRadius
-    const ry = Math.sin(ringAngle) * ringRadius * 0.96
-    const rz = Math.sin(i * 78.233) * 0.5 * 0.15
-
-    particles.push({
-      sx,
-      sy: y,
-      sz,
-      rx,
-      ry,
-      rz,
-      seed: Math.random(),
-      phase: Math.random() * Math.PI * 2,
-      band: i % BAND_COUNT
-    })
-  }
-  return particles
+// Durum başına hedefler: halka, dönen yay ve konuşma dalgası görünürlüğü (0-1)
+const TARGETS: Record<AssistantState, Params> = {
+  idle: { ring: 0, arcs: 0, ripple: 0 },
+  listening: { ring: 1, arcs: 0, ripple: 0 },
+  thinking: { ring: 0, arcs: 1, ripple: 0 },
+  working: { ring: 0, arcs: 2, ripple: 0 },
+  speaking: { ring: 0, arcs: 0, ripple: 1 }
 }
 
-// Jarvis küresi: durumuna göre küre <-> halka arası morph yapan, çok renkli parçacık bulutu (canvas ile çizilir)
+// Jarvis küresi: tek gövdeli, sakin, duruma göre halka/yay/dalga ekleyen canvas çizimi
 function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
@@ -74,20 +45,19 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
 
-    const width = size
-    const height = size
     const dpr = window.devicePixelRatio || 1
-    canvas.width = Math.round(width * dpr)
-    canvas.height = Math.round(height * dpr)
+    canvas.width = Math.round(size * dpr)
+    canvas.height = Math.round(size * dpr)
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const small = size < 120
-    const particles = buildParticles(small ? SMALL_PARTICLE_COUNT : PARTICLE_COUNT)
-    const radius = size * 0.38
+    const small = size < SMALL_SIZE
+    const radius = size * SPHERE_RATIO
+    const cx = size / 2
+    const cy = size / 2
 
-    let morph = 0
-    let hueTime = 0
-    let rotation = 0
+    const params: Params = { ...TARGETS[stateRef.current] }
+    let level = 0
+    let spin = 0
     let last = performance.now()
     let frame = 0
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -95,106 +65,83 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
     const draw = (now: number): void => {
       const dt = Math.min((now - last) / 1000, 0.1)
       last = now
-      const currentState = stateRef.current
-      const morphTarget = RING_STATES.has(currentState) ? 1 : 0
-      morph += (morphTarget - morph) * (reduced ? 1 : Math.min(dt * 2.5, 1))
-      hueTime = reduced ? hueTime : hueTime + dt / HUE_CYCLE_SECONDS
+      const current = stateRef.current
+      const target = TARGETS[current]
+      const ease = reduced ? 1 : Math.min(dt * EASE_PER_SECOND, 1)
+      params.ring += (target.ring - params.ring) * ease
+      params.arcs += (target.arcs - params.arcs) * ease
+      params.ripple += (target.ripple - params.ripple) * ease
 
-      rotation += reduced ? 0 : dt * 0.15 * morph
-
-      const t = reduced ? 0 : now / 1000
-      const breathe = reduced ? 1 : 1 + Math.sin((t * (Math.PI * 2)) / 4) * 0.03
-
-      const spectrum =
-        currentState === 'listening'
-          ? getAudioSpectrum('input', BAND_COUNT)
-          : currentState === 'speaking'
-            ? getAudioSpectrum('output', BAND_COUNT)
-            : null
-      const overallLevel =
-        currentState === 'listening'
+      const rawLevel =
+        current === 'listening'
           ? getAudioLevel('input')
-          : currentState === 'speaking'
+          : current === 'speaking'
             ? getAudioLevel('output')
             : 0
+      level += (rawLevel - level) * (reduced ? 1 : Math.min(dt * 12, 1))
+      if (!reduced) spin += dt * (current === 'working' ? 1.6 : 0.8)
 
-      const cx = width / 2
-      const cy = height / 2
-      const cosR = Math.cos(rotation)
-      const sinR = Math.sin(rotation)
+      const t = reduced ? 0 : now / 1000
+      const breath = 1 + Math.sin((t * Math.PI * 2) / BREATH_SECONDS) * BREATH_AMOUNT
+      const r = radius * breath * (1 + level * 0.12 * params.ripple + level * 0.05 * params.ring)
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, width, height)
+      ctx.clearRect(0, 0, size, size)
 
-      // Dış ışıma
-      const glowColor = orbHsl(hueTime, currentState, 85, 60)
-      const glow = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, radius * 1.6)
-      glow.addColorStop(0, glowColor.replace('hsl', 'hsla').replace(')', ', 0.28)'))
-      glow.addColorStop(1, glowColor.replace('hsl', 'hsla').replace(')', ', 0)'))
+      // Çok hafif dış ışıma
+      const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * (small ? 1.5 : 2))
+      glow.addColorStop(0, orbHsla(current, 70, 0.22))
+      glow.addColorStop(1, orbHsla(current, 70, 0))
       ctx.fillStyle = glow
       ctx.beginPath()
-      ctx.arc(cx, cy, radius * 1.6, 0, Math.PI * 2)
+      ctx.arc(cx, cy, r * (small ? 1.5 : 2), 0, Math.PI * 2)
       ctx.fill()
 
-      ctx.globalCompositeOperation = 'lighter'
+      // Gövde: üstten aydınlık, kenarda koyu degrade
+      const body = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r)
+      body.addColorStop(0, orbHsla(current, 88, 1, -4))
+      body.addColorStop(0.55, orbHsla(current, 68, 1))
+      body.addColorStop(1, orbHsla(current, 40, 1, 10))
+      ctx.fillStyle = body
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.fill()
 
-      const projected = particles.map((p) => {
-        let x = p.sx + (p.rx - p.sx) * morph
-        let y = p.sy + (p.ry - p.sy) * morph
-        let z = p.sz + (p.rz - p.sz) * morph
-
-        if (morph > 0.05) {
-          if (spectrum) {
-            // Dinliyor/konuşuyor: her parçacık kendi frekans bandının seviyesine göre dışa/içe hareket eder
-            const bandLevel = spectrum[p.band]
-            const push = 1 + bandLevel * 0.6
-            x *= push
-            y *= push
-          } else {
-            // Düşünüyor/çalışıyor: spiral akış + hafif rastgele sapma (hibrit)
-            const spiralT = ((p.seed * 6 + t * 0.6) % 1) * morph
-            const jitter = Math.sin(t * 5 + p.phase) * 0.04 * morph
-            x = x * (1 - spiralT * 0.3) + jitter
-            y = y * (1 - spiralT * 0.3) + jitter
-          }
-        }
-
-        x *= breathe
-        y *= breathe
-        z *= breathe
-
-        const rx2 = x * cosR - z * sinR
-        const rz2 = x * sinR + z * cosR
-        const scale = 1 / (2.1 - rz2 * 0.6)
-        const wave = Math.sin(x * 3 + t * 1.4) * Math.cos(y * 2.5 - t) * 0.5 + 0.5
-        return {
-          x: cx + rx2 * radius * scale,
-          y: cy + y * radius * scale,
-          z: rz2,
-          wave,
-          seed: p.seed
-        }
-      })
-      projected.sort((a, b) => a.z - b.z)
-
-      for (const p of projected) {
-        const depth = (p.z + 1) / 2
-        const bright = 0.2 + depth * 0.5 + p.wave * 0.3 + overallLevel * 0.3
-        const pSize = (0.6 + depth * 1.3 + p.wave * 0.6 + overallLevel * 1) * (small ? 0.6 : 1)
-        const color = orbHsl(hueTime + p.seed * 0.15, currentState, 90, 55 + p.wave * 15)
-        ctx.globalAlpha = Math.min(1, bright)
-        ctx.fillStyle = color
-        if (!small) {
-          ctx.shadowColor = color
-          ctx.shadowBlur = 2 + p.wave * 3
-        }
+      // Dinlerken: ses seviyesiyle genişleyen ince halka
+      if (params.ring > 0.01) {
+        const ringRadius = r * (1.28 + level * 0.45)
+        ctx.lineWidth = small ? 1.5 : 2
+        ctx.strokeStyle = orbHsla(current, 78, 0.7 * params.ring)
         ctx.beginPath()
-        ctx.arc(p.x, p.y, pSize, 0, Math.PI * 2)
-        ctx.fill()
+        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2)
+        ctx.stroke()
       }
-      ctx.globalAlpha = 1
-      ctx.shadowBlur = 0
-      ctx.globalCompositeOperation = 'source-over'
+
+      // Düşünürken bir, çalışırken iki dönen yay
+      if (params.arcs > 0.01) {
+        ctx.lineWidth = small ? 1.5 : 2
+        ctx.lineCap = 'round'
+        const count = params.arcs > 1.5 ? 2 : 1
+        const alpha = Math.min(params.arcs, 1) * 0.8
+        for (let i = 0; i < count; i++) {
+          const start = spin + (i * Math.PI * 2) / count
+          ctx.strokeStyle = orbHsla(current, 78, alpha)
+          ctx.beginPath()
+          ctx.arc(cx, cy, r * 1.32, start, start + 1.1)
+          ctx.stroke()
+        }
+      }
+
+      // Konuşurken: kürenin içinden dışa yayılan yumuşak dalga
+      if (params.ripple > 0.01) {
+        const phase = (t * 0.9) % 1
+        const rippleRadius = r * (1.05 + phase * 0.6 + level * 0.2)
+        ctx.lineWidth = 2
+        ctx.strokeStyle = orbHsla(current, 78, (1 - phase) * 0.6 * params.ripple)
+        ctx.beginPath()
+        ctx.arc(cx, cy, rippleRadius, 0, Math.PI * 2)
+        ctx.stroke()
+      }
 
       if (reduced) timer = setTimeout(() => (frame = requestAnimationFrame(draw)), 500)
       else frame = requestAnimationFrame(draw)

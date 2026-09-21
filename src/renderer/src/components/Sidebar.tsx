@@ -71,7 +71,7 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
   return (
     <aside
       className={`flex shrink-0 flex-col border-r border-line bg-app py-4 transition-[width] duration-200 ${
-        collapsed ? 'w-[64px] px-2' : 'w-[220px] px-3'
+        collapsed ? 'w-[64px] px-2' : 'w-[232px] px-3'
       }`}
     >
       <nav className="flex flex-col gap-1">
@@ -83,15 +83,18 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
               onClick={() => onSelect(id)}
               title={collapsed ? PAGE_LABELS[id] : undefined}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex h-10 items-center gap-3 rounded-xl border text-sm transition-colors ${
+              className={`relative flex h-10 items-center gap-3 rounded-[10px] text-sm transition-colors ${
                 collapsed ? 'justify-center px-0' : 'px-3'
               } ${
                 isActive
-                  ? 'border-accent/40 bg-linear-to-r from-accent/30 to-accent/5 text-ink shadow-[0_0_24px_-12px_var(--color-accent)]'
-                  : 'border-transparent text-muted hover:bg-elevated/70 hover:text-ink'
+                  ? 'bg-elevated font-medium text-ink'
+                  : 'text-muted hover:bg-surface hover:text-ink'
               }`}
             >
-              <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-glow' : ''}`} />
+              {isActive && (
+                <span className="absolute top-2.5 bottom-2.5 left-0 w-0.5 rounded-full bg-accent" />
+              )}
+              <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-accent' : ''}`} />
               {!collapsed && <span className="truncate">{PAGE_LABELS[id]}</span>}
             </button>
           )
@@ -104,11 +107,11 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
           title={collapsed ? STATE_LABELS[assistant] : undefined}
         >
           <span
-            className={`h-2 w-2 shrink-0 rounded-full ${busy ? 'animate-pulse bg-glow' : 'bg-positive'}`}
+            className={`h-2 w-2 shrink-0 rounded-full ${busy ? 'animate-pulse bg-accent' : 'bg-positive'}`}
           />
           {!collapsed && (
             <div className="min-w-0 leading-tight">
-              <div className={`truncate text-xs ${busy ? 'text-glow' : 'text-positive'}`}>
+              <div className={`truncate text-xs ${busy ? 'text-accent' : 'text-muted'}`}>
                 {busy ? `${STATE_LABELS[assistant]}...` : 'Sistem hazır'}
               </div>
               <div className="truncate text-[11px] text-faint">Her zaman yanında</div>

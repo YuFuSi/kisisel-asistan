@@ -153,7 +153,7 @@ function Composer({
             title={dictation.recording ? 'Kaydı bitir ve yazıya çevir' : 'Mikrofonla yaz'}
             className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:text-line-strong ${
               dictation.recording
-                ? 'bg-negative text-white hover:bg-negative'
+                ? 'bg-negative text-app hover:bg-negative'
                 : 'text-muted hover:text-ink'
             }`}
           >
@@ -168,7 +168,7 @@ function Composer({
               onClick={onStop}
               aria-label="Durdur"
               title="Durdur"
-              className="rounded-lg bg-line-strong p-1.5 text-white transition-colors hover:bg-line-strong"
+              className="rounded-lg bg-line-strong p-1.5 text-ink transition-colors hover:bg-line-strong"
             >
               <Square className="h-4 w-4 fill-current" />
             </button>
@@ -178,7 +178,7 @@ function Composer({
               disabled={!canSend}
               aria-label="Gönder"
               title="Gönder"
-              className="rounded-lg bg-accent p-1.5 text-white transition-colors hover:bg-accent-hover disabled:bg-transparent disabled:text-faint"
+              className="rounded-lg bg-accent p-1.5 text-app transition-colors hover:bg-accent-hover disabled:bg-transparent disabled:text-faint"
             >
               <SendHorizontal className="h-4 w-4" />
             </button>

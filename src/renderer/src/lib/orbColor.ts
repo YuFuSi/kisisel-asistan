@@ -1,33 +1,23 @@
 import type { AssistantState } from './assistantState'
 
-// Taban renk döngüsü: mavi -> mor -> magenta -> pembe -> altın -> başa dön
-const HUE_STOPS = [205, 255, 300, 335, 45, 205]
+// Küre tek vurgu renginin (accent, ~231°) çevresinde kalır; durum sadece tonu hafifçe kaydırır
+const BASE_HUE = 231
 
-/** t: 0-1 arası (döngüsel) zaman değeri; 0-360 arası hue derecesi döner */
-export function baseHue(t: number): number {
-  const wrapped = ((t % 1) + 1) % 1
-  const scaled = wrapped * (HUE_STOPS.length - 1)
-  const index = Math.floor(scaled)
-  const fraction = scaled - index
-  return HUE_STOPS[index] + (HUE_STOPS[index + 1] - HUE_STOPS[index]) * fraction
-}
-
-// Her durumun taban döngüye eklediği sıcaklık kayması (derece)
-export const STATE_HUE_BIAS: Record<AssistantState, number> = {
+export const STATE_HUE_SHIFT: Record<AssistantState, number> = {
   idle: 0,
-  listening: 10,
-  thinking: 140,
-  working: 140,
-  speaking: 20
+  listening: -12,
+  thinking: 18,
+  working: 32,
+  speaking: -22
 }
 
-/** Belirli bir zaman ve duruma göre küre parçacığının rengi */
-export function orbHsl(
-  t: number,
+/** Belirli bir durumun küre rengi (hsla); lightness ve alpha çizim katmanına göre verilir */
+export function orbHsla(
   state: AssistantState,
-  saturation: number,
-  lightness: number
+  lightness: number,
+  alpha = 1,
+  hueOffset = 0
 ): string {
-  const hue = Math.round((baseHue(t) + STATE_HUE_BIAS[state] + 360) % 360)
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+  const hue = Math.round((BASE_HUE + STATE_HUE_SHIFT[state] + hueOffset + 360) % 360)
+  return `hsla(${hue}, 100%, ${lightness}%, ${alpha})`
 }
