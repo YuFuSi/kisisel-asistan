@@ -1,20 +1,38 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import { getStoredValue, setStoredValue } from '../settings'
 
 // Ekranın sağ üst köşesinde duran, saydam, her zaman üstte küçük Jarvis paneli.
 // Ayrı bir electron-vite giriş noktası gerekmez: aynı renderer bundle'ı #hud
 // işaretiyle açılır, main.tsx bu durumda HudApp'i render eder.
 
-const WIDTH = 260
-const HEIGHT = 150
+const WIDTH = 300
+const HEIGHT = 130
 const MARGIN = 16
+const POSITION_KEY = 'hudPosition'
 
 let hudWindow: BrowserWindow | null = null
 
+// Kullanıcının bıraktığı yer hatırlanır; ekran değiştiyse ve kayıtlı yer artık görünmüyorsa sağ üst köşe
 function hudPosition(): { x: number; y: number } {
-  const { width } = screen.getPrimaryDisplay().workArea
-  return { x: width - WIDTH - MARGIN, y: MARGIN }
+  const saved = getStoredValue(POSITION_KEY)
+  if (saved) {
+    const [x, y] = saved.split(',').map(Number)
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      const visible = screen.getAllDisplays().some(({ workArea: a }) => {
+        return (
+          x >= a.x - WIDTH / 2 &&
+          x <= a.x + a.width - WIDTH / 2 &&
+          y >= a.y &&
+          y <= a.y + a.height - 40
+        )
+      })
+      if (visible) return { x, y }
+    }
+  }
+  const { x, y, width } = screen.getPrimaryDisplay().workArea
+  return { x: x + width - WIDTH - MARGIN, y: y + MARGIN }
 }
 
 function createHudWindow(): BrowserWindow {
@@ -41,6 +59,10 @@ function createHudWindow(): BrowserWindow {
   })
   window.setAlwaysOnTop(true, 'screen-saver')
   window.on('ready-to-show', () => window.show())
+  window.on('moved', () => {
+    const [px, py] = window.getPosition()
+    setStoredValue(POSITION_KEY, `${px},${py}`)
+  })
   window.on('closed', () => {
     if (hudWindow === window) hudWindow = null
   })

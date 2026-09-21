@@ -152,7 +152,11 @@ function Orb({
     const radius = size * SPHERE_RATIO
     const cx = size / 2
     const cy = size / 2
-    const surface = small ? [] : buildDots(SURFACE_DOTS, false)
+    // Küçük kürede (HUD) noktalar seyrek olsun: yoğunluk yüzey alanıyla orantılı kalır
+    const dotScale = Math.min(1, (size / 300) ** 2)
+    const surface = small
+      ? []
+      : buildDots(Math.max(120, Math.round(SURFACE_DOTS * dotScale)), false)
     const halo = small ? [] : buildDots(HALO_DOTS, true)
     // Gövde için WebGL (HUD'daki küçük küre ve WebGL'siz ortam 2D gövdeyle çizer)
     const sphere = small ? null : createSphereRenderer(size, dpr)
