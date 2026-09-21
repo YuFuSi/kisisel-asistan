@@ -23,7 +23,11 @@ import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
 import { noteReplyStarted } from '../lib/assistantState'
-import { onNewChatRequest, onOpenConversationRequest } from '../lib/chatRequests'
+import {
+  onAttachFilesRequest,
+  onNewChatRequest,
+  onOpenConversationRequest
+} from '../lib/chatRequests'
 
 const SUGGESTIONS = [
   'Bugünümü planlamama yardım et',
@@ -90,6 +94,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     async () => {}
   )
   const selectRef = useRef<(id: number) => Promise<void>>(async () => {})
+  const attachFilesRef = useRef<(files: File[]) => Promise<void>>(async () => {})
 
   // Sayfa her görünür olduğunda ayarları tazele (Ayarlar'da model değişmiş olabilir)
   useEffect(() => {
@@ -195,6 +200,16 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
     })
   }, [openConversation])
+
+  // Ana Sayfa'ya bırakılan belgeler yeni sohbete eklenir
+  useEffect(
+    () =>
+      onAttachFilesRequest((files) => {
+        openConversation(null)
+        void attachFilesRef.current(files)
+      }),
+    [openConversation]
+  )
 
   // Ana Sayfa'daki komut kutusundan gelen istek yeni sohbette cevaplanır
   useEffect(
@@ -302,6 +317,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   useEffect(() => {
     sendRef.current = send
     selectRef.current = selectConversation
+    attachFilesRef.current = attachFiles
   })
 
   // Sürüklenen veya seçilen belgeleri okuyup mesaja eklenmek üzere bekletir

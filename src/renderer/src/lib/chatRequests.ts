@@ -21,6 +21,17 @@ export function onNewChatRequest(listener: Listener<string>): () => void {
   return subscribe(newChatListeners, listener)
 }
 
+const attachListeners = new Set<Listener<File[]>>()
+
+/** Ana Sayfa'ya bırakılan belgeler: yeni sohbette mesaja eklenmek üzere bekletilir */
+export function requestAttachFiles(files: File[]): void {
+  attachListeners.forEach((listener) => listener(files))
+}
+
+export function onAttachFilesRequest(listener: Listener<File[]>): () => void {
+  return subscribe(attachListeners, listener)
+}
+
 export function requestOpenConversation(conversationId: number): void {
   openListeners.forEach((listener) => listener(conversationId))
 }

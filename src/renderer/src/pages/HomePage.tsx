@@ -12,9 +12,11 @@ import {
   STATE_LABELS,
   useAssistantEmotion,
   useAssistantState,
+  noteNotification,
   useNoticeSeq,
   useWorkSteps
 } from '../lib/assistantState'
+import { requestAttachFiles } from '../lib/chatRequests'
 import { useBattery, useClock, useOnline } from '../lib/deviceStatus'
 import { buildHomeSummary, summarizeToday } from '../lib/homeSummary'
 import type { PageId } from '../lib/pages'
@@ -78,6 +80,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const tasks = useLiveData(loadTasks, 'tasks').data
   const reminders = useLiveData(loadReminders, 'reminders').data
   const [excite, setExcite] = useState(0)
+  const [dragging, setDragging] = useState(false)
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const orbLayer = useRef<HTMLDivElement>(null)
   const tileLayer = useRef<HTMLDivElement>(null)
@@ -88,12 +91,26 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const summary = tasks && reminders ? buildHomeSummary({ tasks, reminders, now }) : null
   // Boştayken ipucu, aksi halde sesli sohbetin ya da asistanın o anki durumu
   const running = currentStep(steps)
-  const caption =
-    state === 'idle'
+  const caption = dragging
+    ? 'Belgeyi küreye bırak: PDF, Word veya metin'
+    : state === 'idle'
       ? voiceHint(voice)
       : running
         ? `${running.label} çalışıyor... · ${steps.length}. adım`
         : `${STATE_LABELS[state]}...`
+
+  // Belge küreye bırakılınca küre "alır" (çift nabız), kısa süre sonra belge yeni sohbete eklenir
+  function handleDrop(event: React.DragEvent<HTMLDivElement>): void {
+    event.preventDefault()
+    setDragging(false)
+    const files = Array.from(event.dataTransfer.files)
+    if (files.length === 0) return
+    noteNotification()
+    setTimeout(() => {
+      onNavigate('chat')
+      requestAttachFiles(files)
+    }, 700)
+  }
 
   function noteTyping(): void {
     setExcite(1)
@@ -119,7 +136,18 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const date = now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })
 
   return (
-    <div className="relative h-full">
+    <div
+      className="relative h-full"
+      onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes('Files')) return
+        event.preventDefault()
+        setDragging(true)
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+      }}
+      onDrop={handleDrop}
+    >
       <AuroraBackground state={state} />
       <div className="relative h-full overflow-y-auto" onPointerMove={handlePointerMove}>
         <div className="mx-auto flex min-h-full max-w-4xl flex-col items-center justify-center px-8 py-6">
@@ -179,7 +207,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
                 <Orb
                   state={state}
                   size={440}
-                  excite={excite}
+                  excite={dragging ? 1 : excite}
                   emotion={emotion}
                   steps={steps}
                   notice={notice}
