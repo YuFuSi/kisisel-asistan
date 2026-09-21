@@ -7,7 +7,8 @@ import {
 } from '../../lib/assistantState'
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
-import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
+import { createSphereRenderer } from '../../lib/orbGl'
+import { orbHslaShift, orbRgb, STATE_HUE_SHIFT } from '../../lib/orbColor'
 import { orbLook } from '../../lib/orbPrefs'
 import type { WorkStep } from '../../lib/workSteps'
 
@@ -152,6 +153,8 @@ function Orb({
     const cy = size / 2
     const surface = small ? [] : buildDots(SURFACE_DOTS, false)
     const halo = small ? [] : buildDots(HALO_DOTS, true)
+    // Gövde için WebGL (HUD'daki küçük küre ve WebGL'siz ortam 2D gövdeyle çizer)
+    const sphere = small ? null : createSphereRenderer(size, dpr)
     // Ses çubuklarının yumuşatılmış değerleri (aynalı: BAND_COUNT * 2 çubuk)
     const bars = new Array<number>(BAND_COUNT * 2).fill(0)
 
@@ -346,25 +349,45 @@ function Orb({
       ctx.scale(shape.sx, shape.sy)
       ctx.translate(-cx, -cy)
 
-      // Gövde: koyu bir taban üstünde yarı saydam cam; dolgun değil, kenara doğru yoğunlaşır
-      ctx.fillStyle = 'rgba(9, 10, 14, 0.92)'
-      outline(r)
-      ctx.fill()
-      const glass = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.3, r * 0.05, cx, cy, r)
-      glass.addColorStop(0, tone(76, 0.12))
-      glass.addColorStop(0.6, tone(62, 0.16))
-      glass.addColorStop(0.88, tone(56, 0.34))
-      glass.addColorStop(1, tone(66, 0.6))
-      ctx.fillStyle = glass
-      outline(r)
-      ctx.fill()
-
-      if (!small) {
-        // İç sis: küreyle kırpılmış, yavaş süzülen soluk ışık bulutları
+      if (sphere) {
+        // Gövde: WebGL gölgelendiriciyle gerçek 3B ışıklı cam küre (normal, Fresnel, hacimli sis)
+        const hue = hueShift + drift + look.hue
+        sphere.render({
+          radius: r,
+          flow,
+          energy,
+          kick,
+          intensity: look.factor,
+          colorA: orbRgb(hue, 66),
+          colorB: orbRgb(hue + 26, 58),
+          colorRim: orbRgb(hue, 72)
+        })
         ctx.save()
         outline(r)
         ctx.clip()
-        for (const blob of BLOBS) {
+        ctx.drawImage(sphere.canvas, 0, 0, size, size)
+        ctx.restore()
+      } else {
+        // Gövde: koyu bir taban üstünde yarı saydam cam; dolgun değil, kenara doğru yoğunlaşır
+        ctx.fillStyle = 'rgba(9, 10, 14, 0.92)'
+        outline(r)
+        ctx.fill()
+        const glass = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.3, r * 0.05, cx, cy, r)
+        glass.addColorStop(0, tone(76, 0.12))
+        glass.addColorStop(0.6, tone(62, 0.16))
+        glass.addColorStop(0.88, tone(56, 0.34))
+        glass.addColorStop(1, tone(66, 0.6))
+        ctx.fillStyle = glass
+        outline(r)
+        ctx.fill()
+      }
+
+      if (!small) {
+        // İç sis (2D yedek): küreyle kırpılmış, yavaş süzülen soluk ışık bulutları
+        ctx.save()
+        outline(r)
+        ctx.clip()
+        for (const blob of sphere ? [] : BLOBS) {
           const bx = cx + Math.sin(flow * blob.speedX + blob.phase) * r * 0.5
           const by = cy + Math.cos(flow * blob.speedY + blob.phase * 1.7) * r * 0.5
           const g = ctx.createRadialGradient(bx, by, 0, bx, by, r * blob.size)
@@ -413,9 +436,11 @@ function Orb({
         )
         gloss.addColorStop(0, 'rgba(255,255,255,0.16)')
         gloss.addColorStop(1, 'rgba(255,255,255,0)')
-        ctx.fillStyle = gloss
-        outline(r)
-        ctx.fill()
+        if (!sphere) {
+          ctx.fillStyle = gloss
+          outline(r)
+          ctx.fill()
+        }
       }
 
       // Kenar ışığı: kürenin cam gibi görünmesini sağlayan ince parlak çizgi
@@ -655,7 +680,11 @@ function Orb({
         stateRef.current !== 'idle' || exciteRef.current > 0 || energy > 0.02 || kick > 0.01
       return capUnfocused(busy ? 60 : 24, 12)
     }
-    return startFrameLoop(draw, fps)
+    const stopLoop = startFrameLoop(draw, fps)
+    return () => {
+      stopLoop()
+      sphere?.dispose()
+    }
   }, [size])
 
   return (
