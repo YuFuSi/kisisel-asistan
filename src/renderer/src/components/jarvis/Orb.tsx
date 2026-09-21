@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { STATE_LABELS, type AssistantState } from '../../lib/assistantState'
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
+import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
 
 interface OrbProps {
@@ -113,8 +114,6 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
     let flow = 0
     let spin = 0
     let last = performance.now()
-    let frame = 0
-    let timer: ReturnType<typeof setTimeout> | undefined
 
     const draw = (now: number): void => {
       const dt = Math.min((now - last) / 1000, 0.1)
@@ -332,16 +331,15 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         ctx.arc(cx, cy, r * (1.02 + phase * 0.14 + energy * 0.03), 0, TAU)
         ctx.stroke()
       }
-
-      if (reduced) timer = setTimeout(() => (frame = requestAnimationFrame(draw)), 500)
-      else frame = requestAnimationFrame(draw)
     }
 
-    frame = requestAnimationFrame(draw)
-    return () => {
-      cancelAnimationFrame(frame)
-      clearTimeout(timer)
+    // Kare hızı: hareket azaltmada 2, ses/heyecan varken 60, beklemede 30; pencere odakta değilse en fazla 15
+    const fps = (): number => {
+      if (reduced) return 2
+      const busy = stateRef.current !== 'idle' || exciteRef.current > 0 || energy > 0.02
+      return capUnfocused(busy ? 60 : 24, 12)
     }
+    return startFrameLoop(draw, fps)
   }, [size])
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { AssistantState } from '../../lib/assistantState'
+import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { orbHsla } from '../../lib/orbColor'
 
 interface AuroraBackgroundProps {
@@ -13,6 +14,7 @@ const MISTS = [
   { x: 0.78, y: 0.4, size: 0.5, speed: 0.05, phase: 4.6, hue: 34, alpha: 0.09 }
 ]
 const STAR_COUNT = 70
+const RESOLUTION = 0.5
 
 // Ana Sayfa'nın arkasında çok yavaş akan aurora sisi ve hafif yıldız tozu; renk duruma göre tonlanır
 function AuroraBackground({ state }: AuroraBackgroundProps): React.JSX.Element {
@@ -40,15 +42,14 @@ function AuroraBackground({ state }: AuroraBackgroundProps): React.JSX.Element {
 
     let width = 0
     let height = 0
-    let frame = 0
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    // Yumuşak sis için yarım çözünürlük yeter; tuval CSS ile büyütülür, çizim maliyeti dörtte birine iner
+    const scale = RESOLUTION
 
     const resize = (): void => {
       width = parent.clientWidth
       height = parent.clientHeight
-      canvas.width = Math.round(width * dpr)
-      canvas.height = Math.round(height * dpr)
+      canvas.width = Math.max(1, Math.round(width * scale))
+      canvas.height = Math.max(1, Math.round(height * scale))
     }
     resize()
     const observer = new ResizeObserver(resize)
@@ -57,7 +58,7 @@ function AuroraBackground({ state }: AuroraBackgroundProps): React.JSX.Element {
     const draw = (now: number): void => {
       const current = stateRef.current
       const t = reduced ? 0 : now / 1000
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.setTransform(scale, 0, 0, scale, 0, 0)
       ctx.clearRect(0, 0, width, height)
 
       const span = Math.max(width, height)
@@ -76,18 +77,15 @@ function AuroraBackground({ state }: AuroraBackgroundProps): React.JSX.Element {
         const twinkle = 0.5 + 0.5 * Math.sin(t * 0.8 + star.seed * 30)
         ctx.fillStyle = orbHsla(current, 88, 0.08 + twinkle * 0.3, star.seed * 40)
         ctx.beginPath()
-        ctx.arc(star.x * width, star.y * height, star.size, 0, Math.PI * 2)
+        ctx.arc(star.x * width, star.y * height, star.size * 1.6, 0, Math.PI * 2)
         ctx.fill()
       }
-
-      if (reduced) timer = setTimeout(() => (frame = requestAnimationFrame(draw)), 1000)
-      else frame = requestAnimationFrame(draw)
     }
 
-    frame = requestAnimationFrame(draw)
+    // Arka plan yavaş aktığı için 12 fps yeter; hareket azaltmada saniyede 1, odakta değilken 6
+    const stop = startFrameLoop(draw, () => (reduced ? 1 : capUnfocused(12, 6)))
     return () => {
-      cancelAnimationFrame(frame)
-      clearTimeout(timer)
+      stop()
       observer.disconnect()
     }
   }, [])

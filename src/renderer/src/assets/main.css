@@ -168,7 +168,7 @@ textarea {
   animation: orb-in 800ms var(--ease-calm) backwards;
 }
 
-/* Bilgi parçaları önce belirir, sonra çok hafif süzülür */
+/* Bilgi parçaları yumuşakça belirir; sürekli süzülme yok (her ekran karesinde yeniden birleştirme maliyeti) */
 @keyframes tile-in {
   from {
     opacity: 0;
@@ -180,20 +180,8 @@ textarea {
   }
 }
 
-@keyframes tile-float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -5px;
-  }
-}
-
 .animate-tile {
-  animation:
-    tile-in 600ms var(--ease-calm) backwards,
-    tile-float 7s ease-in-out 1s infinite;
+  animation: tile-in 600ms var(--ease-calm) backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

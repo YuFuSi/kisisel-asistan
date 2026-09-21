@@ -26,12 +26,12 @@ function FloatingTile({
     </>
   )
   const base =
-    'animate-tile absolute hidden w-44 rounded-2xl border border-line/80 bg-surface/60 px-4 py-3 text-left backdrop-blur-md @min-[780px]:block'
+    'animate-tile absolute hidden w-44 rounded-2xl border border-line/80 bg-surface/85 px-4 py-3 text-left @min-[780px]:block'
 
   return onClick ? (
     <button
       onClick={onClick}
-      className={`${base} transition-colors hover:border-line-strong hover:bg-surface/80 ${className}`}
+      className={`${base} transition-colors hover:border-line-strong hover:bg-surface ${className}`}
       style={{ animationDelay: `${delayMs}ms` }}
     >
       {body}
