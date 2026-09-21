@@ -41,6 +41,33 @@ const TARGETS: Record<AssistantState, Params> = {
   speaking: { listen: 0, arcs: 0, speak: 1 }
 }
 
+// Ses dalgasının üç katmanı: kaç tur attığı, hızı, görünürlüğü, kalınlığı ve ton kayması
+const WAVES = [
+  { k: 2.2, speed: 3.2, alpha: 0.9, width: 2.4, hue: -8 },
+  { k: 3.1, speed: -4.4, alpha: 0.5, width: 1.6, hue: 0 },
+  { k: 4.3, speed: 5.5, alpha: 0.35, width: 1.2, hue: 10 }
+]
+
+interface Shape {
+  /** Gövdenin yatay ve dikey ölçeği (1 = küre) */
+  sx: number
+  sy: number
+  /** Konuşurken kürenin içinden geçen ses dalgası görünürlüğü */
+  wave: number
+  /** Jiroskop halkaları: 1 = iki halka, 2 = üç halka */
+  rings: number
+}
+
+// Her durumda kürenin aldığı biçim: konuşurken yassılıp ses dalgasına, düşünürken/çalışırken küçülüp halkalara döner
+const SHAPES: Record<AssistantState, Shape> = {
+  idle: { sx: 1, sy: 1, wave: 0, rings: 0 },
+  listening: { sx: 1.05, sy: 1.05, wave: 0, rings: 0 },
+  thinking: { sx: 0.88, sy: 0.88, wave: 0, rings: 1 },
+  working: { sx: 0.82, sy: 0.82, wave: 0, rings: 2 },
+  speaking: { sx: 1.16, sy: 0.66, wave: 1, rings: 0 }
+}
+const MORPH_PER_SECOND = 3.2
+
 // İç sis: kürenin içinde süzülen soluk ışık bulutları; renk kaymaları küçük tutulur (gökkuşağı olmasın)
 const BLOBS = [
   { speedX: 0.42, speedY: 0.55, phase: 0, size: 0.75, lightness: 78, alpha: 0.3, hue: -6 },
@@ -106,6 +133,9 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
     const bars = new Array<number>(BAND_COUNT * 2).fill(0)
 
     const params: Params = { ...TARGETS[stateRef.current] }
+    const shape: Shape = { ...SHAPES[stateRef.current] }
+    // Ses çubuklarının ortalaması: konuşma dalgasının genliğini belirler
+    let barMean = 0
     // Durum tonu anında değil, yarım saniyelik yumuşak geçişle değişir
     let hueShift = STATE_HUE_SHIFT[stateRef.current]
     let level = 0
@@ -124,6 +154,12 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       params.listen += (target.listen - params.listen) * ease
       params.arcs += (target.arcs - params.arcs) * ease
       params.speak += (target.speak - params.speak) * ease
+      const goal = SHAPES[current]
+      const morph = reduced ? 1 : Math.min(dt * MORPH_PER_SECOND, 1)
+      shape.sx += (goal.sx - shape.sx) * morph
+      shape.sy += (goal.sy - shape.sy) * morph
+      shape.wave += (goal.wave - shape.wave) * morph
+      shape.rings += (goal.rings - shape.rings) * morph
 
       const rawLevel =
         current === 'listening'
@@ -155,7 +191,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       if (!small) {
         // Yere düşen yumuşak ışıma: küre havada asılı gibi dursun
         ctx.save()
-        ctx.translate(cx, cy + r * 1.55)
+        ctx.translate(cx, cy + r * (0.35 + 1.2 * shape.sy))
         ctx.scale(1, 0.18)
         const floor = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.1)
         floor.addColorStop(0, tone(70, 0.22))
@@ -176,6 +212,12 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       ctx.beginPath()
       ctx.arc(cx, cy, glowRadius, 0, TAU)
       ctx.fill()
+
+      // Gövde ve içindekiler biçim ölçeğiyle birlikte yassılır ya da küçülür
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.scale(shape.sx, shape.sy)
+      ctx.translate(-cx, -cy)
 
       // Gövde: koyu bir taban üstünde yarı saydam cam; dolgun değil, kenara doğru yoğunlaşır
       ctx.fillStyle = 'rgba(9, 10, 14, 0.92)'
@@ -252,6 +294,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       ctx.beginPath()
       ctx.arc(cx, cy, r - 0.8, 0, TAU)
       ctx.stroke()
+      ctx.restore()
 
       if (!small) {
         // Halo: kürenin çevresinde yavaşça yükselip sönen toz parçacıkları
@@ -285,6 +328,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         const spectrum = getAudioSpectrum(source, BAND_COUNT)
         const total = spectrum.reduce((sum, v) => sum + v, 0)
         const count = bars.length
+        let barSum = 0
         for (let i = 0; i < count; i++) {
           const band = i < BAND_COUNT ? i : count - 1 - i
           const real = Math.min(1, spectrum[band] * 2.6)
@@ -294,41 +338,92 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
           const value =
             total > 0.02 ? real : current === 'speaking' ? Math.max(0.05, synthetic) : 0.05
           bars[i] += (value - bars[i]) * (reduced ? 1 : Math.min(dt * 16, 1))
+          barSum += bars[i]
           const angle = (i / count) * TAU - Math.PI / 2
-          const inner = r * 1.16
-          const outer = inner + 3 + bars[i] * r * (current === 'speaking' ? 0.5 : 0.36)
+          const rx = r * shape.sx * 1.16
+          const ry = r * shape.sy * 1.16
+          let length = 3 + bars[i] * r * (current === 'speaking' ? 0.5 : 0.36)
+          // Çubuk tuval kenarında kesilmesin: iki eksende de sınırın içinde kalacak uzunluğa kırp
+          const cosA = Math.abs(Math.cos(angle))
+          const sinA = Math.abs(Math.sin(angle))
+          const room = size / 2 - 2
+          if (cosA > 0.01) length = Math.min(length, room / cosA - rx)
+          if (sinA > 0.01) length = Math.min(length, room / sinA - ry)
+          length = Math.max(2, length)
           ctx.lineWidth = current === 'speaking' ? 3 : 2
           ctx.lineCap = 'round'
           ctx.strokeStyle = tone(78, (0.35 + bars[i] * 0.6) * voice)
           ctx.beginPath()
-          ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner)
-          ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer)
+          ctx.moveTo(cx + Math.cos(angle) * rx, cy + Math.sin(angle) * ry)
+          ctx.lineTo(cx + Math.cos(angle) * (rx + length), cy + Math.sin(angle) * (ry + length))
           ctx.stroke()
         }
+        barMean = barSum / count
       }
 
-      // Düşünürken bir, çalışırken iki dönen yay
-      if (params.arcs > 0.01) {
-        ctx.lineWidth = small ? 1.5 : 2
+      // Küçük boyutta (HUD) tek bir dönen yay yeter
+      if (small && params.arcs > 0.01) {
+        ctx.lineWidth = 1.5
         ctx.lineCap = 'round'
-        const count = params.arcs > 1.5 ? 2 : 1
-        const alpha = Math.min(params.arcs, 1) * 0.8
-        for (let i = 0; i < count; i++) {
-          const start = spin + (i * TAU) / count
-          ctx.strokeStyle = tone(78, alpha)
+        ctx.strokeStyle = tone(78, Math.min(params.arcs, 1) * 0.8)
+        ctx.beginPath()
+        ctx.arc(cx, cy, r * 1.32, spin, spin + 1.1)
+        ctx.stroke()
+      }
+
+      // Düşünürken iki, çalışırken üç eğik halka jiroskop gibi kürenin çevresinde döner
+      if (!small && shape.rings > 0.01) {
+        for (let i = 0; i < 3; i++) {
+          const presence = i < 2 ? Math.min(shape.rings, 1) : Math.max(0, shape.rings - 1)
+          if (presence < 0.01) continue
+          const rx = r * (1.4 + i * 0.1)
+          const ry = rx * (0.3 + i * 0.12)
+          const tilt = spin * (0.5 + i * 0.3) * (i % 2 === 0 ? 1 : -1) + i * 1.05
+          ctx.lineWidth = 1.2
+          ctx.strokeStyle = tone(78, 0.28 * presence)
           ctx.beginPath()
-          ctx.arc(cx, cy, r * 1.32, start, start + 1.1)
+          ctx.ellipse(cx, cy, rx, ry, tilt, 0, TAU)
+          ctx.stroke()
+          const start = spin * (1.4 + i * 0.4) + i * 2
+          ctx.lineWidth = 2.4
+          ctx.lineCap = 'round'
+          ctx.strokeStyle = tone(82, 0.85 * presence, i * 8)
+          ctx.beginPath()
+          ctx.ellipse(cx, cy, rx, ry, tilt, start, start + 1.15)
           ctx.stroke()
         }
       }
 
-      // Konuşurken: kürenin içinden dışa yayılan yumuşak dalga
+      // Konuşurken: yassılan kürenin içinden geçen, ses seviyesiyle nefes alan üç katmanlı dalga
+      if (!small && shape.wave > 0.01) {
+        const half = r * shape.sx * 1.04
+        const amplitude = r * 0.42 * shape.wave * (0.3 + barMean * 1.7)
+        for (const layer of WAVES) {
+          ctx.lineWidth = layer.width
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.strokeStyle = tone(84, layer.alpha * shape.wave, layer.hue)
+          ctx.beginPath()
+          for (let i = 0; i <= 60; i++) {
+            const u = i / 60
+            const envelope = Math.pow(Math.sin(Math.PI * u), 1.3)
+            const x = cx - half + u * half * 2
+            const y = cy + Math.sin(u * TAU * layer.k + t * layer.speed) * amplitude * envelope
+            if (i === 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+          ctx.stroke()
+        }
+      }
+
+      // Konuşurken: gövdenin biçimini izleyen, dışa yayılan yumuşak dalga
       if (params.speak > 0.01) {
         const phase = (t * 0.9) % 1
+        const grow = 1.02 + phase * 0.14 + energy * 0.03
         ctx.lineWidth = 2
         ctx.strokeStyle = tone(78, (1 - phase) * 0.5 * params.speak)
         ctx.beginPath()
-        ctx.arc(cx, cy, r * (1.02 + phase * 0.14 + energy * 0.03), 0, TAU)
+        ctx.ellipse(cx, cy, r * shape.sx * grow, r * shape.sy * grow, 0, 0, TAU)
         ctx.stroke()
       }
     }
