@@ -3,24 +3,33 @@
 
 /* Tasarım belirteçleri: renkler ve ölçüler tek yerden yönetilir.
    Tailwind bunlardan bg-surface, text-muted, border-line gibi sınıflar üretir. */
-/* Jarvis teması: lacivert-siyah zemin, elektrik mavisi vurgu ve camgöbeği ışıma */
+/* Sakin premium tema: nötr grafit zemin ve tek soğuk mor-mavi vurgu */
 @theme {
-  --color-app: #040914;
-  --color-surface: #07101f;
-  --color-elevated: #0c1a31;
-  --color-line: #152744;
-  --color-line-strong: #21395f;
-  --color-ink: #e6eeff;
-  --color-muted: #9aabcb;
-  --color-faint: #5f7196;
-  --color-accent: #2f7dff;
-  --color-accent-hover: #4d92ff;
-  --color-glow: #3cc4ff;
-  --color-positive: #34d399;
-  --color-caution: #fbbf24;
-  --color-negative: #f87171;
+  --color-app: #0b0c0f;
+  --color-surface: #111318;
+  --color-elevated: #171a21;
+  --color-line: #22262f;
+  --color-line-strong: #2e333f;
+  --color-ink: #eceef3;
+  --color-muted: #a0a6b4;
+  --color-faint: #6b7180;
+  --color-accent: #8b9bff;
+  --color-accent-hover: #a3b0ff;
+  /* Eski "glow" sınıfları yeni vurgu rengine bağlı kalır; ayrı bir ışıma rengi yok */
+  --color-glow: #8b9bff;
+  --color-positive: #5fc9a0;
+  --color-caution: #e0b458;
+  --color-negative: #ef7d7d;
 
-  --radius-card: 14px;
+  --radius-card: 16px;
+  --radius-control: 10px;
+
+  --shadow-float: 0 12px 32px -12px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.35);
+
+  --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --font-sans: 'Inter Variable', 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui,
+    sans-serif;
 }
 
 :root {
@@ -40,7 +49,7 @@ body {
   overflow: hidden;
   background-color: var(--color-app);
   color: var(--color-ink);
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
@@ -58,7 +67,7 @@ textarea {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 35%, transparent);
 }
 
 /* İnce ve sessiz kaydırma çubukları */
@@ -79,7 +88,7 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2c4a78;
+  background: var(--color-faint);
   background-clip: content-box;
   border: 3px solid transparent;
 }
@@ -92,29 +101,17 @@ textarea {
 
 /* Katmanda tanımlı ki Tailwind sınıfları (ör. hover:border-accent/50) bunları ezebilsin */
 @layer components {
-  /* Jarvis cam kartı: yarı saydam yüzey, ince mavi kenar ve hafif iç parıltı */
+  /* Düz kart: dolgu ve ince çizgi; degrade, ışıma ve bulanıklık yok */
+  .card,
   .glass-card {
-    background: linear-gradient(
-      160deg,
-      color-mix(in oklab, var(--color-elevated) 85%, transparent),
-      color-mix(in oklab, var(--color-surface) 90%, transparent)
-    );
-    border: 1px solid color-mix(in oklab, var(--color-accent) 22%, var(--color-line));
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, var(--color-glow) 10%, transparent),
-      0 12px 32px -20px color-mix(in oklab, var(--color-accent) 55%, transparent);
   }
 
-  /* Ana sayfa zemini: kürenin çevresinde mavi ışıma */
+  /* Sayfa zemini: düz; eski sınıf adı sayfalar taşınana kadar korunur */
   .jarvis-backdrop {
-    background:
-      radial-gradient(
-        ellipse 70% 55% at 45% 20%,
-        color-mix(in oklab, var(--color-accent) 16%, transparent),
-        transparent 70%
-      ),
-      var(--color-app);
+    background: var(--color-app);
   }
 }
 
@@ -139,7 +136,7 @@ textarea {
 }
 
 .animate-enter {
-  animation: enter-up 180ms ease-out backwards;
+  animation: enter-up 200ms var(--ease-calm) backwards;
 }
 
 @keyframes enter-fade {
@@ -152,7 +149,14 @@ textarea {
 }
 
 .animate-fade {
-  animation: enter-fade 140ms ease-out;
+  animation: enter-fade 160ms var(--ease-calm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-enter,
+  .animate-fade {
+    animation: none;
+  }
 }
 
 /* Kod bloklarında highlight.js temasının arka planı yerine kendi yüzeyimiz kullanılır */
