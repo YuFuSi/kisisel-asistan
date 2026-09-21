@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { VoicePhase } from '@shared/api'
+import { upsertStep, type WorkStep } from './workSteps'
 
 /** Jarvis küresinin ve menüdeki durum göstergesinin gösterdiği durum */
 export type AssistantState = 'idle' | 'listening' | 'thinking' | 'working' | 'speaking'
@@ -25,6 +26,39 @@ const listeners = new Set<() => void>()
 const emotionListeners = new Set<() => void>()
 let emotion: EmotionSignal | null = null
 let emotionSeq = 0
+
+// İş ilerleyişi: cevap sırasında çalışan araç adımları; cevap bitince kısa süre görünüp temizlenir
+const stepListeners = new Set<() => void>()
+let steps: WorkStep[] = []
+let stepsFinishing = false
+let stepsTimer: ReturnType<typeof setTimeout> | undefined
+const STEPS_LINGER_MS = 1600
+
+function notifySteps(): void {
+  stepListeners.forEach((listener) => listener())
+}
+
+function trackSteps(event: { type: string; activity?: Parameters<typeof upsertStep>[1] }): void {
+  if (event.type === 'tool' && event.activity) {
+    // Önceki cevabın bitmiş adımları yeni cevapta karışmasın
+    if (stepsFinishing) {
+      clearTimeout(stepsTimer)
+      stepsFinishing = false
+      steps = []
+    }
+    steps = upsertStep(steps, event.activity)
+    notifySteps()
+  } else if (event.type === 'done' || event.type === 'stopped' || event.type === 'error') {
+    if (steps.length === 0) return
+    stepsFinishing = true
+    clearTimeout(stepsTimer)
+    stepsTimer = setTimeout(() => {
+      steps = []
+      stepsFinishing = false
+      notifySteps()
+    }, STEPS_LINGER_MS)
+  }
+}
 
 function setEmotion(kind: Emotion | null): void {
   emotion = kind ? { kind, seq: ++emotionSeq } : null
@@ -62,6 +96,7 @@ function subscribeChat(): void {
   chatSubscribed = true
   window.api.chat.onEvent((event) => {
     const runningTools = replies.get(event.conversationId) ?? new Set<string>()
+    trackSteps(event)
     // Duygu: onay beklerken kararsız, cevap bitince başarı, hata olunca hata; durdurma/onay sonrası sakin
     if (event.type === 'approval') setEmotion('unsure')
     else if (event.type === 'done') setEmotion('success')
@@ -121,6 +156,19 @@ function subscribeEmotion(listener: () => void): () => void {
   return () => {
     emotionListeners.delete(listener)
   }
+}
+
+function subscribeSteps(listener: () => void): () => void {
+  subscribeChat()
+  stepListeners.add(listener)
+  return () => {
+    stepListeners.delete(listener)
+  }
+}
+
+/** Asistanın şu anki cevabında çalışan ve biten araç adımları; iş yoksa boş dizi */
+export function useWorkSteps(): WorkStep[] {
+  return useSyncExternalStore(subscribeSteps, () => steps)
 }
 
 /** Kürenin o anki duygu sinyali; yoksa null */

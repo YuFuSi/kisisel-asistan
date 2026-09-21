@@ -3,6 +3,7 @@ import { STATE_LABELS, type AssistantState, type EmotionSignal } from '../../lib
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
+import type { WorkStep } from '../../lib/workSteps'
 
 interface OrbProps {
   state: AssistantState
@@ -12,6 +13,8 @@ interface OrbProps {
   excite?: number
   /** Kısa duygu sinyali: iş bitti (yeşil parıltı), hata (kırmızı sarsıntı), onay bekliyor (amber yalpalama) */
   emotion?: EmotionSignal | null
+  /** Çalışan araç adımları: her biri kürenin çevresinde bir nokta olur */
+  steps?: WorkStep[]
 }
 
 // Hızlı ince ayar için tüm sayılar burada
@@ -93,20 +96,32 @@ function buildDots(count: number, halo: boolean): Dot[] {
 }
 
 const fract = (value: number): number => value - Math.floor(value)
+const NO_STEPS: WorkStep[] = []
+// Adım noktaları arasındaki açı ve kürenin çevresindeki yarıçap çarpanı
+const STEP_SPACING = TAU / 14
+const STEP_RING = 1.26
 
 // Jarvis küresi: cam gibi yarı saydam gövde, iç sis, yüzey parçacıkları; dinlerken ve konuşurken
 // çevresinde ses çubuğu halkası, düşünürken dönen yaylar
-function Orb({ state, size = 240, excite = 0, emotion = null }: OrbProps): React.JSX.Element {
+function Orb({
+  state,
+  size = 240,
+  excite = 0,
+  emotion = null,
+  steps = NO_STEPS
+}: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
   const exciteRef = useRef(excite)
   const emotionRef = useRef<EmotionSignal | null>(emotion)
+  const stepsRef = useRef<WorkStep[]>(steps)
 
   useEffect(() => {
     stateRef.current = state
     exciteRef.current = excite
     emotionRef.current = emotion
-  }, [state, excite, emotion])
+    stepsRef.current = steps
+  }, [state, excite, emotion, steps])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -143,6 +158,8 @@ function Orb({ state, size = 240, excite = 0, emotion = null }: OrbProps): React
     let emotionStart = 0
     // Kararsızlık (onay bekleme) yumuşakça girer ve çıkar
     let unsureAmount = 0
+    // Adım noktalarının görünürlüğü yumuşakça artar ve azalır
+    let stepsAmount = 0
     let last = performance.now()
 
     const draw = (now: number): void => {
@@ -496,6 +513,48 @@ function Orb({ state, size = 240, excite = 0, emotion = null }: OrbProps): React
         ctx.beginPath()
         ctx.ellipse(cx, cy, r * shape.sx * grow, r * shape.sy * grow, 0, 0, TAU)
         ctx.stroke()
+      }
+      // İş ilerleyişi: her araç adımı kürenin çevresinde bir nokta; biten dolu, çalışan nabız atar, hatalı kırmızı
+      const stepList = stepsRef.current
+      stepsAmount +=
+        ((stepList.length > 0 ? 1 : 0) - stepsAmount) * (reduced ? 1 : Math.min(dt * 4, 1))
+      if (!small && stepsAmount > 0.01) {
+        const ringRadius = r * STEP_RING
+        const start = -Math.PI / 2
+        const count = stepList.length
+        if (count > 1) {
+          ctx.lineWidth = 1
+          ctx.strokeStyle = tone(80, 0.22 * stepsAmount)
+          ctx.beginPath()
+          ctx.arc(cx, cy, ringRadius, start, start + STEP_SPACING * (count - 1))
+          ctx.stroke()
+        }
+        for (let i = 0; i < count; i++) {
+          const step = stepList[i]
+          const angle = start + i * STEP_SPACING
+          const x = cx + Math.cos(angle) * ringRadius
+          const y = cy + Math.sin(angle) * ringRadius
+          if (step.status === 'running') {
+            const beat = 0.5 + 0.5 * Math.sin(t * 6)
+            ctx.fillStyle = tone(88, 0.95 * stepsAmount)
+            ctx.beginPath()
+            ctx.arc(x, y, 4 + beat * 1.2, 0, TAU)
+            ctx.fill()
+            ctx.lineWidth = 1.5
+            ctx.strokeStyle = tone(82, (0.6 - 0.4 * beat) * stepsAmount)
+            ctx.beginPath()
+            ctx.arc(x, y, 7 + beat * 5, 0, TAU)
+            ctx.stroke()
+          } else {
+            ctx.fillStyle =
+              step.status === 'error'
+                ? `hsla(355, 85%, 68%, ${0.95 * stepsAmount})`
+                : tone(84, 0.9 * stepsAmount)
+            ctx.beginPath()
+            ctx.arc(x, y, 3.2, 0, TAU)
+            ctx.fill()
+          }
+        }
       }
       ctx.restore()
     }

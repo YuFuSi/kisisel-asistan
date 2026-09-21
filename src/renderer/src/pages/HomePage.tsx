@@ -8,11 +8,17 @@ import Orb from '../components/jarvis/Orb'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
-import { STATE_LABELS, useAssistantEmotion, useAssistantState } from '../lib/assistantState'
+import {
+  STATE_LABELS,
+  useAssistantEmotion,
+  useAssistantState,
+  useWorkSteps
+} from '../lib/assistantState'
 import { useBattery, useClock, useOnline } from '../lib/deviceStatus'
 import { buildHomeSummary, summarizeToday } from '../lib/homeSummary'
 import type { PageId } from '../lib/pages'
 import { useLiveData } from '../lib/useLiveData'
+import { currentStep } from '../lib/workSteps'
 import { toggleVoiceSession, useVoice, type VoiceSnapshot } from '../lib/voiceClient'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
@@ -62,6 +68,7 @@ function voiceHint(voice: VoiceSnapshot): string {
 function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): React.JSX.Element {
   const state = useAssistantState()
   const emotion = useAssistantEmotion()
+  const steps = useWorkSteps()
   const voice = useVoice()
   const now = useClock(60_000)
   const online = useOnline()
@@ -78,7 +85,13 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const today = tasks && reminders ? summarizeToday({ tasks, reminders, now }) : null
   const summary = tasks && reminders ? buildHomeSummary({ tasks, reminders, now }) : null
   // Boştayken ipucu, aksi halde sesli sohbetin ya da asistanın o anki durumu
-  const caption = state === 'idle' ? voiceHint(voice) : `${STATE_LABELS[state]}...`
+  const running = currentStep(steps)
+  const caption =
+    state === 'idle'
+      ? voiceHint(voice)
+      : running
+        ? `${running.label} çalışıyor... · ${steps.length}. adım`
+        : `${STATE_LABELS[state]}...`
 
   function noteTyping(): void {
     setExcite(1)
@@ -161,7 +174,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
                 title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 className="animate-orb-in max-w-full cursor-pointer rounded-full focus-visible:outline-offset-[-24px]"
               >
-                <Orb state={state} size={440} excite={excite} emotion={emotion} />
+                <Orb state={state} size={440} excite={excite} emotion={emotion} steps={steps} />
               </button>
             </div>
           </div>
