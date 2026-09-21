@@ -1,11 +1,9 @@
 import { useRef, useState } from 'react'
 import { MessageSquare, Square } from 'lucide-react'
 import type { Reminder, Task } from '@shared/api'
-import ActivityList from '../components/activity/ActivityList'
 import AuroraBackground from '../components/home/AuroraBackground'
 import CommandBox from '../components/home/CommandBox'
 import FloatingTile from '../components/home/FloatingTile'
-import SystemStatusStrip from '../components/home/SystemStatusStrip'
 import Orb from '../components/jarvis/Orb'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
@@ -109,7 +107,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
       <AuroraBackground state={state} />
       <div className="relative h-full overflow-y-auto" onPointerMove={handlePointerMove}>
         <div className="mx-auto flex min-h-full max-w-4xl flex-col items-center justify-center px-8 py-6">
-          <div className="@container relative h-[360px] w-full">
+          <div className="@container relative h-[440px] w-full">
             <div
               ref={tileLayer}
               className="absolute inset-0 transition-transform duration-500 ease-out"
@@ -162,12 +160,12 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
                 title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 className="animate-orb-in max-w-full cursor-pointer rounded-full focus-visible:outline-offset-[-24px]"
               >
-                <Orb state={state} size={360} excite={excite} />
+                <Orb state={state} size={440} excite={excite} />
               </button>
             </div>
           </div>
 
-          <h1 className="-mt-8 text-[40px] leading-tight font-medium tracking-tight text-ink">
+          <h1 className="-mt-10 text-[40px] leading-tight font-medium tracking-tight text-ink">
             {greeting(now.getHours())}
           </h1>
           <div className="mt-2 flex h-6 items-center">
@@ -230,17 +228,6 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
 
           <div className="mt-5 flex w-full justify-center">
             <CommandBox onSubmit={onAsk} onTyping={noteTyping} />
-          </div>
-
-          <div className="mt-8 flex w-full flex-col items-center gap-2">
-            <SystemStatusStrip />
-            <button
-              onClick={() => onNavigate('settings')}
-              className="w-full max-w-sm rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-surface"
-              title="Tüm işlemler Ayarlar'da"
-            >
-              <ActivityList limit={1} compact />
-            </button>
           </div>
         </div>
       </div>

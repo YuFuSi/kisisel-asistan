@@ -17,6 +17,8 @@ const BREATH_SECONDS = 5
 const BREATH_AMOUNT = 0.02
 const EASE_PER_SECOND = 3
 const SMALL_SIZE = 120
+const HUE_DRIFT = 34
+const PULSE_SECONDS = 5
 const SURFACE_DOTS = 460
 const HALO_DOTS = 70
 
@@ -37,9 +39,11 @@ const TARGETS: Record<AssistantState, Params> = {
 
 // İç ışık lekeleri: konum yolu (hız, faz), boyut ve renk kayması; biri camgöbeği-mor tarafa kayar
 const BLOBS = [
-  { speedX: 0.23, speedY: 0.31, phase: 0, size: 0.75, lightness: 82, alpha: 0.55, hue: -6 },
-  { speedX: 0.37, speedY: 0.19, phase: 2.1, size: 0.65, lightness: 60, alpha: 0.5, hue: 36 },
-  { speedX: 0.17, speedY: 0.29, phase: 4.2, size: 0.7, lightness: 55, alpha: 0.45, hue: -34 }
+  { speedX: 0.42, speedY: 0.55, phase: 0, size: 0.75, lightness: 84, alpha: 0.6, hue: -8 },
+  { speedX: 0.63, speedY: 0.34, phase: 2.1, size: 0.65, lightness: 62, alpha: 0.55, hue: 42 },
+  { speedX: 0.31, speedY: 0.5, phase: 4.2, size: 0.7, lightness: 56, alpha: 0.5, hue: -40 },
+  { speedX: 0.52, speedY: 0.27, phase: 5.4, size: 0.5, lightness: 78, alpha: 0.42, hue: 70 },
+  { speedX: 0.24, speedY: 0.61, phase: 1.1, size: 0.55, lightness: 70, alpha: 0.4, hue: -70 }
 ]
 
 interface Dot {
@@ -123,6 +127,12 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       if (!reduced) spin += dt * (current === 'working' ? 1.6 : 0.8)
 
       const t = reduced ? 0 : now / 1000
+      // Renk sürekli yavaşça kayar: birkaç yavaş dalganın toplamı, taban vurgu tonu etrafında
+      const drift = reduced
+        ? 0
+        : Math.sin(t * 0.21) * HUE_DRIFT + Math.sin(t * 0.13 + 1.3) * HUE_DRIFT * 0.5
+      const tone = (lightness: number, alpha = 1, hueOffset = 0): string =>
+        orbHsla(current, lightness, alpha, hueOffset + drift)
       const breath = 1 + Math.sin((t * Math.PI * 2) / BREATH_SECONDS) * BREATH_AMOUNT
       const r = radius * breath * (1 + level * 0.12 * params.ripple + level * 0.05 * params.ring)
 
@@ -135,8 +145,8 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         ctx.translate(cx, cy + r * 1.55)
         ctx.scale(1, 0.18)
         const floor = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.1)
-        floor.addColorStop(0, orbHsla(current, 70, 0.28))
-        floor.addColorStop(1, orbHsla(current, 70, 0))
+        floor.addColorStop(0, tone(70, 0.28))
+        floor.addColorStop(1, tone(70, 0))
         ctx.fillStyle = floor
         ctx.beginPath()
         ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2)
@@ -147,8 +157,8 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       // Çok hafif dış ışıma; tuval kenarında kesilmesin diye yarıçap sınırlı
       const glowRadius = Math.min(r * (small ? 1.5 : 2), size / 2)
       const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, glowRadius)
-      glow.addColorStop(0, orbHsla(current, 70, 0.22 + level * 0.12))
-      glow.addColorStop(1, orbHsla(current, 70, 0))
+      glow.addColorStop(0, tone(70, 0.22 + level * 0.12))
+      glow.addColorStop(1, tone(70, 0))
       ctx.fillStyle = glow
       ctx.beginPath()
       ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2)
@@ -156,9 +166,9 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
 
       // Gövde: üstten aydınlık, kenarda koyu degrade
       const body = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r)
-      body.addColorStop(0, orbHsla(current, 88, 1, -4))
-      body.addColorStop(0.55, orbHsla(current, 68, 1))
-      body.addColorStop(1, orbHsla(current, 40, 1, 10))
+      body.addColorStop(0, tone(88, 1, -4))
+      body.addColorStop(0.55, tone(68, 1))
+      body.addColorStop(1, tone(40, 1, 10))
       ctx.fillStyle = body
       ctx.beginPath()
       ctx.arc(cx, cy, r, 0, Math.PI * 2)
@@ -170,21 +180,21 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         ctx.beginPath()
         ctx.arc(cx, cy, r, 0, Math.PI * 2)
         ctx.clip()
-        const drift = t * (1 + level * 2)
+        const flow = t * (1 + level * 2.5)
         for (const blob of BLOBS) {
-          const bx = cx + Math.sin(drift * blob.speedX + blob.phase) * r * 0.42
-          const by = cy + Math.cos(drift * blob.speedY + blob.phase * 1.7) * r * 0.42
+          const bx = cx + Math.sin(flow * blob.speedX + blob.phase) * r * 0.5
+          const by = cy + Math.cos(flow * blob.speedY + blob.phase * 1.7) * r * 0.5
           const br = r * blob.size
           const g = ctx.createRadialGradient(bx, by, 0, bx, by, br)
-          g.addColorStop(0, orbHsla(current, blob.lightness, blob.alpha, blob.hue))
-          g.addColorStop(1, orbHsla(current, blob.lightness, 0, blob.hue))
+          g.addColorStop(0, tone(blob.lightness, blob.alpha, blob.hue))
+          g.addColorStop(1, tone(blob.lightness, 0, blob.hue))
           ctx.fillStyle = g
           ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
         }
         ctx.restore()
 
         // Yüzey parçacıkları: çok yavaş kayan, hafif parıldayan iridesan noktalar
-        const yaw = t * 0.04
+        const yaw = t * 0.09
         const cosY = Math.cos(yaw)
         const sinY = Math.sin(yaw)
         for (const dot of surface) {
@@ -224,7 +234,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
 
         // Kenarda ince ışık çizgisi
         ctx.lineWidth = 1
-        ctx.strokeStyle = orbHsla(current, 85, 0.35)
+        ctx.strokeStyle = tone(85, 0.35)
         ctx.beginPath()
         ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2)
         ctx.stroke()
@@ -236,10 +246,22 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
           const px = cx + dot.x * dist
           const py = cy + dot.y * dist * 0.92
           const alpha = Math.sin(life * Math.PI) * (0.3 + level * 0.3)
-          ctx.fillStyle = orbHsla(current, 82, alpha, dot.seed * 50)
+          ctx.fillStyle = tone(82, alpha, dot.seed * 50)
           ctx.beginPath()
           ctx.arc(px, py, 0.7 + life * 0.6, 0, Math.PI * 2)
           ctx.fill()
+        }
+      }
+
+      // Beklemede: kürenin içinden dışa yumuşakça yayılan dalgalar
+      if (!small && !reduced && params.ring + params.arcs + params.ripple < 0.5) {
+        for (let i = 0; i < 2; i++) {
+          const phase = fract(t / PULSE_SECONDS + i * 0.5)
+          ctx.lineWidth = 1.5
+          ctx.strokeStyle = tone(80, Math.pow(1 - phase, 2) * 0.32, i * 24)
+          ctx.beginPath()
+          ctx.arc(cx, cy, r * (1.02 + phase * 0.55), 0, Math.PI * 2)
+          ctx.stroke()
         }
       }
 
@@ -247,7 +269,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       if (params.ring > 0.01) {
         const ringRadius = r * (1.25 + level * 0.3)
         ctx.lineWidth = small ? 1.5 : 2
-        ctx.strokeStyle = orbHsla(current, 78, 0.7 * params.ring)
+        ctx.strokeStyle = tone(78, 0.7 * params.ring)
         ctx.beginPath()
         ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2)
         ctx.stroke()
@@ -261,7 +283,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         const alpha = Math.min(params.arcs, 1) * 0.8
         for (let i = 0; i < count; i++) {
           const start = spin + (i * Math.PI * 2) / count
-          ctx.strokeStyle = orbHsla(current, 78, alpha)
+          ctx.strokeStyle = tone(78, alpha)
           ctx.beginPath()
           ctx.arc(cx, cy, r * 1.32, start, start + 1.1)
           ctx.stroke()
@@ -273,7 +295,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         const phase = (t * 0.9) % 1
         const rippleRadius = r * (1.05 + phase * 0.5 + level * 0.15)
         ctx.lineWidth = 2
-        ctx.strokeStyle = orbHsla(current, 78, (1 - phase) * 0.6 * params.ripple)
+        ctx.strokeStyle = tone(78, (1 - phase) * 0.6 * params.ripple)
         ctx.beginPath()
         ctx.arc(cx, cy, rippleRadius, 0, Math.PI * 2)
         ctx.stroke()
