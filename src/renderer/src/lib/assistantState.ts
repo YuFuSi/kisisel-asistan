@@ -97,6 +97,7 @@ function subscribeChat(): void {
   window.api.chat.onEvent((event) => {
     const runningTools = replies.get(event.conversationId) ?? new Set<string>()
     trackSteps(event)
+    if (event.type === 'delta') replyChunks += 1
     // Duygu: onay beklerken kararsız, cevap bitince başarı, hata olunca hata; durdurma/onay sonrası sakin
     if (event.type === 'approval') setEmotion('unsure')
     else if (event.type === 'done') setEmotion('success')
@@ -169,6 +170,13 @@ function subscribeSteps(listener: () => void): () => void {
 /** Asistanın şu anki cevabında çalışan ve biten araç adımları; iş yoksa boş dizi */
 export function useWorkSteps(): WorkStep[] {
   return useSyncExternalStore(subscribeSteps, () => steps)
+}
+
+// Cevap nabzı: cevap yazılırken her yeni parçada artar; küre çizim döngüsünde doğrudan okur (yeniden çizim yok)
+let replyChunks = 0
+
+export function getReplyChunks(): number {
+  return replyChunks
 }
 
 // Bildirim nabzı: bir Windows bildirimi gösterilince artar, küre iki kez nabız atar

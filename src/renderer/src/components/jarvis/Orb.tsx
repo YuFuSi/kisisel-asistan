@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { STATE_LABELS, type AssistantState, type EmotionSignal } from '../../lib/assistantState'
+import {
+  getReplyChunks,
+  STATE_LABELS,
+  type AssistantState,
+  type EmotionSignal
+} from '../../lib/assistantState'
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
@@ -175,6 +180,8 @@ function Orb({
     let hover = 0
     let noticeSeen = noticeRef.current
     let noticeStart = -1e9
+    let chunksSeen = getReplyChunks()
+    let kick = 0
     let last = performance.now()
 
     const draw = (now: number): void => {
@@ -236,11 +243,18 @@ function Orb({
       const tapP = reduced ? 1 : (now - tapStart) / 900
       const wakeBump = wakeP >= 0 && wakeP < 1 ? Math.sin(Math.PI * wakeP) * 0.05 : 0
       const press = tapP >= 0 && tapP < 0.25 ? Math.sin((Math.PI * tapP) / 0.25) * 0.05 : 0
+      // Cevap nabzı: cevap yazılırken her yeni parçada küre çok hafif atar, parçalar seyrekleşince söner
+      const chunks = getReplyChunks()
+      if (chunks !== chunksSeen) {
+        chunksSeen = chunks
+        kick = Math.min(kick + 0.35, 1)
+      }
+      kick *= reduced ? 0 : Math.exp(-dt * 6)
       const breath = 1 + Math.sin((t * TAU) / BREATH_SECONDS) * BREATH_AMOUNT
       const r =
         radius *
         breath *
-        (1 + wakeBump + hover * 0.025 - press + noticeBeat * 0.035) *
+        (1 + wakeBump + hover * 0.025 - press + noticeBeat * 0.035 + kick * 0.014) *
         (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
       const voice = Math.max(params.listen, params.speak)
 
@@ -358,7 +372,7 @@ function Orb({
             0,
             tone(
               blob.lightness,
-              Math.min(blob.alpha * look.factor * (1 + energy * 0.3), 0.9),
+              Math.min(blob.alpha * look.factor * (1 + energy * 0.3 + kick * 0.25), 0.9),
               blob.hue
             )
           )
@@ -637,7 +651,8 @@ function Orb({
     // Kare hızı: hareket azaltmada 2, ses/heyecan varken 60, beklemede 30; pencere odakta değilse en fazla 15
     const fps = (): number => {
       if (reduced) return 2
-      const busy = stateRef.current !== 'idle' || exciteRef.current > 0 || energy > 0.02
+      const busy =
+        stateRef.current !== 'idle' || exciteRef.current > 0 || energy > 0.02 || kick > 0.01
       return capUnfocused(busy ? 60 : 24, 12)
     }
     return startFrameLoop(draw, fps)
