@@ -66,7 +66,7 @@ function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="flex items-center gap-3 rounded-full border border-line-strong bg-surface py-2 pr-2 pl-5 transition-colors focus-within:border-accent/70">
+      <div className="flex h-14 items-center gap-3 rounded-full border border-line-strong bg-surface pr-2 pl-5 transition-colors focus-within:border-accent/70">
         <Sparkles className="h-4 w-4 shrink-0 text-accent" />
         <input
           id={HOME_COMMAND_ID}
@@ -115,12 +115,12 @@ function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <div className="mt-3 flex flex-wrap justify-center gap-x-1 gap-y-1">
         {STARTERS.map(({ label, icon: Icon, ...starter }) => (
           <button
             key={label}
             onClick={() => applyStarter({ label, icon: Icon, ...starter })}
-            className="flex items-center gap-2 rounded-full border border-line bg-surface/60 px-4 py-2 text-sm text-muted transition-colors hover:border-accent/50 hover:text-ink"
+            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
           >
             <Icon className="h-4 w-4" />
             {label}

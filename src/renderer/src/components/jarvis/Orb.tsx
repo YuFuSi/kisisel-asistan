@@ -31,6 +31,13 @@ const TARGETS: Record<AssistantState, Params> = {
   speaking: { ring: 0, arcs: 0, ripple: 1 }
 }
 
+// İç ışık lekeleri: konum yolu (hız, faz), boyut ve renk kayması; biri camgöbeği-mor tarafa kayar
+const BLOBS = [
+  { speedX: 0.23, speedY: 0.31, phase: 0, size: 0.75, lightness: 82, alpha: 0.55, hue: -6 },
+  { speedX: 0.37, speedY: 0.19, phase: 2.1, size: 0.65, lightness: 60, alpha: 0.5, hue: 36 },
+  { speedX: 0.17, speedY: 0.29, phase: 4.2, size: 0.7, lightness: 55, alpha: 0.45, hue: -34 }
+]
+
 // Jarvis küresi: tek gövdeli, sakin, duruma göre halka/yay/dalga ekleyen canvas çizimi
 function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -88,6 +95,21 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, size, size)
 
+      if (!small) {
+        // Yere düşen yumuşak ışıma: küre havada asılı gibi dursun
+        ctx.save()
+        ctx.translate(cx, cy + r * 1.55)
+        ctx.scale(1, 0.18)
+        const floor = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.1)
+        floor.addColorStop(0, orbHsla(current, 70, 0.28))
+        floor.addColorStop(1, orbHsla(current, 70, 0))
+        ctx.fillStyle = floor
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      }
+
       // Çok hafif dış ışıma
       const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * (small ? 1.5 : 2))
       glow.addColorStop(0, orbHsla(current, 70, 0.22))
@@ -106,6 +128,49 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       ctx.beginPath()
       ctx.arc(cx, cy, r, 0, Math.PI * 2)
       ctx.fill()
+
+      if (!small) {
+        // İç doku: küreyle kırpılmış, yavaş süzülen yumuşak ışık lekeleri
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.clip()
+        const drift = t * (1 + level * 2)
+        for (const blob of BLOBS) {
+          const bx = cx + Math.sin(drift * blob.speedX + blob.phase) * r * 0.42
+          const by = cy + Math.cos(drift * blob.speedY + blob.phase * 1.7) * r * 0.42
+          const br = r * blob.size
+          const g = ctx.createRadialGradient(bx, by, 0, bx, by, br)
+          g.addColorStop(0, orbHsla(current, blob.lightness, blob.alpha, blob.hue))
+          g.addColorStop(1, orbHsla(current, blob.lightness, 0, blob.hue))
+          ctx.fillStyle = g
+          ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+        }
+        ctx.restore()
+
+        // Üstte cam yansıması
+        const gloss = ctx.createRadialGradient(
+          cx - r * 0.35,
+          cy - r * 0.55,
+          0,
+          cx - r * 0.35,
+          cy - r * 0.55,
+          r * 0.55
+        )
+        gloss.addColorStop(0, 'rgba(255,255,255,0.28)')
+        gloss.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = gloss
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Kenarda ince ışık çizgisi
+        ctx.lineWidth = 1
+        ctx.strokeStyle = orbHsla(current, 85, 0.35)
+        ctx.beginPath()
+        ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2)
+        ctx.stroke()
+      }
 
       // Dinlerken: ses seviyesiyle genişleyen ince halka
       if (params.ring > 0.01) {

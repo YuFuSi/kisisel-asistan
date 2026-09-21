@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Activity, Archive, Cpu, HardDrive, Mail, Mic, Wifi, type LucideIcon } from 'lucide-react'
+import { Archive, Cpu, HardDrive, Mail, Mic, Wifi, type LucideIcon } from 'lucide-react'
 import type { SystemStatus } from '@shared/api'
-import HomeCard from './HomeCard'
 import { StatusDot } from '../ui/Badge'
 import Tooltip from '../ui/Tooltip'
 import { formatReminderTime } from '../../lib/dates'
 import { useClock, useMicrophoneAvailable, useOnline } from '../../lib/deviceStatus'
-import { LEVEL_TEXT_CLASS, type Level } from '../../lib/statusLevel'
+import { type Level } from '../../lib/statusLevel'
 
 // Model ve disk bilgisi bu aralıkla yenilenir
 const REFRESH_MS = 60_000
@@ -28,8 +27,8 @@ function diskLevel(disk: { free: number; total: number }): Level {
   return ratio < 0.1 ? 'warn' : 'ok'
 }
 
-// Jarvis'in çalışması için gereken parçaların durumu
-function SystemStatusCard(): React.JSX.Element {
+// Jarvis'in çalışması için gereken parçaların durumu: tek satırlık kompakt şerit
+function SystemStatusStrip(): React.JSX.Element {
   const [status, setStatus] = useState<SystemStatus | null>(null)
   const online = useOnline()
   const microphone = useMicrophoneAvailable()
@@ -108,32 +107,20 @@ function SystemStatusCard(): React.JSX.Element {
   ]
 
   return (
-    <HomeCard title="Sistem durumu" icon={Activity}>
-      <ul className="space-y-2.5">
-        {rows.map(({ icon: Icon, label, value, level, title }) => {
-          const labelRow = (
-            <>
-              <Icon className="h-4 w-4 shrink-0 text-muted" />
-              <span className="min-w-0 flex-1 truncate text-ink">{label}</span>
-            </>
-          )
-          return (
-            <li key={label} className="flex items-center gap-3 text-sm">
-              {title ? (
-                <Tooltip content={title} side="bottom">
-                  <span className="flex min-w-0 flex-1 items-center gap-3">{labelRow}</span>
-                </Tooltip>
-              ) : (
-                labelRow
-              )}
-              <span className={`truncate text-xs ${LEVEL_TEXT_CLASS[level]}`}>{value}</span>
+    <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+      {rows.map(({ icon: Icon, label, value, level, title }) => (
+        <li key={label}>
+          <Tooltip content={title ?? `${label}: ${value}`} side="top">
+            <span className="flex items-center gap-1.5 text-xs text-muted">
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              {label}
               <StatusDot level={level} />
-            </li>
-          )
-        })}
-      </ul>
-    </HomeCard>
+            </span>
+          </Tooltip>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-export default SystemStatusCard
+export default SystemStatusStrip
