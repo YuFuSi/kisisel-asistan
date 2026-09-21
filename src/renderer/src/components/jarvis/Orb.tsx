@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { STATE_LABELS, type AssistantState } from '../../lib/assistantState'
+import { STATE_LABELS, type AssistantState, type EmotionSignal } from '../../lib/assistantState'
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
@@ -10,6 +10,8 @@ interface OrbProps {
   size?: number
   /** 0-1: yazı yazılırken gibi anlık heyecan; ses seviyesi gibi iç ışığı ve parçacıkları canlandırır */
   excite?: number
+  /** Kısa duygu sinyali: iş bitti (yeşil parıltı), hata (kırmızı sarsıntı), onay bekliyor (amber yalpalama) */
+  emotion?: EmotionSignal | null
 }
 
 // Hızlı ince ayar için tüm sayılar burada
@@ -41,30 +43,21 @@ const TARGETS: Record<AssistantState, Params> = {
   speaking: { listen: 0, arcs: 0, speak: 1 }
 }
 
-// Ses dalgasının üç katmanı: kaç tur attığı, hızı, görünürlüğü, kalınlığı ve ton kayması
-const WAVES = [
-  { k: 2.2, speed: 3.2, alpha: 0.9, width: 2.4, hue: -8 },
-  { k: 3.1, speed: -4.4, alpha: 0.5, width: 1.6, hue: 0 },
-  { k: 4.3, speed: 5.5, alpha: 0.35, width: 1.2, hue: 10 }
-]
-
 interface Shape {
   /** Gövdenin yatay ve dikey ölçeği (1 = küre) */
   sx: number
   sy: number
-  /** Konuşurken kürenin içinden geçen ses dalgası görünürlüğü */
-  wave: number
   /** Jiroskop halkaları: 1 = iki halka, 2 = üç halka */
   rings: number
 }
 
-// Her durumda kürenin aldığı biçim: konuşurken yassılıp ses dalgasına, düşünürken/çalışırken küçülüp halkalara döner
+// Her durumda kürenin aldığı biçim: düşünürken/çalışırken küçülüp halkalara döner, konuşurken yuvarlak kalıp yüzeyi titrer
 const SHAPES: Record<AssistantState, Shape> = {
-  idle: { sx: 1, sy: 1, wave: 0, rings: 0 },
-  listening: { sx: 1.05, sy: 1.05, wave: 0, rings: 0 },
-  thinking: { sx: 0.88, sy: 0.88, wave: 0, rings: 1 },
-  working: { sx: 0.82, sy: 0.82, wave: 0, rings: 2 },
-  speaking: { sx: 1.16, sy: 0.66, wave: 1, rings: 0 }
+  idle: { sx: 1, sy: 1, rings: 0 },
+  listening: { sx: 1.05, sy: 1.05, rings: 0 },
+  thinking: { sx: 0.88, sy: 0.88, rings: 1 },
+  working: { sx: 0.82, sy: 0.82, rings: 2 },
+  speaking: { sx: 1.05, sy: 1.05, rings: 0 }
 }
 const MORPH_PER_SECOND = 3.2
 
@@ -103,15 +96,17 @@ const fract = (value: number): number => value - Math.floor(value)
 
 // Jarvis küresi: cam gibi yarı saydam gövde, iç sis, yüzey parçacıkları; dinlerken ve konuşurken
 // çevresinde ses çubuğu halkası, düşünürken dönen yaylar
-function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
+function Orb({ state, size = 240, excite = 0, emotion = null }: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
   const exciteRef = useRef(excite)
+  const emotionRef = useRef<EmotionSignal | null>(emotion)
 
   useEffect(() => {
     stateRef.current = state
     exciteRef.current = excite
-  }, [state, excite])
+    emotionRef.current = emotion
+  }, [state, excite, emotion])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -134,7 +129,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
 
     const params: Params = { ...TARGETS[stateRef.current] }
     const shape: Shape = { ...SHAPES[stateRef.current] }
-    // Ses çubuklarının ortalaması: konuşma dalgasının genliğini belirler
+    // Ses çubuklarının ortalaması: konuşurken yüzey titremesinin genliğini belirler
     let barMean = 0
     // Durum tonu anında değil, yarım saniyelik yumuşak geçişle değişir
     let hueShift = STATE_HUE_SHIFT[stateRef.current]
@@ -143,6 +138,11 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
     let energy = 0
     let flow = 0
     let spin = 0
+    // Duygu: yeni bir sinyal geldiğinde başlangıç zamanı tutulur; açılışta eski sinyal sayılmaz
+    let emotionSeen = emotionRef.current?.seq ?? -1
+    let emotionStart = 0
+    // Kararsızlık (onay bekleme) yumuşakça girer ve çıkar
+    let unsureAmount = 0
     let last = performance.now()
 
     const draw = (now: number): void => {
@@ -158,7 +158,6 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       const morph = reduced ? 1 : Math.min(dt * MORPH_PER_SECOND, 1)
       shape.sx += (goal.sx - shape.sx) * morph
       shape.sy += (goal.sy - shape.sy) * morph
-      shape.wave += (goal.wave - shape.wave) * morph
       shape.rings += (goal.rings - shape.rings) * morph
 
       const rawLevel =
@@ -185,8 +184,62 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       const r = radius * breath * (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
       const voice = Math.max(params.listen, params.speak)
 
+      // Duygu hâlleri: geçici (başarı/hata) sinyaller süreyle, kararsızlık (onay bekleme) sürekli
+      const signal = emotionRef.current
+      if (signal && signal.seq !== emotionSeen) {
+        emotionSeen = signal.seq
+        emotionStart = now
+      }
+      unsureAmount +=
+        ((signal?.kind === 'unsure' ? 1 : 0) - unsureAmount) * (reduced ? 1 : Math.min(dt * 3, 1))
+      let burst = 0
+      let burstKind: 'success' | 'error' | null = null
+      if (signal && signal.kind !== 'unsure') {
+        const progress = (now - emotionStart) / (signal.kind === 'success' ? 1500 : 1100)
+        if (progress >= 0 && progress < 1) {
+          burst = progress
+          burstKind = signal.kind
+        }
+      }
+      const pulse = burstKind ? Math.pow(Math.sin(Math.PI * burst), 0.7) : 0
+      const motionOk = !reduced
+      const shakeX = motionOk && burstKind === 'error' ? Math.sin(burst * 42) * (1 - burst) * 7 : 0
+      const swayX = motionOk ? Math.sin(t * 1.7) * 6 * unsureAmount : 0
+      const swayY = motionOk ? Math.cos(t * 1.2) * 3 * unsureAmount : 0
+      const swayTilt = motionOk ? Math.sin(t * 1.4) * 0.05 * unsureAmount : 0
+      const tintHue = burstKind === 'success' ? 150 : burstKind === 'error' ? 355 : 40
+      const tintAlpha = burstKind ? 0.32 * pulse : 0.14 * unsureAmount
+
+      // Gövde çevresi: konuşurken yüzey sesle birlikte yumuşakça titrer, aksi halde düz daire
+      const wobble = params.speak * (0.005 + barMean * 0.02)
+      const outline = (rad: number): void => {
+        ctx.beginPath()
+        if (wobble < 0.002 || reduced) {
+          ctx.arc(cx, cy, rad, 0, TAU)
+          return
+        }
+        for (let i = 0; i <= 96; i++) {
+          const a = (i / 96) * TAU
+          const k =
+            1 +
+            wobble *
+              (Math.sin(3 * a + t * 2.1) +
+                0.6 * Math.sin(5 * a - t * 3.3) +
+                0.4 * Math.sin(7 * a + t * 4.2))
+          const x = cx + Math.cos(a) * rad * k
+          const y = cy + Math.sin(a) * rad * k
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.closePath()
+      }
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, size, size)
+      ctx.save()
+      ctx.translate(cx + shakeX + swayX, cy + swayY)
+      ctx.rotate(swayTilt)
+      ctx.translate(-cx, -cy)
 
       if (!small) {
         // Yere düşen yumuşak ışıma: küre havada asılı gibi dursun
@@ -221,8 +274,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
 
       // Gövde: koyu bir taban üstünde yarı saydam cam; dolgun değil, kenara doğru yoğunlaşır
       ctx.fillStyle = 'rgba(9, 10, 14, 0.92)'
-      ctx.beginPath()
-      ctx.arc(cx, cy, r, 0, TAU)
+      outline(r)
       ctx.fill()
       const glass = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.3, r * 0.05, cx, cy, r)
       glass.addColorStop(0, tone(76, 0.12))
@@ -230,15 +282,13 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       glass.addColorStop(0.88, tone(56, 0.34))
       glass.addColorStop(1, tone(66, 0.6))
       ctx.fillStyle = glass
-      ctx.beginPath()
-      ctx.arc(cx, cy, r, 0, TAU)
+      outline(r)
       ctx.fill()
 
       if (!small) {
         // İç sis: küreyle kırpılmış, yavaş süzülen soluk ışık bulutları
         ctx.save()
-        ctx.beginPath()
-        ctx.arc(cx, cy, r, 0, TAU)
+        outline(r)
         ctx.clip()
         for (const blob of BLOBS) {
           const bx = cx + Math.sin(flow * blob.speedX + blob.phase) * r * 0.5
@@ -283,18 +333,61 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         gloss.addColorStop(0, 'rgba(255,255,255,0.16)')
         gloss.addColorStop(1, 'rgba(255,255,255,0)')
         ctx.fillStyle = gloss
-        ctx.beginPath()
-        ctx.arc(cx, cy, r, 0, TAU)
+        outline(r)
         ctx.fill()
       }
 
       // Kenar ışığı: kürenin cam gibi görünmesini sağlayan ince parlak çizgi
       ctx.lineWidth = small ? 1 : 1.6
       ctx.strokeStyle = tone(82, 0.55)
-      ctx.beginPath()
-      ctx.arc(cx, cy, r - 0.8, 0, TAU)
+      outline(r - 0.8)
       ctx.stroke()
+      // Duygu tonu: gövdenin üstüne yarı saydam renk ve kenarda ince ışık
+      if (tintAlpha > 0.005) {
+        ctx.fillStyle = `hsla(${tintHue}, 85%, 60%, ${tintAlpha})`
+        outline(r)
+        ctx.fill()
+        ctx.lineWidth = 2
+        ctx.strokeStyle = `hsla(${tintHue}, 90%, 72%, ${Math.min(1, tintAlpha * 2.2)})`
+        outline(r - 0.8)
+        ctx.stroke()
+      }
       ctx.restore()
+
+      // Başarı: dışa yayılan yeşil halka ve kısa süreli kıvılcımlar
+      if (burstKind === 'success' && !small) {
+        ctx.lineWidth = 2
+        ctx.strokeStyle = `hsla(150, 80%, 70%, ${(1 - burst) * 0.6})`
+        ctx.beginPath()
+        ctx.arc(cx, cy, r * (1.05 + burst * 0.9), 0, TAU)
+        ctx.stroke()
+        for (let k = 0; k < 12; k++) {
+          const angle = (k / 12) * TAU + 0.3
+          const dist = r * (1.05 + burst * 0.75)
+          ctx.fillStyle = `hsla(150, 90%, 78%, ${(1 - burst) * 0.9})`
+          ctx.beginPath()
+          ctx.arc(
+            cx + Math.cos(angle) * dist,
+            cy + Math.sin(angle) * dist,
+            2.2 * (1 - burst) + 0.6,
+            0,
+            TAU
+          )
+          ctx.fill()
+        }
+      }
+
+      // Kararsızlık (onay bekleme): kürenin çevresinde yavaşça dönen kesikli amber halka
+      if (unsureAmount > 0.01 && !small) {
+        ctx.lineWidth = 2
+        ctx.setLineDash([4, 9])
+        ctx.lineDashOffset = -t * 10
+        ctx.strokeStyle = `hsla(40, 85%, 68%, ${0.5 * unsureAmount})`
+        ctx.beginPath()
+        ctx.arc(cx, cy, r * 1.32, 0, TAU)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
 
       if (!small) {
         // Halo: kürenin çevresinde yavaşça yükselip sönen toz parçacıkları
@@ -394,28 +487,6 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         }
       }
 
-      // Konuşurken: yassılan kürenin içinden geçen, ses seviyesiyle nefes alan üç katmanlı dalga
-      if (!small && shape.wave > 0.01) {
-        const half = r * shape.sx * 1.04
-        const amplitude = r * 0.42 * shape.wave * (0.3 + barMean * 1.7)
-        for (const layer of WAVES) {
-          ctx.lineWidth = layer.width
-          ctx.lineCap = 'round'
-          ctx.lineJoin = 'round'
-          ctx.strokeStyle = tone(84, layer.alpha * shape.wave, layer.hue)
-          ctx.beginPath()
-          for (let i = 0; i <= 60; i++) {
-            const u = i / 60
-            const envelope = Math.pow(Math.sin(Math.PI * u), 1.3)
-            const x = cx - half + u * half * 2
-            const y = cy + Math.sin(u * TAU * layer.k + t * layer.speed) * amplitude * envelope
-            if (i === 0) ctx.moveTo(x, y)
-            else ctx.lineTo(x, y)
-          }
-          ctx.stroke()
-        }
-      }
-
       // Konuşurken: gövdenin biçimini izleyen, dışa yayılan yumuşak dalga
       if (params.speak > 0.01) {
         const phase = (t * 0.9) % 1
@@ -426,6 +497,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         ctx.ellipse(cx, cy, r * shape.sx * grow, r * shape.sy * grow, 0, 0, TAU)
         ctx.stroke()
       }
+      ctx.restore()
     }
 
     // Kare hızı: hareket azaltmada 2, ses/heyecan varken 60, beklemede 30; pencere odakta değilse en fazla 15

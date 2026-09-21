@@ -12,7 +12,24 @@ export const STATE_LABELS: Record<AssistantState, string> = {
   speaking: 'Konuşuyor'
 }
 
+/** Kürenin kısa süreli duygu hâlleri: iş bitti (success), hata (error), onay bekliyor (unsure) */
+export type Emotion = 'success' | 'error' | 'unsure'
+
+export interface EmotionSignal {
+  kind: Emotion
+  /** Her yeni duygu için artar; küre aynı duyguyu iki kez ayırt edebilsin */
+  seq: number
+}
+
 const listeners = new Set<() => void>()
+const emotionListeners = new Set<() => void>()
+let emotion: EmotionSignal | null = null
+let emotionSeq = 0
+
+function setEmotion(kind: Emotion | null): void {
+  emotion = kind ? { kind, seq: ++emotionSeq } : null
+  emotionListeners.forEach((listener) => listener())
+}
 // Cevap yazılan sohbetler ve her birinde o an çalışan araçlar
 const replies = new Map<number, Set<string>>()
 let listening = false
@@ -45,6 +62,11 @@ function subscribeChat(): void {
   chatSubscribed = true
   window.api.chat.onEvent((event) => {
     const runningTools = replies.get(event.conversationId) ?? new Set<string>()
+    // Duygu: onay beklerken kararsız, cevap bitince başarı, hata olunca hata; durdurma/onay sonrası sakin
+    if (event.type === 'approval') setEmotion('unsure')
+    else if (event.type === 'done') setEmotion('success')
+    else if (event.type === 'error') setEmotion('error')
+    else if (event.type === 'approval-resolved' || event.type === 'stopped') setEmotion(null)
     switch (event.type) {
       case 'delta':
       case 'approval':
@@ -91,6 +113,19 @@ function subscribe(listener: () => void): () => void {
   return () => {
     listeners.delete(listener)
   }
+}
+
+function subscribeEmotion(listener: () => void): () => void {
+  subscribeChat()
+  emotionListeners.add(listener)
+  return () => {
+    emotionListeners.delete(listener)
+  }
+}
+
+/** Kürenin o anki duygu sinyali; yoksa null */
+export function useAssistantEmotion(): EmotionSignal | null {
+  return useSyncExternalStore(subscribeEmotion, () => emotion)
 }
 
 export function useAssistantState(): AssistantState {

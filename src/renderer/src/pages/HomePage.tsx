@@ -8,7 +8,7 @@ import Orb from '../components/jarvis/Orb'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
-import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
+import { STATE_LABELS, useAssistantEmotion, useAssistantState } from '../lib/assistantState'
 import { useBattery, useClock, useOnline } from '../lib/deviceStatus'
 import { buildHomeSummary, summarizeToday } from '../lib/homeSummary'
 import type { PageId } from '../lib/pages'
@@ -61,6 +61,7 @@ function voiceHint(voice: VoiceSnapshot): string {
 // kişiye özel tek cümle, komut kutusu ve ince durum şeridi
 function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): React.JSX.Element {
   const state = useAssistantState()
+  const emotion = useAssistantEmotion()
   const voice = useVoice()
   const now = useClock(60_000)
   const online = useOnline()
@@ -160,7 +161,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
                 title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 className="animate-orb-in max-w-full cursor-pointer rounded-full focus-visible:outline-offset-[-24px]"
               >
-                <Orb state={state} size={440} excite={excite} />
+                <Orb state={state} size={440} excite={excite} emotion={emotion} />
               </button>
             </div>
           </div>
