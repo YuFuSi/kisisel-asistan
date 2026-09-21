@@ -1,5 +1,6 @@
 import type { SettingsPatch, SettingsView } from '@shared/api'
 import Field from './Field'
+import OrbSettings from './OrbSettings'
 import ShortcutRecorder from './ShortcutRecorder'
 import Toggle from '../ui/Toggle'
 
@@ -38,6 +39,9 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
           active={settings.shortcutActive}
           onChange={(accelerator) => onUpdate({ globalShortcut: accelerator })}
         />
+      </Field>
+      <Field label="Jarvis küresi">
+        <OrbSettings />
       </Field>
     </div>
   )

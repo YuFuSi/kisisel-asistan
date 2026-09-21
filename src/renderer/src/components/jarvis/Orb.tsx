@@ -3,6 +3,7 @@ import { STATE_LABELS, type AssistantState, type EmotionSignal } from '../../lib
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
+import { orbLook } from '../../lib/orbPrefs'
 import type { WorkStep } from '../../lib/workSteps'
 
 interface OrbProps {
@@ -200,7 +201,8 @@ function Orb({
       const energyTarget = Math.max(rawLevel, exciteRef.current)
       level += (energyTarget - level) * (reduced ? 1 : Math.min(dt * 12, 1))
       energy += (energyTarget - energy) * (reduced ? 1 : Math.min(dt * 1.6, 1))
-      if (!reduced) flow += dt * (1 + energy * 0.9)
+      const look = orbLook()
+      if (!reduced) flow += dt * (1 + energy * 0.9) * look.factor
       if (!reduced) spin += dt * (current === 'working' ? 1.6 : 0.8)
 
       hueShift += (STATE_HUE_SHIFT[current] - hueShift) * (reduced ? 1 : Math.min(dt * 2, 1))
@@ -210,7 +212,7 @@ function Orb({
         ? 0
         : Math.sin(t * 0.21) * HUE_DRIFT + Math.sin(t * 0.13 + 1.3) * HUE_DRIFT * 0.5
       const tone = (lightness: number, alpha = 1, hueOffset = 0): string =>
-        orbHslaShift(hueShift, lightness, alpha, hueOffset + drift)
+        orbHslaShift(hueShift, lightness, alpha, hueOffset + drift + look.hue)
       // Uyandırma: dinlemeye geçilince küre bir kez "kabarır" ve dışa doğru halka yayılır
       if (current !== prevState) {
         if (current === 'listening' && prevState === 'idle') wakeStart = now
@@ -352,7 +354,14 @@ function Orb({
           const bx = cx + Math.sin(flow * blob.speedX + blob.phase) * r * 0.5
           const by = cy + Math.cos(flow * blob.speedY + blob.phase * 1.7) * r * 0.5
           const g = ctx.createRadialGradient(bx, by, 0, bx, by, r * blob.size)
-          g.addColorStop(0, tone(blob.lightness, blob.alpha * (1 + energy * 0.3), blob.hue))
+          g.addColorStop(
+            0,
+            tone(
+              blob.lightness,
+              Math.min(blob.alpha * look.factor * (1 + energy * 0.3), 0.9),
+              blob.hue
+            )
+          )
           g.addColorStop(1, tone(blob.lightness, 0, blob.hue))
           ctx.fillStyle = g
           ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
