@@ -1,14 +1,14 @@
 import type { AssistantState } from './assistantState'
 
-// Küre tek vurgu renginin (accent, ~231°) çevresinde kalır; durum sadece tonu hafifçe kaydırır
+// Küre tek vurgu renginin (accent, ~231° indigo) çevresinde kalır; her durumun kendi belirgin tonu var
 const BASE_HUE = 231
 
 export const STATE_HUE_SHIFT: Record<AssistantState, number> = {
   idle: 0,
-  listening: -12,
-  thinking: 18,
-  working: 32,
-  speaking: -22
+  listening: -34,
+  thinking: 26,
+  working: 44,
+  speaking: -58
 }
 
 /** Belirli bir durumun küre rengi (hsla); lightness ve alpha çizim katmanına göre verilir */
