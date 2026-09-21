@@ -15,6 +15,8 @@ interface OrbProps {
   emotion?: EmotionSignal | null
   /** Çalışan araç adımları: her biri kürenin çevresinde bir nokta olur */
   steps?: WorkStep[]
+  /** Her bildirimde artan sayaç: küre iki kez nabız atar */
+  notice?: number
 }
 
 // Hızlı ince ayar için tüm sayılar burada
@@ -108,7 +110,8 @@ function Orb({
   size = 240,
   excite = 0,
   emotion = null,
-  steps = NO_STEPS
+  steps = NO_STEPS,
+  notice = 0
 }: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
@@ -117,13 +120,15 @@ function Orb({
   const stepsRef = useRef<WorkStep[]>(steps)
   const hoverRef = useRef(false)
   const tapRef = useRef(0)
+  const noticeRef = useRef(notice)
 
   useEffect(() => {
     stateRef.current = state
     exciteRef.current = excite
     emotionRef.current = emotion
     stepsRef.current = steps
-  }, [state, excite, emotion, steps])
+    noticeRef.current = notice
+  }, [state, excite, emotion, steps, notice])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -167,6 +172,8 @@ function Orb({
     let tapSeen = tapRef.current
     let tapStart = -1e9
     let hover = 0
+    let noticeSeen = noticeRef.current
+    let noticeStart = -1e9
     let last = performance.now()
 
     const draw = (now: number): void => {
@@ -214,6 +221,14 @@ function Orb({
         tapSeen = tapRef.current
         tapStart = now
       }
+      if (noticeRef.current !== noticeSeen) {
+        noticeSeen = noticeRef.current
+        noticeStart = now
+      }
+      // İki yumuşak nabız (2,4 sn): kürenin ışığı iki kez kabarıp söner
+      const noticeP = reduced ? 1 : (now - noticeStart) / 2400
+      const noticeBeat =
+        noticeP >= 0 && noticeP < 1 ? Math.sin(noticeP * TAU) ** 2 * (1 - noticeP) : 0
       hover += ((hoverRef.current ? 1 : 0) - hover) * (reduced ? 1 : Math.min(dt * 8, 1))
       const wakeP = reduced ? 1 : (now - wakeStart) / 1100
       const tapP = reduced ? 1 : (now - tapStart) / 900
@@ -223,7 +238,7 @@ function Orb({
       const r =
         radius *
         breath *
-        (1 + wakeBump + hover * 0.025 - press) *
+        (1 + wakeBump + hover * 0.025 - press + noticeBeat * 0.035) *
         (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
       const voice = Math.max(params.listen, params.speak)
 
@@ -589,6 +604,13 @@ function Orb({
           ctx.strokeStyle = tone(80, (1 - wakeP) * 0.55)
           ctx.beginPath()
           ctx.arc(cx, cy, r * (1.02 + wakeP * 0.5), 0, TAU)
+          ctx.stroke()
+        }
+        if (noticeBeat > 0.01) {
+          ctx.lineWidth = 3
+          ctx.strokeStyle = tone(82, noticeBeat * 0.5)
+          ctx.beginPath()
+          ctx.arc(cx, cy, r * (1.04 + noticeBeat * 0.12), 0, TAU)
           ctx.stroke()
         }
         if (tapP >= 0.1 && tapP < 1) {

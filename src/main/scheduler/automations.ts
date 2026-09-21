@@ -7,7 +7,7 @@ import {
   takeDueAutomations
 } from '../data/automations'
 import { notifyDataChanged } from '../events'
-import { sendCommand, showMainWindow } from '../system/window'
+import { notifyPulse, sendCommand, showMainWindow } from '../system/window'
 import type { Automation, AutomationRun } from '../../shared/api'
 
 const CHECK_INTERVAL_MS = 30_000
@@ -33,6 +33,7 @@ function showAutomationResult(automation: Automation, run: AutomationRun): void 
   })
   notification.on('close', release)
   notification.show()
+  notifyPulse()
 }
 
 /**

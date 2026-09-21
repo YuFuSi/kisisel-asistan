@@ -116,6 +116,11 @@ export function showMainWindow(): void {
   window.focus()
 }
 
+// Bir bildirim gösterildi: Ana Sayfa'daki küre kısa süre nabız atsın
+export function notifyPulse(): void {
+  sendCommand('notified')
+}
+
 // Tepsi menüsü veya kısayoldan gelen komutu arayüze ilet
 export function sendCommand(command: AppCommand): void {
   if (mainWindow && !mainWindow.webContents.isDestroyed()) {

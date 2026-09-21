@@ -171,6 +171,27 @@ export function useWorkSteps(): WorkStep[] {
   return useSyncExternalStore(subscribeSteps, () => steps)
 }
 
+// Bildirim nabzı: bir Windows bildirimi gösterilince artar, küre iki kez nabız atar
+const noticeListeners = new Set<() => void>()
+let noticeSeq = 0
+
+export function noteNotification(): void {
+  noticeSeq += 1
+  noticeListeners.forEach((listener) => listener())
+}
+
+function subscribeNotice(listener: () => void): () => void {
+  noticeListeners.add(listener)
+  return () => {
+    noticeListeners.delete(listener)
+  }
+}
+
+/** Her bildirimde artan sayaç; 0 = hiç bildirim yok */
+export function useNoticeSeq(): number {
+  return useSyncExternalStore(subscribeNotice, () => noticeSeq)
+}
+
 /** Kürenin o anki duygu sinyali; yoksa null */
 export function useAssistantEmotion(): EmotionSignal | null {
   return useSyncExternalStore(subscribeEmotion, () => emotion)

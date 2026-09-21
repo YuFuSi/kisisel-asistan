@@ -550,7 +550,7 @@ export interface GoogleStatus {
 // daily-brief: sabah özeti bildirimine tıklanınca yeni sohbette özet istenir
 // open-automations: bir otomasyon bildirimine tıklanınca Otomasyonlar sayfası açılır
 export type AppCommand =
-  'focus-chat' | 'new-chat' | 'daily-brief' | 'open-tasks' | 'open-automations'
+  'focus-chat' | 'new-chat' | 'daily-brief' | 'open-tasks' | 'open-automations' | 'notified'
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
 /** Sohbete eklenen belgenin okunan ilk parçası */

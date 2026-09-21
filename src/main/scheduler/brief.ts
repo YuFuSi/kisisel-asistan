@@ -4,7 +4,7 @@ import { collectDailyBrief } from '../ai/brief'
 import { briefNotificationText, briefSpokenText, isBriefDue } from '../lib/brief'
 import { toLocalDate } from '../lib/datetime'
 import { getSettings, getStoredValue, setStoredValue } from '../settings'
-import { sendCommand, showMainWindow } from '../system/window'
+import { notifyPulse, sendCommand, showMainWindow } from '../system/window'
 import { speakWithVoice } from '../voice/session'
 
 const CHECK_INTERVAL_MS = 60_000
@@ -37,6 +37,7 @@ export async function showDailyBrief(): Promise<void> {
     if (visibleNotification === notification) visibleNotification = null
   })
   notification.show()
+  notifyPulse()
 
   // Jarvis'in ilk gerçek otomasyonu: zamanı gelince kendiliğinden konuşur, tıklama beklemez
   if (getSettings().briefSpoken) {

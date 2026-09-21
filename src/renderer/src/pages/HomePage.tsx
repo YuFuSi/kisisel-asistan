@@ -12,6 +12,7 @@ import {
   STATE_LABELS,
   useAssistantEmotion,
   useAssistantState,
+  useNoticeSeq,
   useWorkSteps
 } from '../lib/assistantState'
 import { useBattery, useClock, useOnline } from '../lib/deviceStatus'
@@ -69,6 +70,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const state = useAssistantState()
   const emotion = useAssistantEmotion()
   const steps = useWorkSteps()
+  const notice = useNoticeSeq()
   const voice = useVoice()
   const now = useClock(60_000)
   const online = useOnline()
@@ -174,7 +176,14 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
                 title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 className="animate-orb-in max-w-full cursor-pointer rounded-full focus-visible:outline-offset-[-24px]"
               >
-                <Orb state={state} size={440} excite={excite} emotion={emotion} steps={steps} />
+                <Orb
+                  state={state}
+                  size={440}
+                  excite={excite}
+                  emotion={emotion}
+                  steps={steps}
+                  notice={notice}
+                />
               </button>
             </div>
           </div>

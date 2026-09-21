@@ -14,6 +14,7 @@ import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
 import { initVoiceClient } from './lib/voiceClient'
+import { noteNotification } from './lib/assistantState'
 
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('home')
@@ -24,6 +25,10 @@ function App(): React.JSX.Element {
   // Global kısayol, tepsi menüsü veya bir bildirime tıklanınca gelen komutlar
   useEffect(() => {
     return window.api.events.onCommand((command) => {
+      if (command === 'notified') {
+        noteNotification()
+        return
+      }
       if (command === 'open-tasks') {
         setPage('tasks')
         return
