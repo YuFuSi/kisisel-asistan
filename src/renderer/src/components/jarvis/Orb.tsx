@@ -106,6 +106,9 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
 
     const params: Params = { ...TARGETS[stateRef.current] }
     let level = 0
+    // İç ışık ve parlaklık için çok yavaş yumuşatılmış ses enerjisi (göz yormasın diye ayrı tutulur)
+    let energy = 0
+    let flow = 0
     let spin = 0
     let last = performance.now()
     let frame = 0
@@ -129,6 +132,8 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
             : 0
       const energyTarget = Math.max(rawLevel, exciteRef.current)
       level += (energyTarget - level) * (reduced ? 1 : Math.min(dt * 12, 1))
+      energy += (energyTarget - energy) * (reduced ? 1 : Math.min(dt * 1.6, 1))
+      if (!reduced) flow += dt * (1 + energy * 0.9)
       if (!reduced) spin += dt * (current === 'working' ? 1.6 : 0.8)
 
       const t = reduced ? 0 : now / 1000
@@ -139,7 +144,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       const tone = (lightness: number, alpha = 1, hueOffset = 0): string =>
         orbHsla(current, lightness, alpha, hueOffset + drift)
       const breath = 1 + Math.sin((t * TAU) / BREATH_SECONDS) * BREATH_AMOUNT
-      const r = radius * breath * (1 + level * 0.1 * params.speak + level * 0.04 * params.listen)
+      const r = radius * breath * (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
       const voice = Math.max(params.listen, params.speak)
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -163,7 +168,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       // Çok hafif dış ışıma; tuval kenarında kesilmesin diye yarıçap sınırlı
       const glowRadius = Math.min(r * (small ? 1.5 : 2), size / 2)
       const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, glowRadius)
-      glow.addColorStop(0, tone(70, 0.16 + level * 0.14))
+      glow.addColorStop(0, tone(70, 0.16 + energy * 0.06))
       glow.addColorStop(1, tone(70, 0))
       ctx.fillStyle = glow
       ctx.beginPath()
@@ -191,12 +196,11 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         ctx.beginPath()
         ctx.arc(cx, cy, r, 0, TAU)
         ctx.clip()
-        const flow = t * (1 + level * 2.5)
         for (const blob of BLOBS) {
           const bx = cx + Math.sin(flow * blob.speedX + blob.phase) * r * 0.5
           const by = cy + Math.cos(flow * blob.speedY + blob.phase * 1.7) * r * 0.5
           const g = ctx.createRadialGradient(bx, by, 0, bx, by, r * blob.size)
-          g.addColorStop(0, tone(blob.lightness, blob.alpha * (1 + level * 0.8), blob.hue))
+          g.addColorStop(0, tone(blob.lightness, blob.alpha * (1 + energy * 0.3), blob.hue))
           g.addColorStop(1, tone(blob.lightness, 0, blob.hue))
           ctx.fillStyle = g
           ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
@@ -215,11 +219,11 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
           const twinkle = 0.5 + 0.5 * Math.sin(t * 1.3 + dot.seed * 40)
           ctx.fillStyle = tone(
             84,
-            (0.16 + depth * 0.5 + twinkle * 0.3) * (0.85 + level * 0.6),
+            (0.16 + depth * 0.5 + twinkle * 0.3) * (0.9 + energy * 0.2),
             dot.seed * 16
           )
           ctx.beginPath()
-          ctx.arc(cx + x * r * 0.98, cy + dot.y * r * 0.98, 0.7 + depth * 1 + level * 0.5, 0, TAU)
+          ctx.arc(cx + x * r * 0.98, cy + dot.y * r * 0.98, 0.7 + depth * 1 + energy * 0.25, 0, TAU)
           ctx.fill()
         }
 
@@ -252,7 +256,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         for (const dot of halo) {
           const life = fract(dot.seed * 7 + t * 0.035)
           const dist = r * (1.12 + life * 0.55)
-          const alpha = Math.sin(life * Math.PI) * (0.3 + level * 0.3)
+          const alpha = Math.sin(life * Math.PI) * (0.3 + energy * 0.1)
           ctx.fillStyle = tone(82, alpha, dot.seed * 14)
           ctx.beginPath()
           ctx.arc(cx + dot.x * dist, cy + dot.y * dist * 0.92, 0.7 + life * 0.6, 0, TAU)
@@ -322,7 +326,7 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
         ctx.lineWidth = 2
         ctx.strokeStyle = tone(78, (1 - phase) * 0.5 * params.speak)
         ctx.beginPath()
-        ctx.arc(cx, cy, r * (1.02 + phase * 0.14 + level * 0.05), 0, TAU)
+        ctx.arc(cx, cy, r * (1.02 + phase * 0.14 + energy * 0.03), 0, TAU)
         ctx.stroke()
       }
 
