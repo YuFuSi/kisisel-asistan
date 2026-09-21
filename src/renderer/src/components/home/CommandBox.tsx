@@ -32,10 +32,12 @@ const STARTERS: Starter[] = [
 interface CommandBoxProps {
   /** Yazılan istek; yeni sohbette cevaplanır */
   onSubmit: (text: string) => void
+  /** Kullanıcı kutuya yazarken çağrılır; küre buna tepki verir */
+  onTyping?: () => void
 }
 
 // Ana Sayfa'daki büyük komut kutusu: yaz, konuş veya hazır bir başlangıç seç
-function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
+function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element {
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const dictation = useDictation((spoken) => {
@@ -72,7 +74,10 @@ function CommandBox({ onSubmit }: CommandBoxProps): React.JSX.Element {
           id={HOME_COMMAND_ID}
           ref={inputRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            onTyping?.()
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
               e.preventDefault()

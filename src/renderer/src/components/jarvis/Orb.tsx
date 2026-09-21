@@ -5,16 +5,20 @@ import { orbHsla } from '../../lib/orbColor'
 
 interface OrbProps {
   state: AssistantState
-  /** Tuvalin kenarı (px); küre bunun yaklaşık yarısı kadardır, halkalara yer kalır */
+  /** Tuvalin kenarı (px); küre bunun yaklaşık %30'u kadardır, halkalara ve ışımaya yer kalır */
   size?: number
+  /** 0-1: yazı yazılırken gibi anlık heyecan; ses seviyesi gibi iç ışığı ve parçacıkları canlandırır */
+  excite?: number
 }
 
 // Hızlı ince ayar için tüm sayılar burada
-const SPHERE_RATIO = 0.27
+const SPHERE_RATIO = 0.3
 const BREATH_SECONDS = 5
 const BREATH_AMOUNT = 0.02
 const EASE_PER_SECOND = 3
 const SMALL_SIZE = 120
+const SURFACE_DOTS = 460
+const HALO_DOTS = 70
 
 interface Params {
   ring: number
@@ -38,14 +42,41 @@ const BLOBS = [
   { speedX: 0.17, speedY: 0.29, phase: 4.2, size: 0.7, lightness: 55, alpha: 0.45, hue: -34 }
 ]
 
-// Jarvis küresi: tek gövdeli, sakin, duruma göre halka/yay/dalga ekleyen canvas çizimi
-function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
+interface Dot {
+  x: number
+  y: number
+  z: number
+  seed: number
+}
+
+// Küre yüzeyine eşit dağılmış noktalar (fibonacci küresi); halo noktaları ise rastgele yönlü
+function buildDots(count: number, halo: boolean): Dot[] {
+  const golden = Math.PI * (3 - Math.sqrt(5))
+  return Array.from({ length: count }, (_, i) => {
+    const y = 1 - (i / Math.max(1, count - 1)) * 2
+    const ring = Math.sqrt(Math.max(0, 1 - y * y))
+    const theta = golden * i * (halo ? 1.37 : 1)
+    return {
+      x: Math.cos(theta) * ring,
+      y,
+      z: Math.sin(theta) * ring,
+      seed: (Math.sin(i * 91.7) * 43758.5453) % 1
+    }
+  })
+}
+
+const fract = (value: number): number => value - Math.floor(value)
+
+// Jarvis küresi: tek gövdeli, sakin; iç ışık, yüzey parçacıkları ve duruma göre halka/yay/dalga ekleyen canvas çizimi
+function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
+  const exciteRef = useRef(excite)
 
   useEffect(() => {
     stateRef.current = state
-  }, [state])
+    exciteRef.current = excite
+  }, [state, excite])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -61,6 +92,8 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
     const radius = size * SPHERE_RATIO
     const cx = size / 2
     const cy = size / 2
+    const surface = small ? [] : buildDots(SURFACE_DOTS, false)
+    const halo = small ? [] : buildDots(HALO_DOTS, true)
 
     const params: Params = { ...TARGETS[stateRef.current] }
     let level = 0
@@ -85,7 +118,8 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
           : current === 'speaking'
             ? getAudioLevel('output')
             : 0
-      level += (rawLevel - level) * (reduced ? 1 : Math.min(dt * 12, 1))
+      const energyTarget = Math.max(rawLevel, exciteRef.current)
+      level += (energyTarget - level) * (reduced ? 1 : Math.min(dt * 12, 1))
       if (!reduced) spin += dt * (current === 'working' ? 1.6 : 0.8)
 
       const t = reduced ? 0 : now / 1000
@@ -110,13 +144,14 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
         ctx.restore()
       }
 
-      // Çok hafif dış ışıma
-      const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * (small ? 1.5 : 2))
-      glow.addColorStop(0, orbHsla(current, 70, 0.22))
+      // Çok hafif dış ışıma; tuval kenarında kesilmesin diye yarıçap sınırlı
+      const glowRadius = Math.min(r * (small ? 1.5 : 2), size / 2)
+      const glow = ctx.createRadialGradient(cx, cy, r * 0.8, cx, cy, glowRadius)
+      glow.addColorStop(0, orbHsla(current, 70, 0.22 + level * 0.12))
       glow.addColorStop(1, orbHsla(current, 70, 0))
       ctx.fillStyle = glow
       ctx.beginPath()
-      ctx.arc(cx, cy, r * (small ? 1.5 : 2), 0, Math.PI * 2)
+      ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2)
       ctx.fill()
 
       // Gövde: üstten aydınlık, kenarda koyu degrade
@@ -148,6 +183,29 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
         }
         ctx.restore()
 
+        // Yüzey parçacıkları: çok yavaş kayan, hafif parıldayan iridesan noktalar
+        const yaw = t * 0.04
+        const cosY = Math.cos(yaw)
+        const sinY = Math.sin(yaw)
+        for (const dot of surface) {
+          const x = dot.x * cosY - dot.z * sinY
+          const z = dot.x * sinY + dot.z * cosY
+          if (z < -0.15) continue
+          const depth = (z + 1) / 2
+          const twinkle = 0.5 + 0.5 * Math.sin(t * 1.3 + dot.seed * 40)
+          const px = cx + x * r * 0.98
+          const py = cy + dot.y * r * 0.98
+          ctx.fillStyle = orbHsla(
+            current,
+            80,
+            (0.12 + depth * 0.4 + twinkle * 0.25) * (0.8 + level * 0.5),
+            dot.seed * 60
+          )
+          ctx.beginPath()
+          ctx.arc(px, py, 0.6 + depth * 0.9 + level * 0.5, 0, Math.PI * 2)
+          ctx.fill()
+        }
+
         // Üstte cam yansıması
         const gloss = ctx.createRadialGradient(
           cx - r * 0.35,
@@ -157,7 +215,7 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
           cy - r * 0.55,
           r * 0.55
         )
-        gloss.addColorStop(0, 'rgba(255,255,255,0.28)')
+        gloss.addColorStop(0, 'rgba(255,255,255,0.26)')
         gloss.addColorStop(1, 'rgba(255,255,255,0)')
         ctx.fillStyle = gloss
         ctx.beginPath()
@@ -170,11 +228,24 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
         ctx.beginPath()
         ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2)
         ctx.stroke()
+
+        // Halo: kürenin çevresinde yavaşça yükselip sönen toz parçacıkları
+        for (const dot of halo) {
+          const life = fract(dot.seed * 7 + t * 0.035)
+          const dist = r * (1.12 + life * 0.55)
+          const px = cx + dot.x * dist
+          const py = cy + dot.y * dist * 0.92
+          const alpha = Math.sin(life * Math.PI) * (0.3 + level * 0.3)
+          ctx.fillStyle = orbHsla(current, 82, alpha, dot.seed * 50)
+          ctx.beginPath()
+          ctx.arc(px, py, 0.7 + life * 0.6, 0, Math.PI * 2)
+          ctx.fill()
+        }
       }
 
       // Dinlerken: ses seviyesiyle genişleyen ince halka
       if (params.ring > 0.01) {
-        const ringRadius = r * (1.28 + level * 0.45)
+        const ringRadius = r * (1.25 + level * 0.3)
         ctx.lineWidth = small ? 1.5 : 2
         ctx.strokeStyle = orbHsla(current, 78, 0.7 * params.ring)
         ctx.beginPath()
@@ -200,7 +271,7 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       // Konuşurken: kürenin içinden dışa yayılan yumuşak dalga
       if (params.ripple > 0.01) {
         const phase = (t * 0.9) % 1
-        const rippleRadius = r * (1.05 + phase * 0.6 + level * 0.2)
+        const rippleRadius = r * (1.05 + phase * 0.5 + level * 0.15)
         ctx.lineWidth = 2
         ctx.strokeStyle = orbHsla(current, 78, (1 - phase) * 0.6 * params.ripple)
         ctx.beginPath()

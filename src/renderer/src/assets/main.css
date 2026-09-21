@@ -152,9 +152,55 @@ textarea {
   animation: enter-fade 160ms var(--ease-calm);
 }
 
+/* Küre sahneye yumuşakça açılır */
+@keyframes orb-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-orb-in {
+  animation: orb-in 800ms var(--ease-calm) backwards;
+}
+
+/* Bilgi parçaları önce belirir, sonra çok hafif süzülür */
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tile-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+.animate-tile {
+  animation:
+    tile-in 600ms var(--ease-calm) backwards,
+    tile-float 7s ease-in-out 1s infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-enter,
-  .animate-fade {
+  .animate-fade,
+  .animate-orb-in,
+  .animate-tile {
     animation: none;
   }
 }

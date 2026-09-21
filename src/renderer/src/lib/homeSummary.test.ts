@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Reminder, Task } from '@shared/api'
-import { buildHomeSummary } from './homeSummary'
+import { buildHomeSummary, summarizeToday } from './homeSummary'
 
 // 2026-09-21 Pazartesi 10:00 (yerel)
 const now = new Date(2026, 8, 21, 10, 0)
@@ -73,5 +73,32 @@ describe('buildHomeSummary', () => {
   it('saati geçmiş görevi sıradaki olarak göstermez', () => {
     const tasks = [task({ dueDate: '2026-09-21', dueTime: '08:00', title: 'Sabah işi' })]
     expect(buildHomeSummary({ tasks, reminders: [], now })).toBe('Bugün 1 görevin var.')
+  })
+})
+
+describe('summarizeToday', () => {
+  it('sayıları ve sıradaki saatli işi ayrı ayrı verir', () => {
+    const tasks = [
+      task({ id: 1, dueDate: '2026-09-20' }),
+      task({ id: 2, dueDate: '2026-09-21', dueTime: '14:00', title: 'Toplantı' })
+    ]
+    const reminders = [
+      reminder({ message: 'Su iç', remindAt: new Date(2026, 8, 21, 11, 15).getTime() })
+    ]
+    expect(summarizeToday({ tasks, reminders, now })).toEqual({
+      dueTasks: 2,
+      overdue: 1,
+      reminders: 1,
+      next: { time: '11:15', label: 'Su iç' }
+    })
+  })
+
+  it('iş yoksa next null olur', () => {
+    expect(summarizeToday({ tasks: [], reminders: [], now })).toEqual({
+      dueTasks: 0,
+      overdue: 0,
+      reminders: 0,
+      next: null
+    })
   })
 })
