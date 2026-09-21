@@ -13,6 +13,8 @@ export interface SphereUniforms {
   kick: number
   /** Yoğunluk çarpanı */
   intensity: number
+  /** Bakış yönü (-1..1, ekranda sağ ve aşağı pozitif): ışık ve sis imlece doğru kayar */
+  gaze: [number, number]
   /** RGB (0-1) renkler: sis A, sis B, kenar parlaması */
   colorA: [number, number, number]
   colorB: [number, number, number]
@@ -38,6 +40,7 @@ uniform float flow;
 uniform float energy;
 uniform float kick;
 uniform float intensity;
+uniform vec2 gaze;
 uniform vec3 colA;
 uniform vec3 colB;
 uniform vec3 colRim;
@@ -82,7 +85,7 @@ void main() {
   vec3 n = vec3(q, z);
 
   // Hacimli sis: yüzeyin biraz içindeki noktalarda gezinen gürültü, iki katman farklı yönde akar
-  vec3 p1 = n * 1.5 + vec3(flow * 0.21, flow * 0.13, -flow * 0.17);
+  vec3 p1 = n * 1.5 + vec3(flow * 0.21 + gaze.x * 0.5, flow * 0.13 + gaze.y * 0.5, -flow * 0.17);
   vec3 p2 = n * 2.6 + vec3(-flow * 0.16, flow * 0.24, flow * 0.1);
   float fogA = fbm(p1);
   float fogB = fbm(p2 + 4.0);
@@ -94,7 +97,7 @@ void main() {
   vec3 base = vec3(0.035, 0.04, 0.055);
   float fres = pow(1.0 - z, 2.6);
   vec3 rim = colRim * fres * (0.85 + energy * 0.3);
-  vec3 light = normalize(vec3(-0.4, 0.55, 0.75));
+  vec3 light = normalize(vec3(-0.4 + gaze.x * 0.9, 0.55 - gaze.y * 0.9, 0.75));
   float ndl = max(dot(n, light), 0.0);
   float spec = pow(ndl, 48.0) * 0.55 + pow(ndl, 6.0) * 0.06;
 
@@ -149,6 +152,7 @@ export function createSphereRenderer(size: number, dpr: number): SphereRenderer 
     const uEnergy = loc('energy')
     const uKick = loc('kick')
     const uIntensity = loc('intensity')
+    const uGaze = loc('gaze')
     const uA = loc('colA')
     const uB = loc('colB')
     const uRim = loc('colRim')
@@ -165,6 +169,7 @@ export function createSphereRenderer(size: number, dpr: number): SphereRenderer 
         gl.uniform1f(uEnergy, u.energy)
         gl.uniform1f(uKick, u.kick)
         gl.uniform1f(uIntensity, u.intensity)
+        gl.uniform2f(uGaze, u.gaze[0], u.gaze[1])
         gl.uniform3f(uA, ...u.colorA)
         gl.uniform3f(uB, ...u.colorB)
         gl.uniform3f(uRim, ...u.colorRim)

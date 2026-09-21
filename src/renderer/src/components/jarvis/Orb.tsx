@@ -183,6 +183,28 @@ function Orb({
     let hover = 0
     let noticeSeen = noticeRef.current
     let noticeStart = -1e9
+    // İmleç yönü: kürenin merkezine göre -1..1 (uzaktaki imleç de aynı yöne bakar); pencereden çıkınca ortaya döner
+    const pointer = { x: 0, y: 0 }
+    let gazeX = 0
+    let gazeY = 0
+    const onPointerMove = (event: PointerEvent): void => {
+      const rect = canvas.getBoundingClientRect()
+      const dx = event.clientX - (rect.left + rect.width / 2)
+      const dy = event.clientY - (rect.top + rect.height / 2)
+      const dist = Math.hypot(dx, dy) || 1
+      // Yakında hassas, uzakta doygun: yönü korur, büyüklüğü yumuşakça 1'e yaklaşır
+      const strength = Math.min(dist / (size * 0.6), 1)
+      pointer.x = (dx / dist) * strength
+      pointer.y = (dy / dist) * strength
+    }
+    const onPointerLeave = (): void => {
+      pointer.x = 0
+      pointer.y = 0
+    }
+    if (!small) {
+      window.addEventListener('pointermove', onPointerMove)
+      document.addEventListener('pointerleave', onPointerLeave)
+    }
     let chunksSeen = getReplyChunks()
     let kick = 0
     let last = performance.now()
@@ -246,6 +268,10 @@ function Orb({
       const tapP = reduced ? 1 : (now - tapStart) / 900
       const wakeBump = wakeP >= 0 && wakeP < 1 ? Math.sin(Math.PI * wakeP) * 0.05 : 0
       const press = tapP >= 0 && tapP < 0.25 ? Math.sin((Math.PI * tapP) / 0.25) * 0.05 : 0
+      // Göz takibi: küre imlece doğru "bakar"; ışık, sis ve yüzey noktaları imleç yönüne kayar
+      const gazeEase = reduced ? 1 : Math.min(dt * 5, 1)
+      gazeX += ((reduced ? 0 : pointer.x) - gazeX) * gazeEase
+      gazeY += ((reduced ? 0 : pointer.y) - gazeY) * gazeEase
       // Cevap nabzı: cevap yazılırken her yeni parçada küre çok hafif atar, parçalar seyrekleşince söner
       const chunks = getReplyChunks()
       if (chunks !== chunksSeen) {
@@ -358,6 +384,7 @@ function Orb({
           energy,
           kick,
           intensity: look.factor,
+          gaze: [gazeX, gazeY],
           colorA: orbRgb(hue, 66),
           colorB: orbRgb(hue + 26, 58),
           colorRim: orbRgb(hue, 72)
@@ -406,12 +433,17 @@ function Orb({
         ctx.restore()
 
         // Yüzey parçacıkları: küreyi tanımlayan, hafif parıldayan noktalar
-        const yaw = t * 0.09
+        const yaw = t * 0.09 + gazeX * 0.4
         const cosY = Math.cos(yaw)
         const sinY = Math.sin(yaw)
+        const pitch = gazeY * 0.3
+        const cosP = Math.cos(pitch)
+        const sinP = Math.sin(pitch)
         for (const dot of surface) {
           const x = dot.x * cosY - dot.z * sinY
-          const z = dot.x * sinY + dot.z * cosY
+          const zYaw = dot.x * sinY + dot.z * cosY
+          const dy = dot.y * cosP - zYaw * sinP
+          const z = dot.y * sinP + zYaw * cosP
           if (z < -0.15) continue
           const depth = (z + 1) / 2
           const twinkle = 0.5 + 0.5 * Math.sin(t * 1.3 + dot.seed * 40)
@@ -421,7 +453,7 @@ function Orb({
             dot.seed * 16
           )
           ctx.beginPath()
-          ctx.arc(cx + x * r * 0.98, cy + dot.y * r * 0.98, 0.7 + depth * 1 + energy * 0.25, 0, TAU)
+          ctx.arc(cx + x * r * 0.98, cy + dy * r * 0.98, 0.7 + depth * 1 + energy * 0.25, 0, TAU)
           ctx.fill()
         }
 
@@ -682,6 +714,8 @@ function Orb({
     }
     const stopLoop = startFrameLoop(draw, fps)
     return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      document.removeEventListener('pointerleave', onPointerLeave)
       stopLoop()
       sphere?.dispose()
     }
