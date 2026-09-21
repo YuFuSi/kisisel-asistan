@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { STATE_LABELS, type AssistantState } from '../../lib/assistantState'
 import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
-import { orbHsla } from '../../lib/orbColor'
+import { orbHslaShift, STATE_HUE_SHIFT } from '../../lib/orbColor'
 
 interface OrbProps {
   state: AssistantState
@@ -105,6 +105,8 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
     const bars = new Array<number>(BAND_COUNT * 2).fill(0)
 
     const params: Params = { ...TARGETS[stateRef.current] }
+    // Durum tonu anında değil, yarım saniyelik yumuşak geçişle değişir
+    let hueShift = STATE_HUE_SHIFT[stateRef.current]
     let level = 0
     // İç ışık ve parlaklık için çok yavaş yumuşatılmış ses enerjisi (göz yormasın diye ayrı tutulur)
     let energy = 0
@@ -136,13 +138,14 @@ function Orb({ state, size = 240, excite = 0 }: OrbProps): React.JSX.Element {
       if (!reduced) flow += dt * (1 + energy * 0.9)
       if (!reduced) spin += dt * (current === 'working' ? 1.6 : 0.8)
 
+      hueShift += (STATE_HUE_SHIFT[current] - hueShift) * (reduced ? 1 : Math.min(dt * 2, 1))
       const t = reduced ? 0 : now / 1000
       // Renk çok az kayar: taban vurgu tonu etrafında küçük bir salınım
       const drift = reduced
         ? 0
         : Math.sin(t * 0.21) * HUE_DRIFT + Math.sin(t * 0.13 + 1.3) * HUE_DRIFT * 0.5
       const tone = (lightness: number, alpha = 1, hueOffset = 0): string =>
-        orbHsla(current, lightness, alpha, hueOffset + drift)
+        orbHslaShift(hueShift, lightness, alpha, hueOffset + drift)
       const breath = 1 + Math.sin((t * TAU) / BREATH_SECONDS) * BREATH_AMOUNT
       const r = radius * breath * (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
       const voice = Math.max(params.listen, params.speak)

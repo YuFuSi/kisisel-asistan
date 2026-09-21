@@ -11,6 +11,12 @@ export const STATE_HUE_SHIFT: Record<AssistantState, number> = {
   speaking: -58
 }
 
+/** Verilen ton kaymasıyla küre rengi (hsla); geçiş animasyonlarında ara değerler için kullanılır */
+export function orbHslaShift(shift: number, lightness: number, alpha = 1, hueOffset = 0): string {
+  const hue = Math.round((BASE_HUE + shift + hueOffset + 360) % 360)
+  return `hsla(${hue}, 72%, ${lightness}%, ${alpha})`
+}
+
 /** Belirli bir durumun küre rengi (hsla); lightness ve alpha çizim katmanına göre verilir */
 export function orbHsla(
   state: AssistantState,
@@ -18,6 +24,5 @@ export function orbHsla(
   alpha = 1,
   hueOffset = 0
 ): string {
-  const hue = Math.round((BASE_HUE + STATE_HUE_SHIFT[state] + hueOffset + 360) % 360)
-  return `hsla(${hue}, 72%, ${lightness}%, ${alpha})`
+  return orbHslaShift(STATE_HUE_SHIFT[state], lightness, alpha, hueOffset)
 }
