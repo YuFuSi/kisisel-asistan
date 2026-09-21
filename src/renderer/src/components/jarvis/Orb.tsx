@@ -115,6 +115,8 @@ function Orb({
   const exciteRef = useRef(excite)
   const emotionRef = useRef<EmotionSignal | null>(emotion)
   const stepsRef = useRef<WorkStep[]>(steps)
+  const hoverRef = useRef(false)
+  const tapRef = useRef(0)
 
   useEffect(() => {
     stateRef.current = state
@@ -160,6 +162,11 @@ function Orb({
     let unsureAmount = 0
     // Adım noktalarının görünürlüğü yumuşakça artar ve azalır
     let stepsAmount = 0
+    let prevState = stateRef.current
+    let wakeStart = -1e9
+    let tapSeen = tapRef.current
+    let tapStart = -1e9
+    let hover = 0
     let last = performance.now()
 
     const draw = (now: number): void => {
@@ -197,8 +204,27 @@ function Orb({
         : Math.sin(t * 0.21) * HUE_DRIFT + Math.sin(t * 0.13 + 1.3) * HUE_DRIFT * 0.5
       const tone = (lightness: number, alpha = 1, hueOffset = 0): string =>
         orbHslaShift(hueShift, lightness, alpha, hueOffset + drift)
+      // Uyandırma: dinlemeye geçilince küre bir kez "kabarır" ve dışa doğru halka yayılır
+      if (current !== prevState) {
+        if (current === 'listening' && prevState === 'idle') wakeStart = now
+        prevState = current
+      }
+      // Dokunma: imleç üzerindeyken hafifçe büyür, tıklanınca içe basılıp halka yayar
+      if (tapRef.current !== tapSeen) {
+        tapSeen = tapRef.current
+        tapStart = now
+      }
+      hover += ((hoverRef.current ? 1 : 0) - hover) * (reduced ? 1 : Math.min(dt * 8, 1))
+      const wakeP = reduced ? 1 : (now - wakeStart) / 1100
+      const tapP = reduced ? 1 : (now - tapStart) / 900
+      const wakeBump = wakeP >= 0 && wakeP < 1 ? Math.sin(Math.PI * wakeP) * 0.05 : 0
+      const press = tapP >= 0 && tapP < 0.25 ? Math.sin((Math.PI * tapP) / 0.25) * 0.05 : 0
       const breath = 1 + Math.sin((t * TAU) / BREATH_SECONDS) * BREATH_AMOUNT
-      const r = radius * breath * (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
+      const r =
+        radius *
+        breath *
+        (1 + wakeBump + hover * 0.025 - press) *
+        (1 + energy * 0.08 * params.speak + energy * 0.03 * params.listen)
       const voice = Math.max(params.listen, params.speak)
 
       // Duygu hâlleri: geçici (başarı/hata) sinyaller süreyle, kararsızlık (onay bekleme) sürekli
@@ -556,6 +582,24 @@ function Orb({
           }
         }
       }
+      // Uyandırma ve dokunma halkaları
+      if (!small) {
+        if (wakeP >= 0 && wakeP < 1) {
+          ctx.lineWidth = 2
+          ctx.strokeStyle = tone(80, (1 - wakeP) * 0.55)
+          ctx.beginPath()
+          ctx.arc(cx, cy, r * (1.02 + wakeP * 0.5), 0, TAU)
+          ctx.stroke()
+        }
+        if (tapP >= 0.1 && tapP < 1) {
+          const q = (tapP - 0.1) / 0.9
+          ctx.lineWidth = 1.5
+          ctx.strokeStyle = tone(84, (1 - q) * 0.45)
+          ctx.beginPath()
+          ctx.arc(cx, cy, r * (1 + q * 0.32), 0, TAU)
+          ctx.stroke()
+        }
+      }
       ctx.restore()
     }
 
@@ -574,6 +618,15 @@ function Orb({
       role="img"
       aria-label={`Jarvis: ${STATE_LABELS[state]}`}
       style={{ width: size, height: size, maxWidth: '100%' }}
+      onPointerEnter={() => {
+        hoverRef.current = true
+      }}
+      onPointerLeave={() => {
+        hoverRef.current = false
+      }}
+      onPointerDown={() => {
+        tapRef.current += 1
+      }}
     />
   )
 }
