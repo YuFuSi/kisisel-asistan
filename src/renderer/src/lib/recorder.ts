@@ -1,7 +1,13 @@
 // Mikrofon kaydı (sohbet kutusundaki mikrofon düğmesi). Kayıt bitince ses 16 kHz WAV'a çevrilip
 // ana sürece gönderilir; yerel konuşma tanıma (whisper.cpp) bu biçimi ister, bulut servisleri de kabul eder.
 import { setListening } from './assistantState'
-import { analyserLevel, analyserSpectrum, registerLevel, registerSpectrum } from './audioLevel'
+import {
+  analyserLevel,
+  analyserSpectrum,
+  registerLevel,
+  registerSpectrum,
+  BAND_COUNT
+} from './audioLevel'
 import { encodeWav, resample } from '../../../shared/wav'
 
 export interface Recording {
@@ -64,7 +70,7 @@ export async function startRecording(): Promise<Recording> {
   analyser.fftSize = 512
   audioContext.createMediaStreamSource(stream).connect(analyser)
   const unregisterLevel = registerLevel('input', () => analyserLevel(analyser))
-  const unregisterSpectrum = registerSpectrum('input', () => analyserSpectrum(analyser, 40))
+  const unregisterSpectrum = registerSpectrum('input', () => analyserSpectrum(analyser, BAND_COUNT))
   setListening(true)
 
   const releaseMicrophone = (): void => {

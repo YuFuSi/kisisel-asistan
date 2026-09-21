@@ -1,7 +1,13 @@
 import { useSyncExternalStore } from 'react'
 import type { VoiceEvent, VoicePackStatus, VoicePhase } from '@shared/api'
 import { setSpeaking, setVoicePhase } from './assistantState'
-import { analyserLevel, analyserSpectrum, registerLevel, registerSpectrum } from './audioLevel'
+import {
+  analyserLevel,
+  analyserSpectrum,
+  registerLevel,
+  registerSpectrum,
+  BAND_COUNT
+} from './audioLevel'
 import { errorMessage } from './errors'
 import { pickVoice } from './voice'
 import captureWorkletUrl from './voiceCaptureWorklet.ts?worker&url'
@@ -103,7 +109,7 @@ function startMic(): Promise<void> {
         context,
         node,
         unregisterLevel: registerLevel('input', () => analyserLevel(analyser)),
-        unregisterSpectrum: registerSpectrum('input', () => analyserSpectrum(analyser, 40))
+        unregisterSpectrum: registerSpectrum('input', () => analyserSpectrum(analyser, BAND_COUNT))
       }
       update({ micError: null })
       // Açılırken dinleme kapatıldıysa mikrofon hemen bırakılır
@@ -160,7 +166,7 @@ function outputNodes(): { context: AudioContext; analyser: AnalyserNode } {
     outputAnalyser.connect(outputContext.destination)
     const analyser = outputAnalyser
     registerLevel('output', () => analyserLevel(analyser))
-    registerSpectrum('output', () => analyserSpectrum(analyser, 40))
+    registerSpectrum('output', () => analyserSpectrum(analyser, BAND_COUNT))
   }
   return { context: outputContext, analyser: outputAnalyser }
 }

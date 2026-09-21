@@ -18,6 +18,12 @@ describe('binSpectrum', () => {
     expect(binSpectrum(data, 4)).toEqual([1, 1, 1, 1])
   })
 
+  it('bant sayısı veriden büyükse NaN üretmez', () => {
+    const result = binSpectrum(new Uint8Array(2), 5)
+    expect(result).toHaveLength(5)
+    expect(result.every(Number.isFinite)).toBe(true)
+  })
+
   it('bir bandın ortalamasını doğru hesaplar', () => {
     const data = new Uint8Array(4)
     data[0] = 0

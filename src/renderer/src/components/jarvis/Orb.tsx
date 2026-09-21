@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { STATE_LABELS, type AssistantState } from '../../lib/assistantState'
-import { getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
+import { BAND_COUNT, getAudioLevel, getAudioSpectrum } from '../../lib/audioLevel'
 import { orbHsl } from '../../lib/orbColor'
 
 interface OrbProps {
@@ -12,7 +12,7 @@ interface OrbProps {
 // idle: dönmez, sadece nefes alır. Diğerleri halkaya açılır ve döner.
 const RING_STATES = new Set<AssistantState>(['listening', 'thinking', 'working', 'speaking'])
 const PARTICLE_COUNT = 900
-const BAND_COUNT = 40
+const SMALL_PARTICLE_COUNT = 140
 const HUE_CYCLE_SECONDS = 40
 
 interface Particle {
@@ -29,17 +29,17 @@ interface Particle {
   band: number
 }
 
-function buildParticles(): Particle[] {
+function buildParticles(count: number): Particle[] {
   const particles: Particle[] = []
   const goldenAngle = Math.PI * (3 - Math.sqrt(5))
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    const y = 1 - (i / (PARTICLE_COUNT - 1)) * 2
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (i / (count - 1)) * 2
     const radiusAtY = Math.sqrt(Math.max(0, 1 - y * y))
     const theta = goldenAngle * i
     const sx = Math.cos(theta) * radiusAtY
     const sz = Math.sin(theta) * radiusAtY
 
-    const ringAngle = ((i / PARTICLE_COUNT) * Math.PI * 2 * 7) % (Math.PI * 2)
+    const ringAngle = ((i / count) * Math.PI * 2 * 7) % (Math.PI * 2)
     const ringRadius = 0.72 + (Math.sin(i * 12.9898) * 0.5 + 0.5) * 0.3 - 0.15
     const rx = Math.cos(ringAngle) * ringRadius
     const ry = Math.sin(ringAngle) * ringRadius * 0.96
@@ -81,11 +81,13 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
     canvas.height = Math.round(height * dpr)
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const particles = buildParticles()
+    const small = size < 120
+    const particles = buildParticles(small ? SMALL_PARTICLE_COUNT : PARTICLE_COUNT)
     const radius = size * 0.38
 
     let morph = 0
     let hueTime = 0
+    let rotation = 0
     let last = performance.now()
     let frame = 0
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -97,6 +99,8 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       const morphTarget = RING_STATES.has(currentState) ? 1 : 0
       morph += (morphTarget - morph) * (reduced ? 1 : Math.min(dt * 2.5, 1))
       hueTime = reduced ? hueTime : hueTime + dt / HUE_CYCLE_SECONDS
+
+      rotation += reduced ? 0 : dt * 0.15 * morph
 
       const t = reduced ? 0 : now / 1000
       const breathe = reduced ? 1 : 1 + Math.sin((t * (Math.PI * 2)) / 4) * 0.03
@@ -116,9 +120,8 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
 
       const cx = width / 2
       const cy = height / 2
-      const rotationAngle = t * 0.15 * morph
-      const cosR = Math.cos(rotationAngle)
-      const sinR = Math.sin(rotationAngle)
+      const cosR = Math.cos(rotation)
+      const sinR = Math.sin(rotation)
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, width, height)
@@ -177,12 +180,14 @@ function Orb({ state, size = 240 }: OrbProps): React.JSX.Element {
       for (const p of projected) {
         const depth = (p.z + 1) / 2
         const bright = 0.2 + depth * 0.5 + p.wave * 0.3 + overallLevel * 0.3
-        const pSize = 0.6 + depth * 1.3 + p.wave * 0.6 + overallLevel * 1
+        const pSize = (0.6 + depth * 1.3 + p.wave * 0.6 + overallLevel * 1) * (small ? 0.6 : 1)
         const color = orbHsl(hueTime + p.seed * 0.15, currentState, 90, 55 + p.wave * 15)
         ctx.globalAlpha = Math.min(1, bright)
         ctx.fillStyle = color
-        ctx.shadowColor = color
-        ctx.shadowBlur = 2 + p.wave * 3
+        if (!small) {
+          ctx.shadowColor = color
+          ctx.shadowBlur = 2 + p.wave * 3
+        }
         ctx.beginPath()
         ctx.arc(p.x, p.y, pSize, 0, Math.PI * 2)
         ctx.fill()

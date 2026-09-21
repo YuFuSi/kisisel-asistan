@@ -16,8 +16,8 @@ export function baseHue(t: number): number {
 export const STATE_HUE_BIAS: Record<AssistantState, number> = {
   idle: 0,
   listening: 10,
-  thinking: -35,
-  working: -35,
+  thinking: 140,
+  working: 140,
   speaking: 20
 }
 

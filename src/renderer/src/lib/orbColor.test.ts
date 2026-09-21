@@ -30,6 +30,12 @@ describe('orbHsl', () => {
   it('thinking durumunda hue sıcak tarafa kayar', () => {
     const idleHue = Number(orbHsl(0, 'idle', 90, 55).match(/hsl\((.+?),/)![1])
     const thinkingHue = Number(orbHsl(0, 'thinking', 90, 55).match(/hsl\((.+?),/)![1])
-    expect(thinkingHue).toBe(idleHue + STATE_HUE_BIAS.thinking)
+    expect(thinkingHue).toBe((idleHue + STATE_HUE_BIAS.thinking + 360) % 360)
+  })
+
+  it('360 ı aşan kayma 0-359 arasına sarılır', () => {
+    const hue = Number(orbHsl(0.5, 'thinking', 90, 55).match(/hsl\((.+?),/)![1])
+    expect(hue).toBeGreaterThanOrEqual(0)
+    expect(hue).toBeLessThan(360)
   })
 })

@@ -1,5 +1,7 @@
 // Mikrofon (giriş) ve Jarvis'in sesi (çıkış) için anlık ses seviyesi. Jarvis küresi buna göre titreşir.
 
+export const BAND_COUNT = 40
+
 type LevelSource = () => number
 export type LevelKind = 'input' | 'output'
 
@@ -58,11 +60,11 @@ export function getAudioSpectrum(kind: LevelKind, bands: number): number[] {
 
 /** Ham 0-255 frekans verisini `bands` sayıda 0-1 aralığına ortalanmış dilime böler; `data.length` `bands`'e bölünemezse sondaki kalanlar yok sayılır */
 export function binSpectrum(data: Uint8Array, bands: number): number[] {
-  const bandSize = Math.floor(data.length / bands)
+  const bandSize = Math.max(1, Math.floor(data.length / bands))
   const result: number[] = []
   for (let b = 0; b < bands; b++) {
     let sum = 0
-    for (let i = 0; i < bandSize; i++) sum += data[b * bandSize + i]
+    for (let i = 0; i < bandSize; i++) sum += data[b * bandSize + i] ?? 0
     result.push(sum / bandSize / 255)
   }
   return result
