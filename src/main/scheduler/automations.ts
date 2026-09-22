@@ -12,6 +12,11 @@ import type { Automation, AutomationRun } from '../../shared/api'
 
 const CHECK_INTERVAL_MS = 30_000
 
+// Aynı rutin aynı anda iki kez çalışmasın diye: zamanlayıcı ile "Şimdi çalıştır" (veya art arda
+// iki "Şimdi çalıştır" tıklaması) çakışabilir. Süreç içi kilit yeterli; iki ayrı Jarvis kopyası
+// zaten tek kopya kilidiyle (requestSingleInstanceLock) engelleniyor.
+const runningAutomationIds = new Set<number>()
+
 // Bildirim nesneleri çöp toplayıcıya gitmesin (yoksa tıklama olayı kaybolabilir)
 const visibleNotifications = new Set<Notification>()
 
@@ -42,6 +47,11 @@ function showAutomationResult(automation: Automation, run: AutomationRun): void 
  * kullanır.
  */
 export async function executeAutomation(automation: Automation): Promise<AutomationRun> {
+  if (runningAutomationIds.has(automation.id)) {
+    throw new Error(`"${automation.name}" zaten çalışıyor, bitmesini bekle.`)
+  }
+  runningAutomationIds.add(automation.id)
+
   const startedAt = Date.now()
   const runId = recordAutomationRunStart(automation.id, startedAt)
 
@@ -63,6 +73,8 @@ export async function executeAutomation(automation: Automation): Promise<Automat
   } catch (err) {
     status = 'error'
     summary = err instanceof Error ? err.message : String(err)
+  } finally {
+    runningAutomationIds.delete(automation.id)
   }
 
   const finishedAt = Date.now()
