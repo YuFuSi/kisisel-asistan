@@ -6,3 +6,6 @@ out
 *.log*
 
 .superpowers/
+.claude/worktrees/
+.serena/
+.specify/
