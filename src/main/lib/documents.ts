@@ -91,14 +91,17 @@ export async function extractDocumentText(filePath: string): Promise<string> {
     )
   }
 
-  const stat = await fs.stat(filePath).catch(() => null)
+  // Sembolik bağı/junction'ı gerçek hedefine çözer; okuma sırasında (TOCTOU) hedef değişse bile
+  // stat ve gerçek okuma aynı somut dosyaya bakar.
+  const realPath = await fs.realpath(filePath).catch(() => filePath)
+  const stat = await fs.stat(realPath).catch(() => null)
   if (!stat?.isFile()) throw new Error(`Dosya bulunamadı: ${filePath}`)
   if (stat.size > MAX_FILE_BYTES) throw new Error('Dosya çok büyük (en fazla 30 MB).')
 
   let raw: string
-  if (extension === '.pdf') raw = await readPdf(filePath)
-  else if (extension === '.docx') raw = await readDocx(filePath)
-  else raw = await fs.readFile(filePath, 'utf8')
+  if (extension === '.pdf') raw = await readPdf(realPath)
+  else if (extension === '.docx') raw = await readDocx(realPath)
+  else raw = await fs.readFile(realPath, 'utf8')
 
   const text = tidy(raw)
   if (!text) {
