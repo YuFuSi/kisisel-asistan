@@ -8,7 +8,7 @@ import {
   registerSpectrum,
   BAND_COUNT
 } from './audioLevel'
-import { encodeWav, resample } from '../../../shared/wav'
+import { encodeWav, normalizeGain, resample } from '../../../shared/wav'
 
 export interface Recording {
   /** Kaydı bitirir ve 16 kHz WAV sesini döndürür */
@@ -40,7 +40,7 @@ async function toWav(blob: Blob): Promise<ArrayBuffer> {
       const data = decoded.getChannelData(channel)
       for (let i = 0; i < data.length; i++) mono[i] += data[i] / decoded.numberOfChannels
     }
-    return encodeWav(resample(mono, decoded.sampleRate, TARGET_RATE), TARGET_RATE)
+    return encodeWav(normalizeGain(resample(mono, decoded.sampleRate, TARGET_RATE)), TARGET_RATE)
   } finally {
     void context.close()
   }

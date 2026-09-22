@@ -70,6 +70,32 @@ export function decodeWav(buffer: ArrayBuffer): DecodedWav {
   throw new Error('WAV dosyasında ses verisi bulunamadı.')
 }
 
+/**
+ * Sesi tepe genliği hedefe gelecek şekilde yükseltir (dijital kazanç). Mikrofonun donanım
+ * seviyesi düşük olduğunda (bu bilgisayarda tepe ~0,01) whisper ve bulut STT servisleri sesi
+ * yanlış anlıyor; konuşmayı yazıya çevirmeden hemen önce burada uygulanır. Uyandırma kelimesi
+ * ve konuşma algılama (VAD) bu kazancı görmez, onların eşikleri ham genlikle kalibre edilmiş.
+ */
+export function normalizeGain(
+  samples: Float32Array,
+  targetPeak = 0.89,
+  maxGain = 12
+): Float32Array {
+  let peak = 0
+  for (let i = 0; i < samples.length; i++) {
+    const abs = Math.abs(samples[i])
+    if (abs > peak) peak = abs
+  }
+  // Sessizlikte (peak ~0) kazancı sonsuza götürmemek için eşik altında dokunma
+  if (peak < 1e-6) return samples
+  const gain = Math.min(maxGain, targetPeak / peak)
+  // Zaten yeterince güçlüyse gereksiz kopya oluşturma
+  if (gain <= 1.02) return samples
+  const result = new Float32Array(samples.length)
+  for (let i = 0; i < samples.length; i++) result[i] = samples[i] * gain
+  return result
+}
+
 /** Doğrusal yeniden örnekleme (ör. Piper'ın 22050 Hz sesini 16000 Hz'e) */
 export function resample(samples: Float32Array, from: number, to: number): Float32Array {
   if (from === to) return samples
