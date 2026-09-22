@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react'
 import type { ConversationSearchResult } from '@shared/api'
+import { groupConversations } from '../../lib/conversationGroups'
 import { CONVERSATION_SEARCH_ID } from '../../lib/dom'
 
 interface ConversationListProps {
@@ -133,6 +134,66 @@ function ConversationList({
     setEditingId(null)
   }
 
+  // Bir sohbet satırı; adı düzenlenirken kutuya döner
+  function renderRow({ conversation, snippet }: ConversationSearchResult): React.JSX.Element {
+    const isActive = conversation.id === activeId
+    const title = conversation.title || 'Yeni sohbet'
+
+    if (conversation.id === editingId) {
+      return (
+        <div key={conversation.id} className="px-1 py-1">
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') {
+                e.stopPropagation()
+                setEditingId(null)
+              }
+            }}
+            aria-label="Sohbet adı"
+            className="w-full rounded-md border border-accent/70 bg-surface px-2 py-1.5 text-sm text-ink outline-none"
+          />
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={conversation.id}
+        className={`group flex items-start rounded-lg ${isActive ? 'bg-elevated' : 'hover:bg-elevated/60'}`}
+      >
+        <button
+          onClick={() => onSelect(conversation.id)}
+          onDoubleClick={() => startRename(conversation.id, conversation.title)}
+          title={title}
+          className="min-w-0 flex-1 px-3 py-2 text-left"
+        >
+          <span
+            className={`flex items-center gap-1.5 text-sm ${isActive ? 'text-ink' : 'text-muted'}`}
+          >
+            {conversation.pinned && <Pin className="h-3 w-3 shrink-0 fill-current text-accent" />}
+            <span className="truncate">{title}</span>
+          </span>
+          {snippet && <span className="mt-0.5 block truncate text-xs text-faint">{snippet}</span>}
+        </button>
+        <RowMenu
+          pinned={conversation.pinned}
+          onRename={() => startRename(conversation.id, conversation.title)}
+          onPin={() => onPin(conversation.id, !conversation.pinned)}
+          onExport={() => onExport(conversation.id)}
+          onDelete={() => onDelete(conversation.id)}
+        />
+      </div>
+    )
+  }
+
+  // Arama sırasında relevans sıralaması bozulmasın diye düz liste; aksi halde tarihe göre gruplanır
+  const groups = query ? null : groupConversations(results, new Date())
+
   return (
     <div className="flex w-60 shrink-0 flex-col border-r border-line">
       <div className="space-y-2 p-3">
@@ -176,66 +237,17 @@ function ConversationList({
           <p className="px-3 py-2 text-xs text-faint">
             {query ? 'Eşleşen sohbet yok.' : 'Henüz sohbet yok.'}
           </p>
-        ) : (
-          results.map(({ conversation, snippet }) => {
-            const isActive = conversation.id === activeId
-            const title = conversation.title || 'Yeni sohbet'
-
-            if (conversation.id === editingId) {
-              return (
-                <div key={conversation.id} className="px-1 py-1">
-                  <input
-                    autoFocus
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onBlur={commitRename}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitRename()
-                      if (e.key === 'Escape') {
-                        e.stopPropagation()
-                        setEditingId(null)
-                      }
-                    }}
-                    aria-label="Sohbet adı"
-                    className="w-full rounded-md border border-accent/70 bg-surface px-2 py-1.5 text-sm text-ink outline-none"
-                  />
-                </div>
-              )
-            }
-
-            return (
-              <div
-                key={conversation.id}
-                className={`group flex items-start rounded-lg ${isActive ? 'bg-elevated' : 'hover:bg-elevated/60'}`}
-              >
-                <button
-                  onClick={() => onSelect(conversation.id)}
-                  onDoubleClick={() => startRename(conversation.id, conversation.title)}
-                  title={title}
-                  className="min-w-0 flex-1 px-3 py-2 text-left"
-                >
-                  <span
-                    className={`flex items-center gap-1.5 text-sm ${isActive ? 'text-ink' : 'text-muted'}`}
-                  >
-                    {conversation.pinned && (
-                      <Pin className="h-3 w-3 shrink-0 fill-current text-accent" />
-                    )}
-                    <span className="truncate">{title}</span>
-                  </span>
-                  {snippet && (
-                    <span className="mt-0.5 block truncate text-xs text-faint">{snippet}</span>
-                  )}
-                </button>
-                <RowMenu
-                  pinned={conversation.pinned}
-                  onRename={() => startRename(conversation.id, conversation.title)}
-                  onPin={() => onPin(conversation.id, !conversation.pinned)}
-                  onExport={() => onExport(conversation.id)}
-                  onDelete={() => onDelete(conversation.id)}
-                />
+        ) : groups ? (
+          groups.map((group) => (
+            <div key={group.label} className="mb-1">
+              <div className="px-3 pt-2 pb-1 text-[11px] font-medium tracking-wide text-faint uppercase">
+                {group.label}
               </div>
-            )
-          })
+              {group.items.map(renderRow)}
+            </div>
+          ))
+        ) : (
+          results.map(renderRow)
         )}
       </div>
     </div>

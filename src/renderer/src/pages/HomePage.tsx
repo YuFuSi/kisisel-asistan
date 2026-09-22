@@ -18,6 +18,7 @@ import {
 } from '../lib/assistantState'
 import { requestAttachFiles } from '../lib/chatRequests'
 import { useBattery, useClock, useOnline } from '../lib/deviceStatus'
+import { greeting } from '../lib/greeting'
 import { buildHomeSummary, summarizeToday } from '../lib/homeSummary'
 import type { PageId } from '../lib/pages'
 import { useLiveData } from '../lib/useLiveData'
@@ -40,14 +41,6 @@ interface HomePageProps {
   onAsk: (text: string) => void
   /** Sesli sohbetin kaydedildiği sohbeti Asistan sayfasında açar */
   onOpenConversation: (conversationId: number) => void
-}
-
-function greeting(hour: number): string {
-  if (hour < 5) return 'İyi geceler'
-  if (hour < 12) return 'Günaydın'
-  if (hour < 18) return 'İyi günler'
-  if (hour < 22) return 'İyi akşamlar'
-  return 'İyi geceler'
 }
 
 function voiceHint(voice: VoiceSnapshot): string {

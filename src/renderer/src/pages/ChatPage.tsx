@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, FileUp, Settings, Sparkles } from 'lucide-react'
+import { Download, FileUp, Settings } from 'lucide-react'
 import { composeMessage } from '@shared/attachments'
 import {
   PROVIDERS,
@@ -7,7 +7,9 @@ import {
   type ChatMessage,
   type Conversation,
   type ConversationSearchResult,
+  type Reminder,
   type SettingsView,
+  type Task,
   type ToolActivity,
   type ToolApproval
 } from '@shared/api'
@@ -16,13 +18,16 @@ import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
 import ApprovalCard from '../components/chat/ApprovalCard'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import Orb from '../components/jarvis/Orb'
+import { noteReplyStarted, useAssistantState } from '../lib/assistantState'
 import { errorMessage } from '../lib/errors'
 import { focusConversationSearch } from '../lib/dom'
+import { greeting } from '../lib/greeting'
+import { buildHomeSummary } from '../lib/homeSummary'
 import { quietIconButtonClass } from '../lib/styles'
 import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
-import { noteReplyStarted } from '../lib/assistantState'
 import {
   onAttachFilesRequest,
   onBlankChatRequest,
@@ -45,6 +50,8 @@ const BRIEF_PROMPT = 'Günlük özetimi hazırla.'
 const SEARCH_DELAY = 150
 
 const loadConversations = (): Promise<Conversation[]> => window.api.conversations.list()
+const loadTasks = (): Promise<Task[]> => window.api.tasks.list()
+const loadReminders = (): Promise<Reminder[]> => window.api.reminders.list()
 
 interface ChatPageProps {
   active: boolean
@@ -68,6 +75,9 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const toast = useToast()
   const [settings, setSettings] = useState<SettingsView | null>(null)
   const { data: conversations, error: listError } = useLiveData(loadConversations, 'conversations')
+  const { data: tasks } = useLiveData(loadTasks, 'tasks')
+  const { data: reminders } = useLiveData(loadReminders, 'reminders')
+  const assistantState = useAssistantState()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ConversationSearchResult[]>([])
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -403,6 +413,8 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const showEmptyState = messages.length === 0 && streamingView === null
   const lastMessage = messages[messages.length - 1]
   const canRegenerate = !streamingView && lastMessage?.role === 'assistant'
+  const summary =
+    tasks && reminders ? buildHomeSummary({ tasks, reminders, now: new Date() }) : null
 
   return (
     <div className="flex h-full">
@@ -448,7 +460,10 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         )}
 
         <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line px-4">
-          <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
+          <div className="flex min-w-0 items-center gap-2">
+            <Orb state={assistantState} size={28} />
+            <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             {activeConversation && (
               <button
@@ -480,15 +495,14 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         <div className="flex flex-1 flex-col overflow-y-auto">
           {showEmptyState ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15">
-                <Sparkles className="h-7 w-7 text-accent" />
-              </div>
+              <Orb state={assistantState} size={120} />
               <h2 className="text-2xl font-semibold tracking-tight">
-                Merhaba! Nasıl yardımcı olabilirim?
+                {greeting(new Date().getHours())}
               </h2>
               <p className="max-w-md text-sm text-muted">
                 {modelReady
-                  ? 'Sohbet edebilir, görev ve hatırlatma ekletebilir, not tutturabilirsin.'
+                  ? (summary ??
+                    'Sohbet edebilir, görev ve hatırlatma ekletebilir, not tutturabilirsin.')
                   : "Başlamak için Ayarlar'dan bir yapay zeka modeli seç."}
               </p>
               {modelReady && (
