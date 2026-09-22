@@ -33,3 +33,17 @@ jobs:
 
       - name: Derleme
         run: npx electron-vite build
+
+      # Sadece main'e gönderimde: gerçek NSIS kurulum dosyasını üretir (imzasız). Bu, "asar bozuk"
+      # gibi sadece paketlemede ortaya çıkan hataları erken yakalar; PR'larda hız için atlanır.
+      - name: Windows kurulum dosyası (sadece main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: npm run build:win
+
+      - name: Kurulum dosyasını artifact olarak sakla
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kisisel-asistan-setup
+          path: dist/*-setup.exe
+          retention-days: 14
