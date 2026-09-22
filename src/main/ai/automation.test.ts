@@ -104,6 +104,14 @@ describe('runAutomationTurn', () => {
     expect(result.skipped).toEqual([])
   })
 
+  it('abort parçası gelirse zaman aşımı hatası fırlatır', async () => {
+    mockStreamText.mockReturnValue({
+      stream: streamOf([{ type: 'abort' }])
+    } as never)
+
+    await expect(runAutomationTurn('x', 'none', -1)).rejects.toThrow('dakika içinde bitirmedi')
+  })
+
   it('stream hatası fırlatırsa yukarı düşer', async () => {
     mockStreamText.mockReturnValue({
       stream: streamOf([{ type: 'error', error: new Error('Model hatası.') }])

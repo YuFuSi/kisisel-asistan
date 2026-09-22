@@ -8,6 +8,9 @@ import type { RoutineAllowance } from '../../shared/api'
 
 // Kullanıcının başında beklemediği bir çalıştırma; sonsuz araç döngüsüne izin verilmez
 const AUTOMATION_MAX_STEPS = 8
+// Kullanıcı kapanmasını bekleyen bir sohbet değil; model veya bir araç (ör. yavaş bir ağ isteği)
+// takılırsa rutin ve arkasındaki zamanlayıcı kuyruğu sonsuza kadar bloklanmasın diye üst sınır
+const AUTOMATION_TIMEOUT_MS = 5 * 60_000
 
 export interface AutomationTurnResult {
   /** Modelin çalıştırma sonunda ürettiği özet metin */
@@ -38,44 +41,55 @@ export async function runAutomationTurn(
   let needsSeparator = false
   let toolCallCount = 0
 
-  await runWithToolContext({ conversationId, source: 'automation', allowance }, async () => {
-    const instructions = await buildInstructions(prompt, '', 'automation')
-    const result = streamText({
-      model: getModel(),
-      instructions,
-      messages: [{ role: 'user', content: prompt }],
-      tools: getAssistantTools(),
-      stopWhen: isStepCount(AUTOMATION_MAX_STEPS),
-      ...getModelOptions()
-    })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), AUTOMATION_TIMEOUT_MS)
+  try {
+    await runWithToolContext({ conversationId, source: 'automation', allowance }, async () => {
+      const instructions = await buildInstructions(prompt, '', 'automation')
+      const result = streamText({
+        model: getModel(),
+        instructions,
+        messages: [{ role: 'user', content: prompt }],
+        tools: getAssistantTools(),
+        stopWhen: isStepCount(AUTOMATION_MAX_STEPS),
+        abortSignal: controller.signal,
+        ...getModelOptions()
+      })
 
-    for await (const part of result.stream) {
-      switch (part.type) {
-        case 'text-delta': {
-          const chunk = needsSeparator && text ? `\n\n${part.text}` : part.text
-          needsSeparator = false
-          text += chunk
-          break
-        }
-        case 'finish-step':
-          needsSeparator = true
-          break
-        case 'tool-call':
-          toolCallCount++
-          break
-        case 'tool-error': {
-          const reason = part.error instanceof Error ? part.error.message : String(part.error)
-          if (part.error instanceof AutomationApprovalSkipped) {
-            skipped.push({ tool: part.toolName, label: part.error.toolLabel })
+      for await (const part of result.stream) {
+        switch (part.type) {
+          case 'text-delta': {
+            const chunk = needsSeparator && text ? `\n\n${part.text}` : part.text
+            needsSeparator = false
+            text += chunk
+            break
           }
-          console.warn(`Rutin araç hatası (${part.toolName}):`, reason)
-          break
+          case 'finish-step':
+            needsSeparator = true
+            break
+          case 'tool-call':
+            toolCallCount++
+            break
+          case 'tool-error': {
+            const reason = part.error instanceof Error ? part.error.message : String(part.error)
+            if (part.error instanceof AutomationApprovalSkipped) {
+              skipped.push({ tool: part.toolName, label: part.error.toolLabel })
+            }
+            console.warn(`Rutin araç hatası (${part.toolName}):`, reason)
+            break
+          }
+          case 'abort':
+            throw new Error(
+              `Model ${Math.round(AUTOMATION_TIMEOUT_MS / 60_000)} dakika içinde bitirmedi, iptal edildi.`
+            )
+          case 'error':
+            throw part.error
         }
-        case 'error':
-          throw part.error
       }
-    }
-  })
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
 
   return { text: text.trim(), skipped, usedTools: toolCallCount > 0 }
 }
