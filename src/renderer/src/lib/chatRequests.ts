@@ -21,6 +21,20 @@ export function onNewChatRequest(listener: Listener<string>): () => void {
   return subscribe(newChatListeners, listener)
 }
 
+const blankChatListeners = new Set<() => void>()
+
+/** Komut paletinden "Yeni sohbet": metin göndermeden boş bir sohbet açar */
+export function requestBlankChat(): void {
+  blankChatListeners.forEach((listener) => listener())
+}
+
+export function onBlankChatRequest(listener: () => void): () => void {
+  blankChatListeners.add(listener)
+  return () => {
+    blankChatListeners.delete(listener)
+  }
+}
+
 const attachListeners = new Set<Listener<File[]>>()
 
 /** Ana Sayfa'ya bırakılan belgeler: yeni sohbette mesaja eklenmek üzere bekletilir */

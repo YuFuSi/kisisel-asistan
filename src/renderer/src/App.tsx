@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BarChart3, Trophy } from 'lucide-react'
+import CommandPalette from './components/CommandPalette'
 import Sidebar from './components/Sidebar'
 import { PAGE_LABELS, type PageId } from './lib/pages'
 import TitleBar from './components/TitleBar'
@@ -18,6 +19,19 @@ import { noteNotification } from './lib/assistantState'
 
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('home')
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  // Ctrl+K (veya Cmd+K) her yerden komut paletini açar
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   // Jarvis sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
   useEffect(() => initVoiceClient(), [])
@@ -124,6 +138,14 @@ function App(): React.JSX.Element {
           )}
         </main>
       </div>
+
+      {paletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          currentPage={page}
+          onNavigate={setPage}
+        />
+      )}
     </div>
   )
 }

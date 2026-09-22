@@ -12,6 +12,8 @@ function automation(over: Partial<Automation> = {}): Automation {
     allowance: 'write',
     enabled: true,
     nextRunAt: 0,
+    lastRunAt: null,
+    createdAt: '2026-09-22T00:00:00.000Z',
     ...over
   }
 }

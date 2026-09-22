@@ -25,6 +25,7 @@ import { speakText, stopSpeaking } from '../lib/voice'
 import { noteReplyStarted } from '../lib/assistantState'
 import {
   onAttachFilesRequest,
+  onBlankChatRequest,
   onNewChatRequest,
   onOpenConversationRequest
 } from '../lib/chatRequests'
@@ -200,6 +201,9 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
     })
   }, [openConversation])
+
+  // Komut paletinden "Yeni sohbet": metin göndermeden boş sohbet açar
+  useEffect(() => onBlankChatRequest(() => openConversation(null)), [openConversation])
 
   // Ana Sayfa'ya bırakılan belgeler yeni sohbete eklenir
   useEffect(
