@@ -1,7 +1,7 @@
-import type { Reminder, Task } from '@shared/api'
+import type { CalendarItem, Reminder, Task } from '@shared/api'
 import { toIsoDate } from './dates'
 
-export type TimelineKind = 'task' | 'reminder'
+export type TimelineKind = 'task' | 'reminder' | 'event'
 
 export interface TimelineItem {
   id: string
@@ -17,6 +17,8 @@ export interface TimelineItem {
 interface TimelineInput {
   tasks: Task[]
   reminders: Reminder[]
+  /** Google Takvim etkinlikleri; hesap bağlı değilse boş dizi verilir */
+  events?: CalendarItem[]
   now: Date
 }
 
@@ -28,7 +30,12 @@ function hhmm(date: Date): string {
  * Sidebar'daki "Bugün" çizelgesi: saatli görevler ve bugünün hatırlatmaları, saate göre sıralı.
  * Saatsiz görevler (sadece tarihi olanlar) günün başına, 00:00 kabul edilerek eklenir.
  */
-export function buildTimeline({ tasks, reminders, now }: TimelineInput): TimelineItem[] {
+export function buildTimeline({
+  tasks,
+  reminders,
+  events = [],
+  now
+}: TimelineInput): TimelineItem[] {
   const today = toIsoDate(now)
   const nowTime = hhmm(now)
 
@@ -54,7 +61,22 @@ export function buildTimeline({ tasks, reminders, now }: TimelineInput): Timelin
       overdue: reminder.sentAt === null && reminder.remindAt < now.getTime()
     }))
 
-  return [...taskItems, ...reminderItems].sort((a, b) => a.time.localeCompare(b.time))
+  // Tüm gün etkinlikleri saatsiz görev gibi 00:00'a, saatli etkinlikler kendi saatine gider.
+  // "done" burada tamamlanma değil, etkinliğin bitmiş (geçmişte kalmış) olması anlamına gelir.
+  const eventItems: TimelineItem[] = events
+    .filter((event) => toIsoDate(new Date(event.start)) === today)
+    .map((event) => ({
+      id: `event-${event.id}`,
+      kind: 'event' as const,
+      time: event.allDay ? '00:00' : hhmm(new Date(event.start)),
+      label: event.allDay ? `${event.title} (tüm gün)` : event.title,
+      done: (event.end ?? event.start) < now.getTime(),
+      overdue: false
+    }))
+
+  return [...taskItems, ...reminderItems, ...eventItems].sort((a, b) =>
+    a.time.localeCompare(b.time)
+  )
 }
 
 /** Çizelgede "şimdi" çizgisinin altına girecek ilk öğenin index'i (hepsi geçtiyse dizi uzunluğu) */

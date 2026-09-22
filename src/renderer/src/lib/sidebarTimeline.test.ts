@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Reminder, Task } from '@shared/api'
+import type { CalendarItem, Reminder, Task } from '@shared/api'
 import { buildTimeline, nowIndex } from './sidebarTimeline'
 
 function task(over: Partial<Task> = {}): Task {
@@ -22,6 +22,18 @@ function reminder(over: Partial<Reminder> = {}): Reminder {
     remindAt: new Date('2026-09-22T10:00:00').getTime(),
     sentAt: null,
     repeat: 'none',
+    ...over
+  }
+}
+
+function calendarEvent(over: Partial<CalendarItem> = {}): CalendarItem {
+  return {
+    id: 'e1',
+    title: 'Etkinlik',
+    start: new Date('2026-09-22T11:00:00').getTime(),
+    end: new Date('2026-09-22T12:00:00').getTime(),
+    allDay: false,
+    location: null,
     ...over
   }
 }
@@ -64,6 +76,58 @@ describe('buildTimeline', () => {
     })
     expect(items[0].done).toBe(true)
     expect(items[0].overdue).toBe(false)
+  })
+
+  it('bugünün takvim etkinliğini saatine göre araya ekler', () => {
+    const items = buildTimeline({
+      tasks: [task({ dueTime: '14:00', title: 'Toplantı' })],
+      reminders: [],
+      events: [calendarEvent({ title: 'Diş' })],
+      now
+    })
+    expect(items.map((i) => i.label)).toEqual(['Diş', 'Toplantı'])
+  })
+
+  it('tüm gün etkinliğini gün başına, "(tüm gün)" etiketiyle ekler', () => {
+    const items = buildTimeline({
+      tasks: [],
+      reminders: [],
+      events: [
+        calendarEvent({
+          title: 'Tatil',
+          allDay: true,
+          start: new Date('2026-09-22T00:00:00').getTime(),
+          end: null
+        })
+      ],
+      now
+    })
+    expect(items[0]).toMatchObject({ time: '00:00', label: 'Tatil (tüm gün)' })
+  })
+
+  it('bitmiş etkinliği geçmiş sayar', () => {
+    const items = buildTimeline({
+      tasks: [],
+      reminders: [],
+      events: [
+        calendarEvent({
+          start: new Date('2026-09-22T06:00:00').getTime(),
+          end: new Date('2026-09-22T07:00:00').getTime()
+        })
+      ],
+      now
+    })
+    expect(items[0].done).toBe(true)
+  })
+
+  it('başka güne ait etkinliği hariç tutar', () => {
+    const items = buildTimeline({
+      tasks: [],
+      reminders: [],
+      events: [calendarEvent({ start: new Date('2026-09-23T11:00:00').getTime() })],
+      now
+    })
+    expect(items).toHaveLength(0)
   })
 })
 

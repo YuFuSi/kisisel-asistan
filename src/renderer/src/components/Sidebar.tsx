@@ -15,7 +15,7 @@ import {
   Workflow,
   type LucideIcon
 } from 'lucide-react'
-import type { Automation, AutomationRun, Reminder, Task } from '@shared/api'
+import type { Automation, AutomationRun, CalendarItem, Reminder, Task } from '@shared/api'
 import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
 import { requestNewChat } from '../lib/chatRequests'
 import { PAGE_LABELS, type PageId } from '../lib/pages'
@@ -23,6 +23,7 @@ import { buildSuggestions, type Suggestion } from '../lib/sidebarSuggestions'
 import { buildTimeline, nowIndex, type TimelineItem } from '../lib/sidebarTimeline'
 import { buildWorkers, type Worker } from '../lib/sidebarWorkers'
 import { useClock } from '../lib/deviceStatus'
+import { toIsoDate } from '../lib/dates'
 
 const ITEMS: { id: PageId; icon: LucideIcon }[] = [
   { id: 'home', icon: House },
@@ -55,10 +56,35 @@ function useAppVersion(): string {
   return version
 }
 
-// Bugünün saatli görev ve hatırlatmaları; veri değişince (asistan eklese bile) kendiliğinden yenilenir
+// Bugünün Google Takvim etkinlikleri; hesap bağlı değilse sessizce boş kalır. CalendarPage'deki
+// gibi sadece mount'ta çekilir, otomatik yenileme yok (etkinlikler oturum içinde nadiren değişir).
+function useTodayEvents(now: Date): CalendarItem[] {
+  const [events, setEvents] = useState<CalendarItem[]>([])
+  const dayStart = toIsoDate(now)
+
+  useEffect(() => {
+    let active = true
+    const from = new Date(`${dayStart}T00:00:00`)
+    const to = new Date(from.getTime() + 26 * 60 * 60 * 1000)
+    window.api.google.status().then((status) => {
+      if (!active || !status.connected) return
+      window.api.calendar.events(from.toISOString(), to.toISOString()).then((items) => {
+        if (active) setEvents(items)
+      }, noop)
+    }, noop)
+    return () => {
+      active = false
+    }
+  }, [dayStart])
+
+  return events
+}
+
+// Bugünün saatli görev, hatırlatma ve takvim etkinlikleri; veri değişince (asistan eklese bile) kendiliğinden yenilenir
 function useTimeline(now: Date): TimelineItem[] {
   const [tasks, setTasks] = useState<Task[]>([])
   const [reminders, setReminders] = useState<Reminder[]>([])
+  const events = useTodayEvents(now)
 
   useEffect(() => {
     let active = true
@@ -80,7 +106,7 @@ function useTimeline(now: Date): TimelineItem[] {
     }
   }, [])
 
-  return buildTimeline({ tasks, reminders, now })
+  return buildTimeline({ tasks, reminders, events, now })
 }
 
 function useSuggestions(now: Date): Suggestion[] {
@@ -235,7 +261,7 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
                       </div>
                     )}
                     <button
-                      onClick={() => onSelect(item.kind === 'task' ? 'tasks' : 'tasks')}
+                      onClick={() => onSelect(item.kind === 'event' ? 'calendar' : 'tasks')}
                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs transition-colors hover:bg-surface ${
                         item.done
                           ? 'text-faint line-through'
