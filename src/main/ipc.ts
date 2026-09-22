@@ -1,5 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { listActivity } from './data/activity'
+import { listActivity, listActivitySince } from './data/activity'
+import { computeUsageStats } from './lib/analytics'
+import { computeAchievements } from './lib/achievements'
 import { listBackups } from './db/backup'
 import { backupDirectory, createBackupNow, restoreBackup } from './system/database'
 import { logRendererError, openLogDirectory } from './system/logger'
@@ -121,6 +123,17 @@ export function registerIpcHandlers(): void {
     restoreBackup(BrowserWindow.fromWebContents(event.sender), name)
   )
   ipcMain.handle('activity:list', (_event, limit?: number) => listActivity(limit))
+
+  // Analizler ve Başarımlar: activity_log'un son 180 günü (bakım zaten bundan eskisini siliyor)
+  const ANALYTICS_WINDOW_MS = 180 * 24 * 60 * 60 * 1000
+  ipcMain.handle('analytics:usage', () =>
+    computeUsageStats(listActivitySince(Date.now() - ANALYTICS_WINDOW_MS), new Date())
+  )
+  ipcMain.handle('analytics:achievements', () =>
+    computeAchievements(
+      computeUsageStats(listActivitySince(Date.now() - ANALYTICS_WINDOW_MS), new Date())
+    )
+  )
 
   // Ana Sayfa ve Takvim
   ipcMain.handle('system:status', () => getSystemStatus())

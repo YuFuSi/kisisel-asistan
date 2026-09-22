@@ -502,6 +502,44 @@ export interface ActivityEntry {
   conversationId: number | null
 }
 
+// Analizler sayfası: activity_log'dan hesaplanan kullanım istatistikleri
+export interface ToolUsage {
+  name: string
+  label: string
+  count: number
+}
+
+export interface DayUsage {
+  /** Yerel tarih: 2026-09-22 */
+  date: string
+  count: number
+}
+
+export interface UsageStats {
+  totalCalls: number
+  doneCalls: number
+  errorCalls: number
+  /** Onay reddedilen veya izin yetersizliğinden atlanan çağrılar */
+  blockedCalls: number
+  /** En çok kullanılan 5 araç, çoktan aza */
+  topTools: ToolUsage[]
+  /** Son 14 günün günlük çağrı sayısı, en eskiden en yeniye */
+  last14Days: DayUsage[]
+  /** Bugün dahil, art arda en az bir çağrı yapılan gün sayısı */
+  activeDayStreak: number
+  voiceCalls: number
+  automationCalls: number
+  distinctTools: number
+}
+
+// Başarımlar sayfası: tamamı activity_log'dan hesaplanır, hiçbir şey dışarı gönderilmez
+export interface Achievement {
+  id: string
+  title: string
+  description: string
+  achieved: boolean
+}
+
 export interface BackupInfo {
   /** Yedek dosyasının adı, ör. asistan-2026-09-14.db */
   name: string
@@ -585,6 +623,12 @@ export interface Api {
   activity: {
     /** Son işlemler, en yenisi başta */
     list(limit?: number): Promise<ActivityEntry[]>
+  }
+  analytics: {
+    /** Analizler sayfası: son 180 günün kullanım istatistikleri */
+    usage(): Promise<UsageStats>
+    /** Başarımlar sayfası: kazanılan ve kazanılmamış rozetler */
+    achievements(): Promise<Achievement[]>
   }
   calendar: {
     /** Google Takvim etkinlikleri (ISO zaman aralığı, en fazla 62 gün); hesap bağlı değilse boş liste */

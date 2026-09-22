@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, Trophy } from 'lucide-react'
 import CommandPalette from './components/CommandPalette'
 import Sidebar from './components/Sidebar'
 import { PAGE_LABELS, type PageId } from './lib/pages'
@@ -10,7 +9,8 @@ import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
 import AutomationsPage from './pages/AutomationsPage'
-import ComingSoonPage from './pages/ComingSoonPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import AchievementsPage from './pages/AchievementsPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
@@ -105,30 +105,12 @@ function App(): React.JSX.Element {
           )}
           {page === 'analytics' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <ComingSoonPage
-                icon={BarChart3}
-                title="Analizler"
-                description="Asistan kullanımın hakkında istatistikler."
-                bullets={[
-                  'Tamamlanan görevler, en çok kullanılan araçlar',
-                  'Otomasyonların kazandırdığı tahmini süre',
-                  'Haftalık kullanım özeti'
-                ]}
-              />
+              <AnalyticsPage />
             </div>
           )}
           {page === 'achievements' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <ComingSoonPage
-                icon={Trophy}
-                title="Başarımlar"
-                description="Düzenli kullanım için küçük kutlamalar."
-                bullets={[
-                  '7 gün üst üste görev tamamlama gibi seriler',
-                  'İlk rutin, 100. komut gibi rozetler',
-                  'Tamamı yerel veriden hesaplanır, dışarı bir şey gitmez'
-                ]}
-              />
+              <AchievementsPage />
             </div>
           )}
           {page === 'settings' && (

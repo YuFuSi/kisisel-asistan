@@ -27,6 +27,10 @@ const api: Api = {
   activity: {
     list: (limit) => ipcRenderer.invoke('activity:list', limit)
   },
+  analytics: {
+    usage: () => ipcRenderer.invoke('analytics:usage'),
+    achievements: () => ipcRenderer.invoke('analytics:achievements')
+  },
   calendar: {
     events: (from, to) => ipcRenderer.invoke('calendar:events', from, to)
   },

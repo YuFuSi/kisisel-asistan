@@ -80,6 +80,14 @@ export function listActivity(limit = 20): ActivityEntry[] {
   return rows.map(toEntry)
 }
 
+/** Analizler ve Başarımlar sayfaları için: belirtilen zamandan yeni tüm kayıtlar */
+export function listActivitySince(since: number): ActivityEntry[] {
+  const rows = getDb()
+    .prepare('SELECT * FROM activity_log WHERE created_at >= ? ORDER BY created_at ASC')
+    .all(since) as ActivityRow[]
+  return rows.map(toEntry)
+}
+
 /** Verilen zamandan eski kayıtları siler, silinen kayıt sayısını döndürür */
 export function pruneActivity(olderThan: number): number {
   return getDb().prepare('DELETE FROM activity_log WHERE created_at < ?').run(olderThan).changes
