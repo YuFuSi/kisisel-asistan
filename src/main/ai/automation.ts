@@ -14,6 +14,12 @@ export interface AutomationTurnResult {
   text: string
   /** İzin yetersizliği nedeniyle atlanan araç çağrıları */
   skipped: { tool: string; label: string }[]
+  /**
+   * En az bir araç gerçekten çağrıldı mı. Küçük yerel modeller bazen hiç araç çağırmadan sadece
+   * "şunu yapacağım" diye bir plan yazıp duruyor; bu durumda iş aslında yapılmamış olur ama
+   * modelin özeti başarılı gibi görünebilir. Çağıran taraf bunu kullanıcıya açıkça belirtir.
+   */
+  usedTools: boolean
 }
 
 /**
@@ -30,6 +36,7 @@ export async function runAutomationTurn(
   const skipped: { tool: string; label: string }[] = []
   let text = ''
   let needsSeparator = false
+  let toolCallCount = 0
 
   await runWithToolContext({ conversationId, source: 'automation', allowance }, async () => {
     const instructions = await buildInstructions(prompt, '', 'automation')
@@ -53,6 +60,9 @@ export async function runAutomationTurn(
         case 'finish-step':
           needsSeparator = true
           break
+        case 'tool-call':
+          toolCallCount++
+          break
         case 'tool-error': {
           const reason = part.error instanceof Error ? part.error.message : String(part.error)
           if (part.error instanceof AutomationApprovalSkipped) {
@@ -67,5 +77,5 @@ export async function runAutomationTurn(
     }
   })
 
-  return { text: text.trim(), skipped }
+  return { text: text.trim(), skipped, usedTools: toolCallCount > 0 }
 }

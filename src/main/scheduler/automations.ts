@@ -53,6 +53,13 @@ export async function executeAutomation(automation: Automation): Promise<Automat
     const result = await runAutomationTurn(automation.prompt, automation.allowance, -automation.id)
     summary = result.text
     skippedTools = result.skipped
+    // Model hiç araç çağırmadan sadece bir plan/açıklama yazdıysa iş aslında yapılmamıştır;
+    // özeti başarılı gibi göstermek yanıltıcı olur, bunu en başa açıkça ekleriz.
+    if (!result.usedTools) {
+      summary = summary
+        ? `⚠ Hiçbir araç çalıştırmadı, sadece yazdı: ${summary}`
+        : '⚠ Hiçbir araç çalıştırmadı.'
+    }
   } catch (err) {
     status = 'error'
     summary = err instanceof Error ? err.message : String(err)
