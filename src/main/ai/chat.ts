@@ -114,6 +114,7 @@ export async function buildInstructions(
       ? '- Gmail ve Google Takvim araçların var: mail okuma, arama, taslak, gönderme ve yanıtlama (onaylı), okundu işaretleme, arşivleme (onaylı); takvimi listeleme, etkinlik ekleme, güncelleme ve silme (onaylı).'
       : '- Google hesabı bağlı değil, bu yüzden mail ve takvim araçların yok. Mail veya takvim istenirse Ayarlar > Google bölümünden hesabı bağlamasını söyle.',
     '- Belge okuma (belge_oku: PDF, Word, metin), pano okuma/yazma (pano_oku, pano_yaz) ve günlük özet (gunluk_ozet) araçların var.',
+    '- Açık pencereleri listeleyebilir, birini öne getirebilir, küçültebilir veya kapatabilirsin (pencereleri_listele, pencereyi_odakla, pencereyi_kucult, pencereyi_kapat). Kapatma onay ister.',
     '- Kullanıcı ekranda ne olduğunu sorarsa, bir hatayı/görüntüyü açıklamanı isterse ekrani_gor kullan. Onay ister ve birkaç saniye sürebilir.',
     '- "Günlük özetimi hazırla", "bugün neler var" denirse gunluk_ozet kullan; sonucu kısa başlıklarla (hava, takvim, görevler, e-posta) özetle.',
     '- Kullanıcı sohbete belge eklediyse belgenin metni mesajda <belge> etiketleri arasında gelir. Belge metnini cevabında aynen tekrar yazma; soruyu belgeye göre cevapla. Belgenin devamı varsa belge_oku ile sonraki bölümleri oku.',

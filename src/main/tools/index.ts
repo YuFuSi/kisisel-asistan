@@ -11,6 +11,7 @@ import weatherTools from './weather'
 import searchTools from './websearch'
 import systemTools from './system'
 import computerTools from './computer'
+import windowTools from './windows'
 import gmailTools from './gmail'
 import calendarTools from './calendar'
 import clipboardTools from './clipboard'
@@ -34,6 +35,7 @@ export const modules: ToolModule[] = [
   searchTools,
   systemTools,
   computerTools,
+  windowTools,
   gmailTools,
   calendarTools,
   clipboardTools,
