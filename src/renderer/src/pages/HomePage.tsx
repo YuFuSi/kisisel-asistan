@@ -43,6 +43,21 @@ const HAND_ORBIT_RADIUS_Y = 80
 const HAND_ORBIT_HOVER_DISTANCE = 65
 const HAND_GAIN_X = 640
 const HAND_GAIN_Y = 260
+// İki elle büyütme/küçültme: küre canvas'ı hep aynı boyutta kalır (yeniden çizim tetiklenmesin
+// diye), sadece CSS transform:scale ile görsel olarak büyür/küçülür — hem daha akıcı hem ucuz.
+// Eller arası normalize mesafe (0-1) bu aralığa göre ölçeğe eşlenir.
+const MIN_HAND_SPREAD = 0.15
+const MAX_HAND_SPREAD = 0.75
+const MIN_ORB_SCALE = 0.6
+const MAX_ORB_SCALE = 1.3
+
+function orbScaleFromSpread(spread: number): number {
+  const t = Math.min(
+    1,
+    Math.max(0, (spread - MIN_HAND_SPREAD) / (MAX_HAND_SPREAD - MIN_HAND_SPREAD))
+  )
+  return MIN_ORB_SCALE + t * (MAX_ORB_SCALE - MIN_ORB_SCALE)
+}
 
 interface HomePageProps {
   onNavigate: (page: PageId) => void
@@ -96,8 +111,10 @@ function HomePage({
     videoRef: handVideoRef,
     status: handStatus,
     pinching: handPinching,
-    handPoint
+    handPoint,
+    twoHandSpread
   } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
+  const orbScale = handControlOn && twoHandSpread !== null ? orbScaleFromSpread(twoHandSpread) : 1
   // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses
   useClapActivation(true, () => onHandControlChange(!handControlOn))
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -117,7 +134,7 @@ function HomePage({
         ? 'El kontrolü açılıyor...'
         : handStatus === 'error'
           ? 'El kontrolü hata verdi (iki alkışla kapat)'
-          : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç (kapatmak için iki alkış)'
+          : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç; iki elle küreyi büyüt/küçült (kapatmak için iki alkış)'
       : state === 'idle'
         ? voiceHint(voice)
         : running
@@ -233,7 +250,8 @@ function HomePage({
                 onClick={toggleVoiceSession}
                 aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-                className="animate-orb-in max-w-full cursor-pointer rounded-full focus-visible:outline-offset-[-24px]"
+                className="animate-orb-in max-w-full cursor-pointer rounded-full transition-transform duration-150 ease-out focus-visible:outline-offset-[-24px]"
+                style={{ transform: `scale(${orbScale})` }}
               >
                 <Orb
                   state={state}

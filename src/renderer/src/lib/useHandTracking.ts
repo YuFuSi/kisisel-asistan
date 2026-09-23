@@ -22,12 +22,23 @@ export interface HandTrackingResult {
   errorMessage: string
   pinching: boolean
   handPoint: HandPoint | null
+  /** İki el birden görünüyorsa aralarındaki normalize (0-1) mesafe; tek elde/elsizde null.
+   *  İki elle büyütme/küçültme jesti için — eller açılıp kapanınca değişir. */
+  twoHandSpread: number | null
 }
 
 function distance(a: HandPoint, b: HandPoint): number {
   const dx = a.x - b.x
   const dy = a.y - b.y
   return Math.sqrt(dx * dx + dy * dy)
+}
+
+// Ham kare-kare mesafe/konum titrek geliyor (MediaPipe'in kendi gürültüsü); üstel hareketli
+// ortalama (EMA) ile yumuşatılıyor. Alfa küçüldükçe daha yumuşak ama daha gecikmeli olur.
+const SPREAD_SMOOTHING = 0.15
+
+function smooth(previous: number | null, next: number, alpha: number): number {
+  return previous === null ? next : previous + (next - previous) * alpha
 }
 
 /** @param gainX/gainY Elin normalize (0-1) konumunu merkeze göre px'e çeviren kazanç */
@@ -41,6 +52,7 @@ export function useHandTracking(
   const [errorMessage, setErrorMessage] = useState('')
   const [pinching, setPinching] = useState(false)
   const [handPoint, setHandPoint] = useState<HandPoint | null>(null)
+  const [twoHandSpread, setTwoHandSpread] = useState<number | null>(null)
 
   useEffect(() => {
     if (!enabled) {
@@ -49,6 +61,7 @@ export function useHandTracking(
         setStatus('idle')
         setPinching(false)
         setHandPoint(null)
+        setTwoHandSpread(null)
       })
       return
     }
@@ -65,7 +78,7 @@ export function useHandTracking(
         const landmarker = await HandLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
           runningMode: 'VIDEO',
-          numHands: 1
+          numHands: 2
         })
         if (cancelled) return
 
@@ -80,18 +93,36 @@ export function useHandTracking(
         await video.play()
         setStatus('ready')
 
+        let smoothedSpread: number | null = null
+
         function loop(): void {
           if (cancelled || !video) return
           const result = landmarker.detectForVideo(video, performance.now())
           const hand = result.landmarks[0]
-          if (hand) {
+          const secondHand = result.landmarks[1]
+          if (secondHand) {
+            // İki el birden görünüyorsa yörünge hover/pinch'i devre dışı bırakılır (karışmasın);
+            // avuç içi merkezi (landmark 9) elin kendisi kadar sabit, parmak ucuna göre daha az titrek
+            setPinching(false)
+            setHandPoint(null)
+            smoothedSpread = smooth(
+              smoothedSpread,
+              distance(hand[9], secondHand[9]),
+              SPREAD_SMOOTHING
+            )
+            setTwoHandSpread(smoothedSpread)
+          } else if (hand) {
             setPinching(distance(hand[4], hand[8]) < PINCH_THRESHOLD)
             // MediaPipe koordinatı aynalanmamış ham görüntüye göre; kullanıcı ekranda kendini
             // aynalanmış görüyor, bu yüzden x ters çevrilip merkeze göre px'e çevriliyor
             setHandPoint({ x: (0.5 - hand[8].x) * gainX, y: (hand[8].y - 0.5) * gainY })
+            smoothedSpread = null
+            setTwoHandSpread(null)
           } else {
             setPinching(false)
             setHandPoint(null)
+            smoothedSpread = null
+            setTwoHandSpread(null)
           }
           rafId = requestAnimationFrame(loop)
         }
@@ -113,5 +144,5 @@ export function useHandTracking(
     }
   }, [enabled, gainX, gainY])
 
-  return { videoRef, status, errorMessage, pinching, handPoint }
+  return { videoRef, status, errorMessage, pinching, handPoint, twoHandSpread }
 }
