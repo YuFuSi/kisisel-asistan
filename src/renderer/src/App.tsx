@@ -21,6 +21,8 @@ import { noteNotification } from './lib/assistantState'
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('home')
   const [paletteOpen, setPaletteOpen] = useState(false)
+  // El ile kontrol açıkken sürükleyici (Iron Man tarzı) görünüm için sidebar gizlenir
+  const [handControlOn, setHandControlOn] = useState(false)
 
   // Ctrl+K (veya Cmd+K) her yerden komut paletini açar
   useEffect(() => {
@@ -73,11 +75,17 @@ function App(): React.JSX.Element {
       <TitleBar page={PAGE_LABELS[page]} />
 
       <div className="flex min-h-0 flex-1">
-        <Sidebar active={page} onSelect={setPage} />
+        {!handControlOn && <Sidebar active={page} onSelect={setPage} />}
         <main className="min-w-0 flex-1 bg-surface">
           {page === 'home' && (
             <div className="animate-fade h-full">
-              <HomePage onNavigate={setPage} onAsk={ask} onOpenConversation={openConversation} />
+              <HomePage
+                onNavigate={setPage}
+                onAsk={ask}
+                onOpenConversation={openConversation}
+                handControlOn={handControlOn}
+                onHandControlChange={setHandControlOn}
+              />
             </div>
           )}
           {/* Sohbet sayfası hep açık kalır; cevap yazılırken sayfa değiştirilse de akış kaybolmaz */}

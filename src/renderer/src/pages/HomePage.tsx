@@ -50,6 +50,9 @@ interface HomePageProps {
   onAsk: (text: string) => void
   /** Sesli sohbetin kaydedildiği sohbeti Asistan sayfasında açar */
   onOpenConversation: (conversationId: number) => void
+  /** El ile kontrol açık mı; App.tsx'te tutulur, açıkken sidebar gizlenir */
+  handControlOn: boolean
+  onHandControlChange: (on: boolean) => void
 }
 
 function voiceHint(voice: VoiceSnapshot): string {
@@ -70,7 +73,13 @@ function voiceHint(voice: VoiceSnapshot): string {
 
 // Jarvis ana ekranı: canlı arka plan, sahnedeki küre, çevresinde süzülen bilgi parçaları,
 // kişiye özel tek cümle, komut kutusu ve ince durum şeridi
-function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): React.JSX.Element {
+function HomePage({
+  onNavigate,
+  onAsk,
+  onOpenConversation,
+  handControlOn,
+  onHandControlChange
+}: HomePageProps): React.JSX.Element {
   const state = useAssistantState()
   const emotion = useAssistantEmotion()
   const steps = useWorkSteps()
@@ -83,7 +92,6 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const reminders = useLiveData(loadReminders, 'reminders').data
   const [excite, setExcite] = useState(0)
   const [dragging, setDragging] = useState(false)
-  const [handControlOn, setHandControlOn] = useState(false)
   const {
     videoRef: handVideoRef,
     status: handStatus,
@@ -91,7 +99,7 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
     handPoint
   } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
   // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses
-  useClapActivation(true, () => setHandControlOn((v) => !v))
+  useClapActivation(true, () => onHandControlChange(!handControlOn))
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const orbLayer = useRef<HTMLDivElement>(null)
   const tileLayer = useRef<HTMLDivElement>(null)
@@ -169,48 +177,54 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
       <div className="relative h-full overflow-y-auto" onPointerMove={handlePointerMove}>
         <div className="mx-auto flex min-h-full max-w-4xl flex-col items-center justify-center px-8 py-6">
           <div className="@container relative h-[440px] w-full">
-            <div
-              ref={tileLayer}
-              className="absolute inset-0 transition-transform duration-500 ease-out"
-            >
-              <FloatingTile
-                label="Şimdi"
-                value={clock}
-                detail={date}
-                className="top-[10%] left-0"
-                delayMs={200}
-              />
-              <FloatingTile
-                label="Sıradaki"
-                value={today?.next ? today.next.time : 'Boş'}
-                detail={today?.next ? today.next.label : 'Saatli iş yok'}
-                className="top-[10%] right-0"
-                delayMs={320}
-              />
-              <FloatingTile
-                label="Görevler"
-                value={today ? `${today.dueTasks} bugün` : '...'}
-                detail={today && today.overdue > 0 ? `${today.overdue} gecikti` : 'Yolunda'}
-                onClick={() => onNavigate('tasks')}
-                className="bottom-[14%] left-8"
-                delayMs={440}
-              />
-              <FloatingTile
-                label="Sistem"
-                value={
-                  battery ? `%${Math.round(battery.level * 100)}` : online ? 'Hazır' : 'Çevrimdışı'
-                }
-                detail={
-                  battery
-                    ? `${battery.charging ? 'Şarj oluyor' : 'Pil'} · ${online ? 'Çevrimiçi' : 'Çevrimdışı'}`
-                    : online
-                      ? 'Çevrimiçi'
-                      : 'İnternet yok'
-                }
-                className="right-8 bottom-[14%]"
-                delayMs={560}
-              />
-            </div>
+            {!handControlOn && (
+              <div
+                ref={tileLayer}
+                className="absolute inset-0 transition-transform duration-500 ease-out"
+              >
+                <FloatingTile
+                  label="Şimdi"
+                  value={clock}
+                  detail={date}
+                  className="top-[10%] left-0"
+                  delayMs={200}
+                />
+                <FloatingTile
+                  label="Sıradaki"
+                  value={today?.next ? today.next.time : 'Boş'}
+                  detail={today?.next ? today.next.label : 'Saatli iş yok'}
+                  className="top-[10%] right-0"
+                  delayMs={320}
+                />
+                <FloatingTile
+                  label="Görevler"
+                  value={today ? `${today.dueTasks} bugün` : '...'}
+                  detail={today && today.overdue > 0 ? `${today.overdue} gecikti` : 'Yolunda'}
+                  onClick={() => onNavigate('tasks')}
+                  className="bottom-[14%] left-8"
+                  delayMs={440}
+                />
+                <FloatingTile
+                  label="Sistem"
+                  value={
+                    battery
+                      ? `%${Math.round(battery.level * 100)}`
+                      : online
+                        ? 'Hazır'
+                        : 'Çevrimdışı'
+                  }
+                  detail={
+                    battery
+                      ? `${battery.charging ? 'Şarj oluyor' : 'Pil'} · ${online ? 'Çevrimiçi' : 'Çevrimdışı'}`
+                      : online
+                        ? 'Çevrimiçi'
+                        : 'İnternet yok'
+                  }
+                  className="right-8 bottom-[14%]"
+                  delayMs={560}
+                />
+              </div>
+            )}
             <div
               ref={orbLayer}
               className="absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-out"

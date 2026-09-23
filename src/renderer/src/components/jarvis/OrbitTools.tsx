@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, ListTodo, MessageSquare, Brain, type LucideIcon } from 'lucide-react'
+import {
+  BarChart3,
+  CalendarDays,
+  ListTodo,
+  MessageSquare,
+  Brain,
+  Settings,
+  Workflow,
+  type LucideIcon
+} from 'lucide-react'
 import type { PageId } from '../../lib/pages'
 
 // Tur O: küre etrafında yörüngede dönen araç ikonları.
@@ -17,7 +26,10 @@ const ITEMS: OrbitItem[] = [
   { page: 'tasks', icon: ListTodo, label: 'Görevler' },
   { page: 'notes', icon: Brain, label: 'Hafıza' },
   { page: 'calendar', icon: CalendarDays, label: 'Takvim' },
-  { page: 'chat', icon: MessageSquare, label: 'Asistan' }
+  { page: 'chat', icon: MessageSquare, label: 'Asistan' },
+  { page: 'automations', icon: Workflow, label: 'Otomasyonlar' },
+  { page: 'analytics', icon: BarChart3, label: 'Analizler' },
+  { page: 'settings', icon: Settings, label: 'Ayarlar' }
 ]
 
 const DEFAULT_RADIUS_X = 180

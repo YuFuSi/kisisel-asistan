@@ -6,8 +6,11 @@ import { useEffect, useRef } from 'react'
 // yavaş hareketli ortalaması (baseline) tutulur, bu ortalamanın kat kat üstüne çıkan ani bir
 // sıçrama "alkış" sayılır. Bu, mikrofonun giriş seviyesi düşük olan makinelerde de (bu projede
 // bilinen bir donanım sorunu) çalışır çünkü sabit bir ses seviyesine bağlı değil.
-const SPIKE_MULTIPLIER = 4
-const MIN_ABS_THRESHOLD = 0.01
+// Eşikler ilk denemede çok düşüktü (hafif "tık" sesleri bile tetikliyordu); gerçek bir alkışın
+// hem ortam gürültüsüne göre belirgin bir sıçrama olması hem de belirli bir mutlak yükseklikte
+// olması isteniyor. Hâlâ çok/az hassassa bu iki sabit ayarlanır.
+const SPIKE_MULTIPLIER = 8
+const MIN_ABS_THRESHOLD = 0.05
 const BASELINE_SMOOTHING = 0.02
 const CLAP_REFRACTORY_MS = 150
 const DOUBLE_CLAP_WINDOW_MS = 700
