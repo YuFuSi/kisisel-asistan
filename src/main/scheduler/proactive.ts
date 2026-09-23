@@ -19,7 +19,7 @@ import {
   type ProactiveNotification
 } from '../lib/proactive'
 import { getSettings, getStoredValue, setStoredValue } from '../settings'
-import { sendCommand, showMainWindow } from '../system/window'
+import { notifyPulse, sendCommand, showMainWindow } from '../system/window'
 
 // Otomasyon motorunu (Tur J) beklemeden sabit kurallar: uzun süredir bekleyen bir görev, unutulmuş
 // bir hatırlatma, sürekli büyüyen bir görev listesi veya indekslenmemiş kayıt birikmesi varsa
@@ -45,6 +45,7 @@ function showProactiveNudge(notification: ProactiveNotification, onClick: () => 
   })
   win.on('close', () => visibleNotifications.delete(win))
   win.show()
+  notifyPulse()
 }
 
 function checkStaleTasks(now: Date): void {

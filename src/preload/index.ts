@@ -27,6 +27,10 @@ const api: Api = {
   activity: {
     list: (limit) => ipcRenderer.invoke('activity:list', limit)
   },
+  analytics: {
+    usage: () => ipcRenderer.invoke('analytics:usage'),
+    achievements: () => ipcRenderer.invoke('analytics:achievements')
+  },
   calendar: {
     events: (from, to) => ipcRenderer.invoke('calendar:events', from, to)
   },
@@ -137,6 +141,10 @@ const api: Api = {
       ipcRenderer.on('app:command', handler)
       return () => ipcRenderer.removeListener('app:command', handler)
     }
+  },
+  hud: {
+    resize: (width, height) => ipcRenderer.invoke('hud:resize', width, height),
+    navigate: (page) => ipcRenderer.invoke('hud:navigate', page)
   }
 }
 

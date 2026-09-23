@@ -50,10 +50,10 @@ export function createMainWindow(options: { startHidden: boolean }): BrowserWind
     minHeight: 560,
     title: 'Jarvis',
     // Renkler main.css'teki --color-app ve --color-muted ile aynı
-    backgroundColor: '#040914',
+    backgroundColor: '#0b0c0f',
     // Kendi başlık çubuğumuzu çiziyoruz; kapat/küçült düğmelerini Windows çiziyor
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#040914', symbolColor: '#9aabcb', height: 40 },
+    titleBarOverlay: { color: '#0b0c0f', symbolColor: '#a0a6b4', height: 40 },
     show: false,
     autoHideMenuBar: true,
     icon,
@@ -114,6 +114,11 @@ export function showMainWindow(): void {
   window.show()
   window.moveTop()
   window.focus()
+}
+
+// Bir bildirim gösterildi: Ana Sayfa'daki küre kısa süre nabız atsın
+export function notifyPulse(): void {
+  sendCommand('notified')
 }
 
 // Tepsi menüsü veya kısayoldan gelen komutu arayüze ilet

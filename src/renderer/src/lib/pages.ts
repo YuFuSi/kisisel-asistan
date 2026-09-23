@@ -7,6 +7,7 @@ export type PageId =
   | 'automations'
   | 'analytics'
   | 'achievements'
+  | 'gestures'
   | 'settings'
 
 export const PAGE_LABELS: Record<PageId, string> = {
@@ -18,5 +19,6 @@ export const PAGE_LABELS: Record<PageId, string> = {
   automations: 'Otomasyonlar',
   analytics: 'Analizler',
   achievements: 'Başarımlar',
+  gestures: 'Kamera (deneme)',
   settings: 'Ayarlar'
 }

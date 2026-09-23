@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { app, shell } from 'electron'
 import { findApp, launchApp, listStartApps, suggestApps } from '../lib/apps'
 import { searchFiles } from '../lib/files'
+import { assertWithinRoot } from '../lib/safePath'
 import { requireApproval } from './approval'
 import type { ToolModule } from './types'
 
@@ -97,21 +98,23 @@ const computerTools: ToolModule = {
         const stat = await fs.stat(target).catch(() => null)
         if (!stat) throw new Error('Bu yolda bir dosya veya klasör bulunamadı.')
 
+        // path.relative ile gerçek alt yol kontrolü (salt "startsWith" kardeş klasöre kanar,
+        // ör. "C:\Users\ysfll2\..."); realpath symlink/junction ile kaçışı da engeller.
         const home = app.getPath('home')
-        if (!target.toLowerCase().startsWith(home.toLowerCase())) {
-          throw new Error('Güvenlik için sadece kullanıcı klasörünün içindeki dosyalar açılabilir.')
-        }
+        const safeMessage =
+          'Güvenlik için sadece kullanıcı klasörünün içindeki dosyalar açılabilir.'
+        const realTarget = await assertWithinRoot(home, target, safeMessage)
 
         await requireApproval({
           toolName: 'dosya_ac',
           label: stat.isDirectory() ? 'Klasör açılsın mı?' : 'Dosya açılsın mı?',
-          summary: basename(target),
-          details: target
+          summary: basename(realTarget),
+          details: realTarget
         })
 
-        const error = await shell.openPath(target)
+        const error = await shell.openPath(realTarget)
         if (error) throw new Error(`Açılamadı: ${error}`)
-        return { acildi: true, yol: target }
+        return { acildi: true, yol: realTarget }
       }
     })
   }

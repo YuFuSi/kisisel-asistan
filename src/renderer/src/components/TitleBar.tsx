@@ -1,13 +1,7 @@
-import {
-  BatteryCharging,
-  BatteryFull,
-  BatteryLow,
-  BatteryMedium,
-  Wifi,
-  WifiOff
-} from 'lucide-react'
+import { BatteryCharging, BatteryFull, BatteryLow, BatteryMedium } from 'lucide-react'
 import Logo from './jarvis/Logo'
-import { useBattery, useClock, useOnline, type BatteryInfo } from '../lib/deviceStatus'
+import SystemStatusIcons from './SystemStatusIcons'
+import { useBattery, useClock, type BatteryInfo } from '../lib/deviceStatus'
 
 interface TitleBarProps {
   /** O an açık olan sayfanın adı */
@@ -26,7 +20,6 @@ function BatteryIcon({ level, charging }: BatteryInfo): React.JSX.Element {
 // Kapat/küçült düğmeleri Windows tarafından sağ tarafa çizilir, o alan boş bırakılır.
 function TitleBar({ page }: TitleBarProps): React.JSX.Element {
   const now = useClock()
-  const online = useOnline()
   const battery = useBattery()
 
   return (
@@ -35,14 +28,12 @@ function TitleBar({ page }: TitleBarProps): React.JSX.Element {
       style={{ paddingRight: 150 }}
     >
       <Logo className="h-5 w-5" />
-      <span className="text-[13px] font-semibold tracking-[0.3em] text-ink">JARVIS</span>
-      <span className="text-faint">·</span>
+      <span className="text-sm font-semibold tracking-tight text-ink">Jarvis</span>
+      <span className="text-line-strong">/</span>
       <span className="min-w-0 truncate text-sm text-muted">{page}</span>
 
       <div className="ml-auto flex shrink-0 items-center gap-3 text-muted">
-        <span title={online ? 'İnternet bağlı' : 'İnternet bağlantısı yok'}>
-          {online ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4 text-caution" />}
-        </span>
+        <SystemStatusIcons />
         {battery && (
           <span
             className={`flex items-center gap-1 text-xs tabular-nums ${

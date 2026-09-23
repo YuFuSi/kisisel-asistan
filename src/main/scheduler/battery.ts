@@ -6,6 +6,7 @@ import {
   shouldWarnLowBattery,
   type BatteryReading
 } from '../lib/battery'
+import { notifyPulse } from '../system/window'
 
 // Otomasyon motorunun ikinci hazır senaryosu: zamana değil pil durumuna bağlı bir tetikleyici.
 // Sabah özetinden farklı olarak "günde bir kez" değil, "düşük pil bölümü başına bir kez" mantığı var:
@@ -43,6 +44,7 @@ async function check(): Promise<void> {
       body: `Pil %${Math.round(reading.percent)} kaldı. Şarja takmayı unutma.`,
       icon
     }).show()
+    notifyPulse()
   }
 }
 

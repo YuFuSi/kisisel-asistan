@@ -68,7 +68,16 @@ function writeValue(key: string, value: string): void {
 export function getSettings(): AppSettings {
   const raw = readValue(SETTINGS_KEY)
   if (!raw) return { ...defaults, models: { ...defaults.models } }
-  const saved = JSON.parse(raw) as Partial<AppSettings>
+  let saved: Partial<AppSettings>
+  try {
+    saved = JSON.parse(raw) as Partial<AppSettings>
+  } catch (err) {
+    // Bozuk JSON açılışı kilitlemesin: uygulama varsayılan ayarlarla devam eder. Bozuk değer,
+    // sonradan incelenebilsin diye ayrı bir anahtarda saklanır, üzerine yazılmaz.
+    console.error('Kayıtlı ayarlar okunamadı (bozuk JSON), varsayılanlara dönülüyor:', err)
+    writeValue(`app:corrupt:${Date.now()}`, raw)
+    return { ...defaults, models: { ...defaults.models } }
+  }
   return { ...defaults, ...saved, models: { ...defaults.models, ...saved.models } }
 }
 

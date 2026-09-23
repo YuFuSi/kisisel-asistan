@@ -43,7 +43,7 @@ function NewAutomationForm({ onCreate }: NewAutomationFormProps): React.JSX.Elem
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="glass-card space-y-3 p-4">
+    <form onSubmit={(e) => void submit(e)} className="card space-y-3 p-4">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}

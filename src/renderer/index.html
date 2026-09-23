@@ -4,9 +4,11 @@
     <meta charset="UTF-8" />
     <title>Jarvis</title>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- cdn.jsdelivr.net ve storage.googleapis.com: MediaPipe el takibi denemesi (Tur O, adım 1)
+         için geçici, model/wasm buradan indiriliyor. Özellik onaylanırsa self-host edilip kaldırılacak. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com blob:; worker-src 'self' blob:"
     />
   </head>
 

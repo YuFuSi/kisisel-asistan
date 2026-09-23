@@ -224,6 +224,21 @@ export function finishAutomationRun(
     .run(now, result.status, result.summary, JSON.stringify(result.skippedTools), runId)
 }
 
+/**
+ * Uygulama düzgün kapanmadıysa (çökme, zorla sonlandırma) `running` durumunda kalmış çalıştırma
+ * kayıtları olabilir; bunlar sonsuza kadar "çalışıyor" görünmesin diye açılışta hataya çevrilir.
+ * Silinen kayıt sayısı değil, güncellenen kayıt sayısı döner.
+ */
+export function interruptStaleRunningRuns(now = Date.now()): number {
+  return getDb()
+    .prepare(
+      `UPDATE automation_runs
+       SET status = 'error', summary = ?, finished_at = ?
+       WHERE status = 'running'`
+    )
+    .run('Uygulama kapanırken yarıda kaldı.', now).changes
+}
+
 export function listAutomationRuns(automationId: number): AutomationRun[] {
   const rows = getDb()
     .prepare('SELECT * FROM automation_runs WHERE automation_id = ? ORDER BY started_at DESC')

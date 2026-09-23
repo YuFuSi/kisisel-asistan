@@ -1,5 +1,7 @@
 // Mikrofon (giriş) ve Jarvis'in sesi (çıkış) için anlık ses seviyesi. Jarvis küresi buna göre titreşir.
 
+export const BAND_COUNT = 40
+
 type LevelSource = () => number
 export type LevelKind = 'input' | 'output'
 
@@ -33,4 +35,44 @@ export function analyserLevel(analyser: AnalyserNode): number {
     sum += value * value
   }
   return Math.min(1, Math.sqrt(sum / samples.length) * 4)
+}
+
+type SpectrumSource = () => number[]
+
+const spectrumSources: Record<LevelKind, Set<SpectrumSource>> = {
+  input: new Set(),
+  output: new Set()
+}
+
+/** Spektrum kaynağı ekler; dönen fonksiyon kaynağı kaldırır */
+export function registerSpectrum(kind: LevelKind, source: SpectrumSource): () => void {
+  spectrumSources[kind].add(source)
+  return () => {
+    spectrumSources[kind].delete(source)
+  }
+}
+
+/** Kayıtlı ilk kaynağın bantlanmış seviyeleri; kaynak yoksa sıfır dizisi */
+export function getAudioSpectrum(kind: LevelKind, bands: number): number[] {
+  for (const source of spectrumSources[kind]) return source()
+  return new Array(bands).fill(0)
+}
+
+/** Ham 0-255 frekans verisini `bands` sayıda 0-1 aralığına ortalanmış dilime böler; `data.length` `bands`'e bölünemezse sondaki kalanlar yok sayılır */
+export function binSpectrum(data: Uint8Array, bands: number): number[] {
+  const bandSize = Math.max(1, Math.floor(data.length / bands))
+  const result: number[] = []
+  for (let b = 0; b < bands; b++) {
+    let sum = 0
+    for (let i = 0; i < bandSize; i++) sum += data[b * bandSize + i] ?? 0
+    result.push(sum / bandSize / 255)
+  }
+  return result
+}
+
+/** AnalyserNode'un anlık frekans verisini bantlanmış seviyelere çevirir */
+export function analyserSpectrum(analyser: AnalyserNode, bands: number): number[] {
+  const data = new Uint8Array(analyser.frequencyBinCount)
+  analyser.getByteFrequencyData(data)
+  return binSpectrum(data, bands)
 }

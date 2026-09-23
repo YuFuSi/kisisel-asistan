@@ -41,6 +41,19 @@ describe('runAutomationTurn', () => {
     const result = await runAutomationTurn('Günümü özetle', 'write', -1)
     expect(result.text).toBe('Günlük özet: hava güneşli.')
     expect(result.skipped).toEqual([])
+    expect(result.usedTools).toBe(false)
+  })
+
+  it('en az bir araç çağrılırsa usedTools true döner', async () => {
+    mockStreamText.mockReturnValue({
+      stream: streamOf([
+        { type: 'tool-call', toolName: 'gorev_ekle', toolCallId: '1', input: {} },
+        { type: 'text-delta', text: 'Görev eklendi.' }
+      ])
+    } as never)
+
+    const result = await runAutomationTurn('görev ekle', 'write', -1)
+    expect(result.usedTools).toBe(true)
   })
 
   it('adım aralarında ayraç ekler', async () => {
@@ -89,6 +102,14 @@ describe('runAutomationTurn', () => {
 
     const result = await runAutomationTurn('dosya aç', 'all', -1)
     expect(result.skipped).toEqual([])
+  })
+
+  it('abort parçası gelirse zaman aşımı hatası fırlatır', async () => {
+    mockStreamText.mockReturnValue({
+      stream: streamOf([{ type: 'abort' }])
+    } as never)
+
+    await expect(runAutomationTurn('x', 'none', -1)).rejects.toThrow('dakika içinde bitirmedi')
   })
 
   it('stream hatası fırlatırsa yukarı düşer', async () => {

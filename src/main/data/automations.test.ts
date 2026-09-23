@@ -5,6 +5,7 @@ import {
   createAutomation,
   deleteAutomation,
   finishAutomationRun,
+  interruptStaleRunningRuns,
   listAutomationRuns,
   listAutomations,
   recordAutomationRunStart,
@@ -151,5 +152,28 @@ describe('automation run kaydı', () => {
 
     const [run] = listAutomationRuns(automation.id)
     expect(run.skippedTools).toEqual([{ tool: 'eposta_gonder', label: 'E-posta gönderme' }])
+  })
+})
+
+describe('interruptStaleRunningRuns', () => {
+  it('running durumundaki kaydı error yapar, bitmişleri değiştirmez', () => {
+    const automation = createAutomation({ name: 'Rutin', prompt: 'x', timeOfDay: '09:00' })
+    const stuckId = recordAutomationRunStart(automation.id, 1000)
+    const doneId = recordAutomationRunStart(automation.id, 2000)
+    finishAutomationRun(doneId, { status: 'done', summary: 'Tamam.', skippedTools: [] }, 2500)
+
+    const changed = interruptStaleRunningRuns(3000)
+    expect(changed).toBe(1)
+
+    const runs = listAutomationRuns(automation.id)
+    const stuck = runs.find((r) => r.id === stuckId)
+    const done = runs.find((r) => r.id === doneId)
+    expect(stuck).toMatchObject({ status: 'error', finishedAt: 3000 })
+    expect(stuck?.summary).toContain('yarıda kaldı')
+    expect(done).toMatchObject({ status: 'done', finishedAt: 2500, summary: 'Tamam.' })
+  })
+
+  it('running kaydı yoksa 0 döner', () => {
+    expect(interruptStaleRunningRuns()).toBe(0)
   })
 })

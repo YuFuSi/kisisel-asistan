@@ -2,8 +2,9 @@ import { app, globalShortcut, powerMonitor } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { closeDb } from './db'
+import { interruptStaleRunningRuns } from './data/automations'
 import { registerIpcHandlers } from './ipc'
-import { startAutomationScheduler } from './scheduler/automations'
+import { startAutomationScheduler, waitForActiveAutomations } from './scheduler/automations'
 import { startBatteryScheduler } from './scheduler/battery'
 import { startBriefScheduler } from './scheduler/brief'
 import { safeCheckpoint, startMaintenance } from './scheduler/maintenance'
@@ -84,6 +85,9 @@ if (!app.requestSingleInstanceLock()) {
       return
     }
     registerIpcHandlers()
+    // Önceki oturum otomasyon çalıştırırken kapandıysa (çökme, zorla kapatma) "running" kaydı
+    // sonsuza kadar öyle görünmesin
+    interruptStaleRunningRuns()
 
     const settings = getSettings()
     // Windows açılışında başlatıldıysa pencere gösterilmez, tepside bekler
@@ -138,18 +142,31 @@ if (!app.requestSingleInstanceLock()) {
   // Buraya sadece "kapatınca tepside kal" kapalıyken veya çıkış sırasında gelinir
   app.on('window-all-closed', () => app.quit())
 
-  app.on('will-quit', () => {
-    disposeGlobalShortcut()
-    disposeHud()
-    destroyTray()
-    stopReminderScheduler?.()
-    stopBriefScheduler?.()
-    stopMaintenance?.()
-    stopProactiveScheduler?.()
-    stopBatteryScheduler?.()
-    stopAutomationScheduler?.()
-    // Arka plandaki whisper ve Piper programları da kapansın
-    disposeVoiceSession()
-    closeDb()
+  // Kapanış sırasında devam eden bir otomasyon olabilir (model çağrısı dakikalar sürebilir);
+  // closeDb()'den önce bitmesi (en fazla belirli bir süre) beklenir, yoksa yarım kalan çalıştırma
+  // kapanmış veritabanına yazmaya çalışır. will-quit varsayılan olarak beklemeyi desteklemediği
+  // için ilk seferinde engellenip asıl kapanış asenkron işler bitince tekrar tetiklenir.
+  const AUTOMATION_SHUTDOWN_WAIT_MS = 15_000
+  let quitting = false
+  app.on('will-quit', (event) => {
+    if (quitting) return
+    quitting = true
+    event.preventDefault()
+    ;(async () => {
+      disposeGlobalShortcut()
+      disposeHud()
+      destroyTray()
+      stopReminderScheduler?.()
+      stopBriefScheduler?.()
+      stopMaintenance?.()
+      stopProactiveScheduler?.()
+      stopBatteryScheduler?.()
+      stopAutomationScheduler?.()
+      await waitForActiveAutomations(AUTOMATION_SHUTDOWN_WAIT_MS)
+      // Arka plandaki whisper ve Piper programları da kapansın
+      disposeVoiceSession()
+      closeDb()
+      app.quit()
+    })()
   })
 }

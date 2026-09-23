@@ -32,7 +32,7 @@ function AutomationItem({
   }
 
   return (
-    <li className="glass-card overflow-hidden">
+    <li className="card overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3">
         <Toggle
           label={automation.enabled ? 'Rutini kapat' : 'Rutini aç'}

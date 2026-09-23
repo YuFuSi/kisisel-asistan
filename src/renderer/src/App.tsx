@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, Trophy } from 'lucide-react'
+import CommandPalette from './components/CommandPalette'
 import Sidebar from './components/Sidebar'
 import { PAGE_LABELS, type PageId } from './lib/pages'
 import TitleBar from './components/TitleBar'
@@ -9,14 +9,32 @@ import TasksPage from './pages/TasksPage'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
 import AutomationsPage from './pages/AutomationsPage'
-import ComingSoonPage from './pages/ComingSoonPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import AchievementsPage from './pages/AchievementsPage'
+import GesturesPage from './pages/GesturesPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
 import { initVoiceClient } from './lib/voiceClient'
+import { noteNotification } from './lib/assistantState'
 
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('home')
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  // El ile kontrol açıkken sürükleyici (Iron Man tarzı) görünüm için sidebar gizlenir
+  const [handControlOn, setHandControlOn] = useState(false)
+
+  // Ctrl+K (veya Cmd+K) her yerden komut paletini açar
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   // Jarvis sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
   useEffect(() => initVoiceClient(), [])
@@ -24,12 +42,20 @@ function App(): React.JSX.Element {
   // Global kısayol, tepsi menüsü veya bir bildirime tıklanınca gelen komutlar
   useEffect(() => {
     return window.api.events.onCommand((command) => {
+      if (command === 'notified') {
+        noteNotification()
+        return
+      }
       if (command === 'open-tasks') {
         setPage('tasks')
         return
       }
       if (command === 'open-automations') {
         setPage('automations')
+        return
+      }
+      if (command.startsWith('open-page:')) {
+        setPage(command.slice('open-page:'.length) as PageId)
         return
       }
       setPage('chat')
@@ -53,11 +79,17 @@ function App(): React.JSX.Element {
       <TitleBar page={PAGE_LABELS[page]} />
 
       <div className="flex min-h-0 flex-1">
-        <Sidebar active={page} onSelect={setPage} />
+        {!handControlOn && <Sidebar active={page} onSelect={setPage} />}
         <main className="min-w-0 flex-1 bg-surface">
           {page === 'home' && (
             <div className="animate-fade h-full">
-              <HomePage onNavigate={setPage} onAsk={ask} onOpenConversation={openConversation} />
+              <HomePage
+                onNavigate={setPage}
+                onAsk={ask}
+                onOpenConversation={openConversation}
+                handControlOn={handControlOn}
+                onHandControlChange={setHandControlOn}
+              />
             </div>
           )}
           {/* Sohbet sayfası hep açık kalır; cevap yazılırken sayfa değiştirilse de akış kaybolmaz */}
@@ -86,30 +118,17 @@ function App(): React.JSX.Element {
           )}
           {page === 'analytics' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <ComingSoonPage
-                icon={BarChart3}
-                title="Analizler"
-                description="Asistan kullanımın hakkında istatistikler."
-                bullets={[
-                  'Tamamlanan görevler, en çok kullanılan araçlar',
-                  'Otomasyonların kazandırdığı tahmini süre',
-                  'Haftalık kullanım özeti'
-                ]}
-              />
+              <AnalyticsPage />
             </div>
           )}
           {page === 'achievements' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <ComingSoonPage
-                icon={Trophy}
-                title="Başarımlar"
-                description="Düzenli kullanım için küçük kutlamalar."
-                bullets={[
-                  '7 gün üst üste görev tamamlama gibi seriler',
-                  'İlk rutin, 100. komut gibi rozetler',
-                  'Tamamı yerel veriden hesaplanır, dışarı bir şey gitmez'
-                ]}
-              />
+              <AchievementsPage />
+            </div>
+          )}
+          {page === 'gestures' && (
+            <div className="animate-fade h-full overflow-y-auto">
+              <GesturesPage onNavigate={setPage} />
             </div>
           )}
           {page === 'settings' && (
@@ -119,6 +138,14 @@ function App(): React.JSX.Element {
           )}
         </main>
       </div>
+
+      {paletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          currentPage={page}
+          onNavigate={setPage}
+        />
+      )}
     </div>
   )
 }

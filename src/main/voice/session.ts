@@ -21,7 +21,7 @@ import {
 import { VAD_FRAME_SAMPLES } from './vad'
 import { WAKE_CHUNK_SAMPLES } from './wakeword'
 import { plainForSpeech } from '../../shared/speechText'
-import { encodeWav } from '../../shared/wav'
+import { encodeWav, normalizeGain } from '../../shared/wav'
 import type { VoiceEvent, VoicePhase, VoiceState } from '../../shared/api'
 
 // Sesli sohbet: "hey jarvis" → dinle → yazıya çevir → asistana sor → cümle cümle seslendir → yeniden dinle.
@@ -252,7 +252,7 @@ async function finishCapture(audio: Float32Array): Promise<void> {
   queue.length = 0
   let text: string
   try {
-    text = await transcribeAudio(encodeWav(audio, 16000), 'audio/wav')
+    text = await transcribeAudio(encodeWav(normalizeGain(audio), 16000), 'audio/wav')
   } catch (err) {
     const message = errorText(err)
     const notUnderstood = message.includes('anlaşılamadı')

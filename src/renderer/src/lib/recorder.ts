@@ -1,8 +1,14 @@
 // Mikrofon kaydı (sohbet kutusundaki mikrofon düğmesi). Kayıt bitince ses 16 kHz WAV'a çevrilip
 // ana sürece gönderilir; yerel konuşma tanıma (whisper.cpp) bu biçimi ister, bulut servisleri de kabul eder.
 import { setListening } from './assistantState'
-import { analyserLevel, registerLevel } from './audioLevel'
-import { encodeWav, resample } from '../../../shared/wav'
+import {
+  analyserLevel,
+  analyserSpectrum,
+  registerLevel,
+  registerSpectrum,
+  BAND_COUNT
+} from './audioLevel'
+import { encodeWav, normalizeGain, resample } from '../../../shared/wav'
 
 export interface Recording {
   /** Kaydı bitirir ve 16 kHz WAV sesini döndürür */
@@ -34,7 +40,7 @@ async function toWav(blob: Blob): Promise<ArrayBuffer> {
       const data = decoded.getChannelData(channel)
       for (let i = 0; i < data.length; i++) mono[i] += data[i] / decoded.numberOfChannels
     }
-    return encodeWav(resample(mono, decoded.sampleRate, TARGET_RATE), TARGET_RATE)
+    return encodeWav(normalizeGain(resample(mono, decoded.sampleRate, TARGET_RATE)), TARGET_RATE)
   } finally {
     void context.close()
   }
@@ -64,11 +70,13 @@ export async function startRecording(): Promise<Recording> {
   analyser.fftSize = 512
   audioContext.createMediaStreamSource(stream).connect(analyser)
   const unregisterLevel = registerLevel('input', () => analyserLevel(analyser))
+  const unregisterSpectrum = registerSpectrum('input', () => analyserSpectrum(analyser, BAND_COUNT))
   setListening(true)
 
   const releaseMicrophone = (): void => {
     stream.getTracks().forEach((track) => track.stop())
     unregisterLevel()
+    unregisterSpectrum()
     void audioContext.close()
     setListening(false)
   }

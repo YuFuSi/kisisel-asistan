@@ -2,7 +2,7 @@ import { Notification } from 'electron'
 import icon from '../../../resources/icon.png?asset'
 import { takeDueReminders } from '../data/reminders'
 import { notifyDataChanged } from '../events'
-import { showMainWindow } from '../system/window'
+import { notifyPulse, showMainWindow } from '../system/window'
 import type { Reminder } from '../../shared/api'
 
 const CHECK_INTERVAL_MS = 15_000
@@ -35,6 +35,7 @@ function showReminder(reminder: Reminder, now: number): void {
   })
   notification.on('close', release)
   notification.show()
+  notifyPulse()
 }
 
 // Zamanı gelen hatırlatmaları düzenli aralıklarla kontrol edip Windows bildirimi gösterir.

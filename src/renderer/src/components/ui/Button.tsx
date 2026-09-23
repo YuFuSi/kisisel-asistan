@@ -13,15 +13,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-white shadow-sm hover:bg-accent-hover',
-  secondary: 'border border-line bg-elevated text-ink hover:border-line-strong hover:bg-line/40',
-  ghost: 'text-muted hover:bg-line/40 hover:text-ink',
-  danger: 'bg-negative/90 text-white hover:bg-negative'
+  primary: 'bg-accent text-app hover:bg-accent-hover',
+  secondary:
+    'border border-line bg-transparent text-ink hover:border-line-strong hover:bg-elevated',
+  ghost: 'text-muted hover:bg-elevated hover:text-ink',
+  danger: 'bg-negative/90 text-app hover:bg-negative'
 }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: 'gap-1.5 rounded-md px-3 py-1.5 text-xs',
-  md: 'gap-2 rounded-lg px-4 py-2 text-sm'
+  sm: 'gap-1.5 rounded-lg px-3 py-1.5 text-xs',
+  md: 'gap-2 rounded-[10px] px-4 py-2 text-sm'
 }
 
 const ICON_SIZE_CLASS: Record<ButtonSize, string> = {

@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Activity, Archive, Cpu, HardDrive, Mail, Mic, Wifi, type LucideIcon } from 'lucide-react'
+import { Archive, Cpu, HardDrive, Mail, Mic, Wifi, type LucideIcon } from 'lucide-react'
 import type { SystemStatus } from '@shared/api'
-import HomeCard from './HomeCard'
-import { StatusDot } from '../ui/Badge'
-import Tooltip from '../ui/Tooltip'
-import { formatReminderTime } from '../../lib/dates'
-import { useClock, useMicrophoneAvailable, useOnline } from '../../lib/deviceStatus'
-import { LEVEL_TEXT_CLASS, type Level } from '../../lib/statusLevel'
+import Tooltip from './ui/Tooltip'
+import { formatReminderTime } from '../lib/dates'
+import { useClock, useMicrophoneAvailable, useOnline } from '../lib/deviceStatus'
+import { type Level } from '../lib/statusLevel'
 
 // Model ve disk bilgisi bu aralıkla yenilenir
 const REFRESH_MS = 60_000
@@ -20,6 +18,15 @@ interface Row {
   title?: string
 }
 
+// Her şey yolundayken simgeler sessiz kalır, sorun olunca renklenir
+const ICON_CLASS: Record<Level, string> = {
+  ok: 'text-faint hover:text-muted',
+  warn: 'text-caution',
+  bad: 'text-negative',
+  active: 'text-accent',
+  unknown: 'text-faint'
+}
+
 const formatGb = (bytes: number): string => `${Math.round(bytes / 1024 ** 3)} GB`
 
 function diskLevel(disk: { free: number; total: number }): Level {
@@ -28,8 +35,8 @@ function diskLevel(disk: { free: number; total: number }): Level {
   return ratio < 0.1 ? 'warn' : 'ok'
 }
 
-// Jarvis'in çalışması için gereken parçaların durumu
-function SystemStatusCard(): React.JSX.Element {
+// Jarvis'in çalışması için gereken parçaların durumu: başlık çubuğunda sadece simge; sorun varsa renklenir
+function SystemStatusIcons(): React.JSX.Element {
   const [status, setStatus] = useState<SystemStatus | null>(null)
   const online = useOnline()
   const microphone = useMicrophoneAvailable()
@@ -108,32 +115,21 @@ function SystemStatusCard(): React.JSX.Element {
   ]
 
   return (
-    <HomeCard title="Sistem durumu" icon={Activity}>
-      <ul className="space-y-2.5">
-        {rows.map(({ icon: Icon, label, value, level, title }) => {
-          const labelRow = (
-            <>
-              <Icon className="h-4 w-4 shrink-0 text-muted" />
-              <span className="min-w-0 flex-1 truncate text-ink">{label}</span>
-            </>
-          )
-          return (
-            <li key={label} className="flex items-center gap-3 text-sm">
-              {title ? (
-                <Tooltip content={title} side="bottom">
-                  <span className="flex min-w-0 flex-1 items-center gap-3">{labelRow}</span>
-                </Tooltip>
-              ) : (
-                labelRow
-              )}
-              <span className={`truncate text-xs ${LEVEL_TEXT_CLASS[level]}`}>{value}</span>
-              <StatusDot level={level} />
-            </li>
-          )
-        })}
-      </ul>
-    </HomeCard>
+    <ul className="flex items-center gap-0.5">
+      {rows.map(({ icon: Icon, label, value, level, title }) => (
+        <li key={label}>
+          <Tooltip content={title ?? `${label}: ${value}`} side="bottom">
+            <span
+              className={`no-drag flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-elevated ${ICON_CLASS[level]}`}
+              aria-label={`${label}: ${value}`}
+            >
+              <Icon className="h-4 w-4" />
+            </span>
+          </Tooltip>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-export default SystemStatusCard
+export default SystemStatusIcons
