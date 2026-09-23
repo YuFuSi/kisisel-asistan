@@ -11,6 +11,7 @@ import NotesPage from './pages/NotesPage'
 import AutomationsPage from './pages/AutomationsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import AchievementsPage from './pages/AchievementsPage'
+import GesturesPage from './pages/GesturesPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
@@ -111,6 +112,11 @@ function App(): React.JSX.Element {
           {page === 'achievements' && (
             <div className="animate-fade h-full overflow-y-auto">
               <AchievementsPage />
+            </div>
+          )}
+          {page === 'gestures' && (
+            <div className="animate-fade h-full overflow-y-auto">
+              <GesturesPage />
             </div>
           )}
           {page === 'settings' && (

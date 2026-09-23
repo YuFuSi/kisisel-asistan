@@ -4,6 +4,7 @@ import {
   Brain,
   CalendarDays,
   Clock,
+  Hand,
   House,
   ListTodo,
   MessageSquare,
@@ -34,6 +35,7 @@ const ITEMS: { id: PageId; icon: LucideIcon }[] = [
   { id: 'automations', icon: Workflow },
   { id: 'analytics', icon: BarChart3 },
   { id: 'achievements', icon: Trophy },
+  { id: 'gestures', icon: Hand },
   { id: 'settings', icon: Settings }
 ]
 

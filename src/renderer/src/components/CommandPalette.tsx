@@ -4,6 +4,7 @@ import {
   BarChart3,
   Brain,
   CalendarDays,
+  Hand,
   House,
   ListTodo,
   MessageSquare,
@@ -29,6 +30,7 @@ const PAGE_ICONS: Record<PageId, LucideIcon> = {
   automations: Workflow,
   analytics: BarChart3,
   achievements: Trophy,
+  gestures: Hand,
   settings: Settings
 }
 

@@ -26,6 +26,7 @@
     "@ai-sdk/google": "^4.0.67",
     "@ai-sdk/openai": "^4.0.65",
     "@electron-toolkit/utils": "^4.0.0",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "ai": "^7.0.97",
     "better-sqlite3": "^13.0.3",
     "electron-log": "^5.4.4",
