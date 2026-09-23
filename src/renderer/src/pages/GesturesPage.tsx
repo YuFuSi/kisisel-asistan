@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Orb from '../components/jarvis/Orb'
 import OrbitTools from '../components/jarvis/OrbitTools'
+import type { PageId } from '../lib/pages'
 
 // Deneme sayfası (Tur O, adım 1): MediaPipe el takibinin bizim Electron/React
 // ortamında çalışıp çalışmadığını görmek için izole bir prototip. Hiçbir gerçek
@@ -26,7 +27,11 @@ function distance(a: { x: number; y: number }, b: { x: number; y: number }): num
   return Math.sqrt(dx * dx + dy * dy)
 }
 
-export default function GesturesPage(): React.JSX.Element {
+interface GesturesPageProps {
+  onNavigate: (page: PageId) => void
+}
+
+export default function GesturesPage({ onNavigate }: GesturesPageProps): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [status, setStatus] = useState<Status>('loading')
   const [errorMessage, setErrorMessage] = useState('')
@@ -125,11 +130,11 @@ export default function GesturesPage(): React.JSX.Element {
       </div>
 
       <div className="flex flex-col items-center gap-3 border-l border-line pl-10">
-        <h2 className="text-sm font-medium text-ink">Yörünge denemesi (adım 2: el ile hover)</h2>
+        <h2 className="text-sm font-medium text-ink">Yörünge denemesi (adım 3: pinch ile seç)</h2>
         <div className="relative flex items-center justify-center">
           <Orb state="idle" size={140} />
           <div className="pointer-events-none absolute">
-            <OrbitTools handPoint={handPoint} />
+            <OrbitTools handPoint={handPoint} pinching={pinching} onSelect={onNavigate} />
           </div>
         </div>
       </div>

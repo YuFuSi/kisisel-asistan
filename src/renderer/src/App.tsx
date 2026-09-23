@@ -116,7 +116,7 @@ function App(): React.JSX.Element {
           )}
           {page === 'gestures' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <GesturesPage />
+              <GesturesPage onNavigate={setPage} />
             </div>
           )}
           {page === 'settings' && (

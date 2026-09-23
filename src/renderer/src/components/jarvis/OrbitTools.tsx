@@ -1,21 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, ListTodo, MessageSquare, Brain, type LucideIcon } from 'lucide-react'
+import type { PageId } from '../../lib/pages'
 
 // Tur O: küre etrafında yörüngede dönen araç ikonları.
 // Adım 1: sadece görsel (eğik elips yörünge, derinlik hissi).
-// Adım 2: elin konumu (handPoint, merkeze göre px) yörüngedeki nesnelerle karşılaştırılıp
-// yaklaşınca "hover" (büyüme + parlama) verilir. Henüz tıklama/seçme yok.
+// Adım 2: elin konumu (handPoint) yörüngedeki nesnelerle karşılaştırılıp yaklaşınca hover verilir.
+// Adım 3: hover'dayken pinch yapılırsa o nesnenin gerçek sayfasına geçilir (onSelect).
 
 interface OrbitItem {
+  page: PageId
   icon: LucideIcon
   label: string
 }
 
 const ITEMS: OrbitItem[] = [
-  { icon: ListTodo, label: 'Görevler' },
-  { icon: Brain, label: 'Hafıza' },
-  { icon: CalendarDays, label: 'Takvim' },
-  { icon: MessageSquare, label: 'Asistan' }
+  { page: 'tasks', icon: ListTodo, label: 'Görevler' },
+  { page: 'notes', icon: Brain, label: 'Hafıza' },
+  { page: 'calendar', icon: CalendarDays, label: 'Takvim' },
+  { page: 'chat', icon: MessageSquare, label: 'Asistan' }
 ]
 
 const RADIUS_X = 180
@@ -23,15 +25,43 @@ const RADIUS_Y = 60
 const DEGREES_PER_SECOND = 18
 const HOVER_DISTANCE = 55
 
+interface ItemLayout {
+  item: OrbitItem
+  x: number
+  y: number
+  depth: number
+  hovered: boolean
+}
+
+function layoutItems(angle: number, handPoint?: { x: number; y: number } | null): ItemLayout[] {
+  return ITEMS.map((item, index) => {
+    const itemAngle = ((angle + index * (360 / ITEMS.length)) * Math.PI) / 180
+    const x = Math.cos(itemAngle) * RADIUS_X
+    const y = Math.sin(itemAngle) * RADIUS_Y
+    // Öndeyken (sin > 0) büyük ve parlak, arkadayken küçük ve soluk: derinlik hissi
+    const depth = (Math.sin(itemAngle) + 1) / 2
+    const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < HOVER_DISTANCE
+    return { item, x, y, depth, hovered }
+  })
+}
+
 interface OrbitToolsProps {
   /** Elin merkeze göre px konumu (mirror düzeltilmiş); yoksa hiçbir nesne hover olmaz */
   handPoint?: { x: number; y: number } | null
+  /** Pinch yapılan anda true olur; hover'daki nesne varsa onSelect ile bildirilir */
+  pinching?: boolean
+  onSelect?: (page: PageId) => void
 }
 
-export default function OrbitTools({ handPoint }: OrbitToolsProps): React.JSX.Element {
+export default function OrbitTools({
+  handPoint,
+  pinching = false,
+  onSelect
+}: OrbitToolsProps): React.JSX.Element {
   const [angle, setAngle] = useState(0)
   const rafRef = useRef(0)
   const lastRef = useRef(0)
+  const wasPinching = useRef(false)
 
   useEffect(() => {
     function tick(now: number): void {
@@ -45,15 +75,21 @@ export default function OrbitTools({ handPoint }: OrbitToolsProps): React.JSX.El
     return () => cancelAnimationFrame(rafRef.current)
   }, [])
 
+  const layout = layoutItems(angle, handPoint)
+  const hoveredPage = layout.find((l) => l.hovered)?.item.page ?? null
+
+  // Pinch'in "başladığı" an (false -> true geçişi) hover'daki nesneyi seçer; basılı tutmak
+  // tekrar tekrar tetiklemesin diye kenar (edge) algılanıyor
+  useEffect(() => {
+    if (pinching && !wasPinching.current && hoveredPage) {
+      onSelect?.(hoveredPage)
+    }
+    wasPinching.current = pinching
+  }, [pinching, hoveredPage, onSelect])
+
   return (
     <div className="relative h-[260px] w-[420px]">
-      {ITEMS.map((item, index) => {
-        const itemAngle = ((angle + index * (360 / ITEMS.length)) * Math.PI) / 180
-        const x = Math.cos(itemAngle) * RADIUS_X
-        const y = Math.sin(itemAngle) * RADIUS_Y
-        // Öndeyken (sin > 0) büyük ve parlak, arkadayken küçük ve soluk: derinlik hissi
-        const depth = (Math.sin(itemAngle) + 1) / 2
-        const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < HOVER_DISTANCE
+      {layout.map(({ item, x, y, depth, hovered }) => {
         const scale = (0.7 + depth * 0.5) * (hovered ? 1.25 : 1)
         const opacity = hovered ? 1 : 0.4 + depth * 0.6
         const Icon = item.icon
@@ -83,7 +119,10 @@ export default function OrbitTools({ handPoint }: OrbitToolsProps): React.JSX.El
       })}
       {handPoint && (
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-3 rounded-full bg-accent"
+          className={
+            'pointer-events-none absolute left-1/2 top-1/2 h-3 w-3 rounded-full transition-colors ' +
+            (pinching ? 'bg-positive' : 'bg-accent')
+          }
           style={{
             transform: `translate(-50%, -50%) translate(${handPoint.x}px, ${handPoint.y}px)`
           }}
