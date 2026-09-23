@@ -1,4 +1,4 @@
-import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -39,7 +39,10 @@ describe('assertWithinRoot', () => {
     await writeFile(inside, 'merhaba')
 
     const result = await assertWithinRoot(dir, inside, 'reddedildi')
-    expect(result.toLowerCase()).toBe(inside.toLowerCase())
+    // Beklenen taraf da realpath'ten geçirilir: Windows bazı makinelerde/CI çalıştırıcılarında
+    // kısa (8.3, "RUNNER~1") ad döndürebiliyor, bazılarında döndürmüyor — ikisi de aynı normalize
+    // biçimden geçince karşılaştırma tutarlı olur.
+    expect(result.toLowerCase()).toBe((await realpath(inside)).toLowerCase())
   })
 
   it('var olmayan dosyada hata fırlatır', async () => {
