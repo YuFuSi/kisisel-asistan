@@ -7,6 +7,8 @@ import { backupDirectory, createBackupNow, restoreBackup } from './system/databa
 import { logRendererError, openLogDirectory } from './system/logger'
 import { getSystemStatus } from './system/status'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
+import { resizeHud } from './system/hud'
+import { sendCommand, showMainWindow } from './system/window'
 import {
   getVoiceState,
   pushVoiceAudio,
@@ -115,6 +117,13 @@ export function registerIpcHandlers(): void {
   // Cevap beklenmez; arayüzdeki hata sadece günlüğe yazılır
   ipcMain.on('app:logError', (_event, message: string) => logRendererError(message))
   ipcMain.handle('app:openLogs', () => openLogDirectory())
+
+  // HUD: el ile kontrol açılınca büyür, yörüngeden bir araç seçilince ana pencere o sayfayı açar
+  ipcMain.handle('hud:resize', (_event, width: number, height: number) => resizeHud(width, height))
+  ipcMain.handle('hud:navigate', (_event, page: string) => {
+    showMainWindow()
+    sendCommand(`open-page:${page}`)
+  })
 
   // Yedekler ve etkinlik kaydı
   ipcMain.handle('backups:list', () => listBackups(backupDirectory()))

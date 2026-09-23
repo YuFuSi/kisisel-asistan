@@ -54,6 +54,10 @@ function App(): React.JSX.Element {
         setPage('automations')
         return
       }
+      if (command.startsWith('open-page:')) {
+        setPage(command.slice('open-page:'.length) as PageId)
+        return
+      }
       setPage('chat')
       focusComposer()
     })

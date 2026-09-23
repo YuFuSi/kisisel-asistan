@@ -141,6 +141,10 @@ const api: Api = {
       ipcRenderer.on('app:command', handler)
       return () => ipcRenderer.removeListener('app:command', handler)
     }
+  },
+  hud: {
+    resize: (width, height) => ipcRenderer.invoke('hud:resize', width, height),
+    navigate: (page) => ipcRenderer.invoke('hud:navigate', page)
   }
 }
 

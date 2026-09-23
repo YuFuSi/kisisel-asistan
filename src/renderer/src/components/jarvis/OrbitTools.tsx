@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Brain,
   Settings,
+  Trophy,
   Workflow,
   type LucideIcon
 } from 'lucide-react'
@@ -29,6 +30,7 @@ const ITEMS: OrbitItem[] = [
   { page: 'chat', icon: MessageSquare, label: 'Asistan' },
   { page: 'automations', icon: Workflow, label: 'Otomasyonlar' },
   { page: 'analytics', icon: BarChart3, label: 'Analizler' },
+  { page: 'achievements', icon: Trophy, label: 'Başarımlar' },
   { page: 'settings', icon: Settings, label: 'Ayarlar' }
 ]
 

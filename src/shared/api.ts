@@ -587,8 +587,15 @@ export interface GoogleStatus {
 
 // daily-brief: sabah özeti bildirimine tıklanınca yeni sohbette özet istenir
 // open-automations: bir otomasyon bildirimine tıklanınca Otomasyonlar sayfası açılır
+// open-page:<sayfa>: HUD'daki el ile kontrol yörüngesinden bir araç seçilince o sayfa açılır
 export type AppCommand =
-  'focus-chat' | 'new-chat' | 'daily-brief' | 'open-tasks' | 'open-automations' | 'notified'
+  | 'focus-chat'
+  | 'new-chat'
+  | 'daily-brief'
+  | 'open-tasks'
+  | 'open-automations'
+  | 'notified'
+  | `open-page:${string}`
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
 /** Sohbete eklenen belgenin okunan ilk parçası */
@@ -765,5 +772,11 @@ export interface Api {
     onDataChanged(listener: (scope: DataScope) => void): () => void
     /** Tepsi menüsü veya global kısayoldan gelen komutlar */
     onCommand(listener: (command: AppCommand) => void): () => void
+  }
+  hud: {
+    /** HUD penceresini büyütür/küçültür (sağ üst köşe sabit kalır); el ile kontrol açılıp kapanınca */
+    resize(width: number, height: number): Promise<void>
+    /** Ana pencereyi öne getirip verilen sayfayı açar (HUD'daki yörüngeden seçim yapılınca) */
+    navigate(page: string): Promise<void>
   }
 }

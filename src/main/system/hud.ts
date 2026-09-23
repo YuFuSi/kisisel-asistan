@@ -92,6 +92,16 @@ export function closeHud(): void {
   hudWindow?.close()
 }
 
+// El ile kontrol açılıp yörünge gösterilince HUD büyür; sağ kenar sabit tutulur ki pencere
+// ekranın sağından taşmasın (`resizable: false` sadece kullanıcının kenardan sürüklemesini
+// engeller, programatik setBounds'u etkilemez)
+export function resizeHud(width: number, height: number): void {
+  if (!hudWindow) return
+  const [x, y] = hudWindow.getPosition()
+  const [currentWidth] = hudWindow.getSize()
+  hudWindow.setBounds({ x: x + currentWidth - width, y, width, height })
+}
+
 export function disposeHud(): void {
   hudWindow?.destroy()
   hudWindow = null
