@@ -11,9 +11,10 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import type { PageId } from '../../lib/pages'
+import { projectRing } from '../../lib/orbit3d'
 
 // Tur O: küre etrafında yörüngede dönen araç ikonları.
-// Adım 1: sadece görsel (eğik elips yörünge, derinlik hissi).
+// Adım 1: sadece görsel (önce sahte sin/cos elips, sonra gerçek Three.js perspektif projeksiyonu).
 // Adım 2: elin konumu (handPoint) yörüngedeki nesnelerle karşılaştırılıp yaklaşınca hover verilir.
 // Adım 3: hover'dayken pinch yapılırsa o nesnenin gerçek sayfasına geçilir (onSelect).
 
@@ -54,14 +55,13 @@ function layoutItems(
   radiusY: number,
   hoverDistance: number
 ): ItemLayout[] {
+  const projected = projectRing(ITEMS.length, angle)
   return ITEMS.map((item, index) => {
-    const itemAngle = ((angle + index * (360 / ITEMS.length)) * Math.PI) / 180
-    const x = Math.cos(itemAngle) * radiusX
-    const y = Math.sin(itemAngle) * radiusY
-    // Öndeyken (sin > 0) büyük ve parlak, arkadayken küçük ve soluk: derinlik hissi
-    const depth = (Math.sin(itemAngle) + 1) / 2
+    const p = projected[index]
+    const x = p.x * radiusX
+    const y = p.y * radiusY
     const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < hoverDistance
-    return { item, x, y, depth, hovered }
+    return { item, x, y, depth: p.depth, hovered }
   })
 }
 
