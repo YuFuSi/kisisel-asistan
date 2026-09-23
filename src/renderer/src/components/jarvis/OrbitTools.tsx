@@ -20,10 +20,10 @@ const ITEMS: OrbitItem[] = [
   { page: 'chat', icon: MessageSquare, label: 'Asistan' }
 ]
 
-const RADIUS_X = 180
-const RADIUS_Y = 60
+const DEFAULT_RADIUS_X = 180
+const DEFAULT_RADIUS_Y = 60
+const DEFAULT_HOVER_DISTANCE = 55
 const DEGREES_PER_SECOND = 18
-const HOVER_DISTANCE = 55
 
 interface ItemLayout {
   item: OrbitItem
@@ -33,14 +33,20 @@ interface ItemLayout {
   hovered: boolean
 }
 
-function layoutItems(angle: number, handPoint?: { x: number; y: number } | null): ItemLayout[] {
+function layoutItems(
+  angle: number,
+  handPoint: { x: number; y: number } | null | undefined,
+  radiusX: number,
+  radiusY: number,
+  hoverDistance: number
+): ItemLayout[] {
   return ITEMS.map((item, index) => {
     const itemAngle = ((angle + index * (360 / ITEMS.length)) * Math.PI) / 180
-    const x = Math.cos(itemAngle) * RADIUS_X
-    const y = Math.sin(itemAngle) * RADIUS_Y
+    const x = Math.cos(itemAngle) * radiusX
+    const y = Math.sin(itemAngle) * radiusY
     // Öndeyken (sin > 0) büyük ve parlak, arkadayken küçük ve soluk: derinlik hissi
     const depth = (Math.sin(itemAngle) + 1) / 2
-    const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < HOVER_DISTANCE
+    const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < hoverDistance
     return { item, x, y, depth, hovered }
   })
 }
@@ -51,12 +57,18 @@ interface OrbitToolsProps {
   /** Pinch yapılan anda true olur; hover'daki nesne varsa onSelect ile bildirilir */
   pinching?: boolean
   onSelect?: (page: PageId) => void
+  radiusX?: number
+  radiusY?: number
+  hoverDistance?: number
 }
 
 export default function OrbitTools({
   handPoint,
   pinching = false,
-  onSelect
+  onSelect,
+  radiusX = DEFAULT_RADIUS_X,
+  radiusY = DEFAULT_RADIUS_Y,
+  hoverDistance = DEFAULT_HOVER_DISTANCE
 }: OrbitToolsProps): React.JSX.Element {
   const [angle, setAngle] = useState(0)
   const rafRef = useRef(0)
@@ -75,7 +87,7 @@ export default function OrbitTools({
     return () => cancelAnimationFrame(rafRef.current)
   }, [])
 
-  const layout = layoutItems(angle, handPoint)
+  const layout = layoutItems(angle, handPoint, radiusX, radiusY, hoverDistance)
   const hoveredPage = layout.find((l) => l.hovered)?.item.page ?? null
 
   // Pinch'in "başladığı" an (false -> true geçişi) hover'daki nesneyi seçer; basılı tutmak
@@ -88,7 +100,7 @@ export default function OrbitTools({
   }, [pinching, hoveredPage, onSelect])
 
   return (
-    <div className="relative h-[260px] w-[420px]">
+    <div className="relative" style={{ width: (radiusX + 60) * 2, height: (radiusY + 60) * 2 }}>
       {layout.map(({ item, x, y, depth, hovered }) => {
         const scale = (0.7 + depth * 0.5) * (hovered ? 1.25 : 1)
         const opacity = hovered ? 1 : 0.4 + depth * 0.6

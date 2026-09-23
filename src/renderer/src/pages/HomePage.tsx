@@ -5,6 +5,7 @@ import AuroraBackground from '../components/home/AuroraBackground'
 import CommandBox from '../components/home/CommandBox'
 import FloatingTile from '../components/home/FloatingTile'
 import Orb from '../components/jarvis/Orb'
+import OrbitTools from '../components/jarvis/OrbitTools'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
@@ -24,6 +25,8 @@ import type { PageId } from '../lib/pages'
 import { useLiveData } from '../lib/useLiveData'
 import { currentStep } from '../lib/workSteps'
 import { toggleVoiceSession, useVoice, type VoiceSnapshot } from '../lib/voiceClient'
+import { useHandTracking } from '../lib/useHandTracking'
+import { useClapActivation } from '../lib/useClapActivation'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadTasks = (): Promise<Task[]> => window.api.tasks.list()
@@ -34,6 +37,12 @@ const EXCITE_MS = 700
 // Fare paralaksı: küre ve parçalar zıt yönde en fazla bu kadar piksel kayar
 const PARALLAX_ORB = 10
 const PARALLAX_TILES = 16
+// El ile kontrol açıkken yörünge yarıçapları büyük küreye (440px) göre ayarlandı
+const HAND_ORBIT_RADIUS_X = 260
+const HAND_ORBIT_RADIUS_Y = 80
+const HAND_ORBIT_HOVER_DISTANCE = 65
+const HAND_GAIN_X = 640
+const HAND_GAIN_Y = 260
 
 interface HomePageProps {
   onNavigate: (page: PageId) => void
@@ -74,6 +83,15 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const reminders = useLiveData(loadReminders, 'reminders').data
   const [excite, setExcite] = useState(0)
   const [dragging, setDragging] = useState(false)
+  const [handControlOn, setHandControlOn] = useState(false)
+  const {
+    videoRef: handVideoRef,
+    status: handStatus,
+    pinching: handPinching,
+    handPoint
+  } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
+  // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses
+  useClapActivation(true, () => setHandControlOn((v) => !v))
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const orbLayer = useRef<HTMLDivElement>(null)
   const tileLayer = useRef<HTMLDivElement>(null)
@@ -86,11 +104,17 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
   const running = currentStep(steps)
   const caption = dragging
     ? 'Belgeyi küreye bırak: PDF, Word veya metin'
-    : state === 'idle'
-      ? voiceHint(voice)
-      : running
-        ? `${running.label} çalışıyor... · ${steps.length}. adım`
-        : `${STATE_LABELS[state]}...`
+    : handControlOn
+      ? handStatus === 'loading'
+        ? 'El kontrolü açılıyor...'
+        : handStatus === 'error'
+          ? 'El kontrolü hata verdi (iki alkışla kapat)'
+          : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç (kapatmak için iki alkış)'
+      : state === 'idle'
+        ? voiceHint(voice)
+        : running
+          ? `${running.label} çalışıyor... · ${steps.length}. adım`
+          : `${STATE_LABELS[state]}...`
 
   // Belge küreye bırakılınca küre "alır" (çift nabız), kısa süre sonra belge yeni sohbete eklenir
   function handleDrop(event: React.DragEvent<HTMLDivElement>): void {
@@ -206,8 +230,22 @@ function HomePage({ onNavigate, onAsk, onOpenConversation }: HomePageProps): Rea
                   notice={notice}
                 />
               </button>
+              {handControlOn && (
+                <div className="pointer-events-none absolute">
+                  <OrbitTools
+                    handPoint={handPoint}
+                    pinching={handPinching}
+                    onSelect={onNavigate}
+                    radiusX={HAND_ORBIT_RADIUS_X}
+                    radiusY={HAND_ORBIT_RADIUS_Y}
+                    hoverDistance={HAND_ORBIT_HOVER_DISTANCE}
+                  />
+                </div>
+              )}
             </div>
           </div>
+
+          <video ref={handVideoRef} className="hidden" muted playsInline />
 
           <h1 className="-mt-10 text-[40px] leading-tight font-medium tracking-tight text-ink">
             {greeting(now.getHours())}
