@@ -7,7 +7,22 @@ import { useEffect, useRef, useState } from 'react'
 const WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
-const PINCH_THRESHOLD = 0.06
+// Histerezis: tek bir sabit eşik, mesafe tam sınırdayken kare-kare true/false arasında titreyip
+// yanlışlıkla art arda kavrama/bırakma tetikliyordu. Girişte daha sıkı (PINCH_ENTER), çıkışta
+// daha gevşek (PINCH_EXIT) bir eşik kullanmak bu titremeyi ortadan kaldırıyor.
+const PINCH_ENTER = 0.05
+const PINCH_EXIT = 0.075
+// Ham parmak ucu konumu kare-kare titrek geliyor; üstel hareketli ortalama (EMA) ile yumuşatılıyor.
+// Not: bu değer aynı zamanda pencere sürüklemesinin ne kadar gecikmeli hissedileceğini de belirliyor
+// (handNormalized da buradan türüyor) — çok düşük tutulursa titreme azalır ama sürükleme gecikir.
+// Hover histerezisi (OrbitTools/TaskOrbit) titremeyi zaten ayrıca engellediği için burası daha
+// tepkisel tutulabiliyor.
+const POSITION_SMOOTHING = 0.55
+// El hızlı hareket ederken veya kısa bir an bulanıklaşınca MediaPipe tek bir karede eli kaçırabiliyor.
+// Bunu anında "el yok" sayıp pinch/sürükleme/kavrama durumunu sıfırlamak yerine, birkaç ardışık kare
+// (yaklaşık 150 ms, 60 kare/sn'de) boyunca son bilinen durum korunuyor; el gerçekten gittiyse bu süre
+// sonunda sıfırlanıyor.
+const MISSED_FRAMES_TOLERANCE = 9
 
 export type HandTrackingStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -83,7 +98,12 @@ export function useHandTracking(
         const landmarker = await HandLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
           runningMode: 'VIDEO',
-          numHands: 2
+          numHands: 2,
+          // Varsayılanlar (0.5) sınırda titriyordu — daha yüksek güven eşiği daha kararlı
+          // algılama sağlıyor, karşılığında biraz daha geç algılama kabul ediliyor
+          minHandDetectionConfidence: 0.7,
+          minHandPresenceConfidence: 0.7,
+          minTrackingConfidence: 0.7
         })
         if (cancelled) return
 
@@ -99,18 +119,32 @@ export function useHandTracking(
         setStatus('ready')
 
         let smoothedSpread: number | null = null
+        let smoothedX: number | null = null
+        let smoothedY: number | null = null
+        let isPinching = false
+        let missedFrames = 0
 
         function loop(): void {
           if (cancelled || !video) return
           const result = landmarker.detectForVideo(video, performance.now())
           const hand = result.landmarks[0]
           const secondHand = result.landmarks[1]
+          if (!hand && !secondHand && missedFrames < MISSED_FRAMES_TOLERANCE) {
+            // Tek karelik kayıp: son bilinen durum korunur, hiçbir şey sıfırlanmaz
+            missedFrames += 1
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+          if (hand || secondHand) missedFrames = 0
           if (secondHand) {
             // İki el birden görünüyorsa yörünge hover/pinch'i devre dışı bırakılır (karışmasın);
             // avuç içi merkezi (landmark 9) elin kendisi kadar sabit, parmak ucuna göre daha az titrek
+            isPinching = false
             setPinching(false)
             setHandPoint(null)
             setHandNormalized(null)
+            smoothedX = null
+            smoothedY = null
             smoothedSpread = smooth(
               smoothedSpread,
               distance(hand[9], secondHand[9]),
@@ -118,17 +152,27 @@ export function useHandTracking(
             )
             setTwoHandSpread(smoothedSpread)
           } else if (hand) {
-            setPinching(distance(hand[4], hand[8]) < PINCH_THRESHOLD)
+            const pinchDistance = distance(hand[4], hand[8])
+            // Histerezis: kavrarken sıkı eşik, bırakırken gevşek eşik — sınırda titremeyi önler
+            isPinching = isPinching ? pinchDistance < PINCH_EXIT : pinchDistance < PINCH_ENTER
+            setPinching(isPinching)
+            // Ham parmak ucu konumu (mirror düzeltmeden önce) yumuşatılır; hem handPoint hem
+            // handNormalized aynı yumuşatılmış kaynaktan türetilir
+            smoothedX = smooth(smoothedX, hand[8].x, POSITION_SMOOTHING)
+            smoothedY = smooth(smoothedY, hand[8].y, POSITION_SMOOTHING)
             // MediaPipe koordinatı aynalanmamış ham görüntüye göre; kullanıcı ekranda kendini
             // aynalanmış görüyor, bu yüzden x ters çevrilip merkeze göre px'e çevriliyor
-            setHandPoint({ x: (0.5 - hand[8].x) * gainX, y: (hand[8].y - 0.5) * gainY })
-            setHandNormalized({ x: 1 - hand[8].x, y: hand[8].y })
+            setHandPoint({ x: (0.5 - smoothedX) * gainX, y: (smoothedY - 0.5) * gainY })
+            setHandNormalized({ x: 1 - smoothedX, y: smoothedY })
             smoothedSpread = null
             setTwoHandSpread(null)
           } else {
+            isPinching = false
             setPinching(false)
             setHandPoint(null)
             setHandNormalized(null)
+            smoothedX = null
+            smoothedY = null
             smoothedSpread = null
             setTwoHandSpread(null)
           }

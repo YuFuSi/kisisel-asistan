@@ -9,7 +9,7 @@ import type { HandPoint } from './useHandTracking'
 // sadece bir kez derlendiği için her komut birkaç milisaniye sürüyor. Yine de elin her karesinde
 // (30-60/sn) IPC + PowerShell round-trip yapmak gereksiz; hafif bir sınırlama akıcılığı bozmadan
 // gereksiz trafiği azaltıyor.
-const MOVE_THROTTLE_MS = 40
+const MOVE_THROTTLE_MS = 20
 
 export function useWindowDrag(
   enabled: boolean,
