@@ -13,11 +13,12 @@ const MODEL_URL =
 const PINCH_ENTER = 0.05
 const PINCH_EXIT = 0.075
 // Ham parmak ucu konumu kare-kare titrek geliyor; üstel hareketli ortalama (EMA) ile yumuşatılıyor.
-// Not: bu değer aynı zamanda pencere sürüklemesinin ne kadar gecikmeli hissedileceğini de belirliyor
-// (handNormalized da buradan türüyor) — çok düşük tutulursa titreme azalır ama sürükleme gecikir.
-// Hover histerezisi (OrbitTools/TaskOrbit) titremeyi zaten ayrıca engellediği için burası daha
-// tepkisel tutulabiliyor.
-const POSITION_SMOOTHING = 0.55
+// handPoint (yörünge hover'ı) ve handNormalized (pencere sürükleme, ekran mutlak konumu) ZIT
+// ihtiyaçlar: hover'da titremesizlik, sürüklemede gecikmesizlik önemli. Tek bir ortak alfa ikisi
+// arasında hep taviz oluyordu (biri iyileşince öteki kötüleşiyordu); bu yüzden ikisi artık ayrı
+// EMA zincirleriyle, aynı ham konumdan bağımsız hesaplanıyor.
+const HOVER_SMOOTHING = 0.35
+const DRAG_SMOOTHING = 0.65
 // El hızlı hareket ederken veya kısa bir an bulanıklaşınca MediaPipe tek bir karede eli kaçırabiliyor.
 // Bunu anında "el yok" sayıp pinch/sürükleme/kavrama durumunu sıfırlamak yerine, birkaç ardışık kare
 // (yaklaşık 150 ms, 60 kare/sn'de) boyunca son bilinen durum korunuyor; el gerçekten gittiyse bu süre
@@ -119,8 +120,10 @@ export function useHandTracking(
         setStatus('ready')
 
         let smoothedSpread: number | null = null
-        let smoothedX: number | null = null
-        let smoothedY: number | null = null
+        let hoverX: number | null = null
+        let hoverY: number | null = null
+        let dragX: number | null = null
+        let dragY: number | null = null
         let isPinching = false
         let missedFrames = 0
 
@@ -143,8 +146,10 @@ export function useHandTracking(
             setPinching(false)
             setHandPoint(null)
             setHandNormalized(null)
-            smoothedX = null
-            smoothedY = null
+            hoverX = null
+            hoverY = null
+            dragX = null
+            dragY = null
             smoothedSpread = smooth(
               smoothedSpread,
               distance(hand[9], secondHand[9]),
@@ -156,14 +161,15 @@ export function useHandTracking(
             // Histerezis: kavrarken sıkı eşik, bırakırken gevşek eşik — sınırda titremeyi önler
             isPinching = isPinching ? pinchDistance < PINCH_EXIT : pinchDistance < PINCH_ENTER
             setPinching(isPinching)
-            // Ham parmak ucu konumu (mirror düzeltmeden önce) yumuşatılır; hem handPoint hem
-            // handNormalized aynı yumuşatılmış kaynaktan türetilir
-            smoothedX = smooth(smoothedX, hand[8].x, POSITION_SMOOTHING)
-            smoothedY = smooth(smoothedY, hand[8].y, POSITION_SMOOTHING)
+            // Ham parmak ucu konumu (mirror düzeltmeden önce) iki ayrı hızda yumuşatılır
+            hoverX = smooth(hoverX, hand[8].x, HOVER_SMOOTHING)
+            hoverY = smooth(hoverY, hand[8].y, HOVER_SMOOTHING)
+            dragX = smooth(dragX, hand[8].x, DRAG_SMOOTHING)
+            dragY = smooth(dragY, hand[8].y, DRAG_SMOOTHING)
             // MediaPipe koordinatı aynalanmamış ham görüntüye göre; kullanıcı ekranda kendini
             // aynalanmış görüyor, bu yüzden x ters çevrilip merkeze göre px'e çevriliyor
-            setHandPoint({ x: (0.5 - smoothedX) * gainX, y: (smoothedY - 0.5) * gainY })
-            setHandNormalized({ x: 1 - smoothedX, y: smoothedY })
+            setHandPoint({ x: (0.5 - hoverX) * gainX, y: (hoverY - 0.5) * gainY })
+            setHandNormalized({ x: 1 - dragX, y: dragY })
             smoothedSpread = null
             setTwoHandSpread(null)
           } else {
@@ -171,8 +177,10 @@ export function useHandTracking(
             setPinching(false)
             setHandPoint(null)
             setHandNormalized(null)
-            smoothedX = null
-            smoothedY = null
+            hoverX = null
+            hoverY = null
+            dragX = null
+            dragY = null
             smoothedSpread = null
             setTwoHandSpread(null)
           }
