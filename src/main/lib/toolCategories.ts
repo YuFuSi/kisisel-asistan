@@ -63,7 +63,14 @@ const CATEGORIES: ToolCategory[] = [
   },
   {
     keywords: ['pencere'],
-    tools: ['pencereleri_listele', 'pencereyi_odakla', 'pencereyi_kucult', 'pencereyi_kapat']
+    tools: [
+      'pencereleri_listele',
+      'pencereyi_odakla',
+      'pencereyi_kucult',
+      'pencereyi_tasi',
+      'pencereyi_boyutlandir',
+      'pencereyi_kapat'
+    ]
   },
   {
     keywords: ['mail', 'e-posta', 'eposta', 'gmail'],
