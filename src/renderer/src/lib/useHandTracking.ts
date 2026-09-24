@@ -126,6 +126,8 @@ export function useHandTracking(
         let dragY: number | null = null
         let isPinching = false
         let missedFrames = 0
+        let wasTwoHand = false
+        let twoHandMissedFrames = 0
 
         function loop(): void {
           if (cancelled || !video) return
@@ -139,6 +141,15 @@ export function useHandTracking(
             return
           }
           if (hand || secondHand) missedFrames = 0
+          // Eller üst üste bindiğinde veya biri kadraj kenarına yaklaştığında MediaPipe iki elden
+          // birini bir anlığına kaçırabiliyor; bu, zoom jesti sırasında küre ölçeğinin aniden 1'e
+          // sıçramasına yol açıyordu. İki elliyken tek el görünür hâle gelirse birkaç kare son
+          // bilinen mesafe korunur, ikinci el gerçekten gittiyse bu süre sonunda tek-el moduna geçilir.
+          if (wasTwoHand && hand && !secondHand && twoHandMissedFrames < MISSED_FRAMES_TOLERANCE) {
+            twoHandMissedFrames += 1
+            rafId = requestAnimationFrame(loop)
+            return
+          }
           if (secondHand) {
             // İki el birden görünüyorsa yörünge hover/pinch'i devre dışı bırakılır (karışmasın);
             // avuç içi merkezi (landmark 9) elin kendisi kadar sabit, parmak ucuna göre daha az titrek
@@ -156,6 +167,8 @@ export function useHandTracking(
               SPREAD_SMOOTHING
             )
             setTwoHandSpread(smoothedSpread)
+            wasTwoHand = true
+            twoHandMissedFrames = 0
           } else if (hand) {
             const pinchDistance = distance(hand[4], hand[8])
             // Histerezis: kavrarken sıkı eşik, bırakırken gevşek eşik — sınırda titremeyi önler
@@ -172,6 +185,8 @@ export function useHandTracking(
             setHandNormalized({ x: 1 - dragX, y: dragY })
             smoothedSpread = null
             setTwoHandSpread(null)
+            wasTwoHand = false
+            twoHandMissedFrames = 0
           } else {
             isPinching = false
             setPinching(false)
@@ -183,6 +198,8 @@ export function useHandTracking(
             dragY = null
             smoothedSpread = null
             setTwoHandSpread(null)
+            wasTwoHand = false
+            twoHandMissedFrames = 0
           }
           rafId = requestAnimationFrame(loop)
         }
