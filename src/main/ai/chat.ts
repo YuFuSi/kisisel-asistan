@@ -308,7 +308,7 @@ async function streamReply(
         model: getModel(),
         instructions,
         messages: toModelMessages(recent),
-        tools: getAssistantTools(),
+        tools: getAssistantTools(query),
         stopWhen: isStepCount(MAX_STEPS),
         abortSignal: controller.signal,
         ...getModelOptions()
