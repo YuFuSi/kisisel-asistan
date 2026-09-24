@@ -71,6 +71,9 @@ interface OrbitToolsProps {
   /** Pinch yapılan anda true olur; hover'daki nesne varsa onSelect ile bildirilir */
   pinching?: boolean
   onSelect?: (page: PageId) => void
+  /** Hover'daki nesne değişince bildirir (null = hiçbiri); ör. boşlukta pinch'in başka bir işe
+   *  (pencere sürükleme gibi) ayrılabilmesi için */
+  onHoverChange?: (page: PageId | null) => void
   radiusX?: number
   radiusY?: number
   hoverDistance?: number
@@ -80,6 +83,7 @@ export default function OrbitTools({
   handPoint,
   pinching = false,
   onSelect,
+  onHoverChange,
   radiusX = DEFAULT_RADIUS_X,
   radiusY = DEFAULT_RADIUS_Y,
   hoverDistance = DEFAULT_HOVER_DISTANCE
@@ -112,6 +116,10 @@ export default function OrbitTools({
     }
     wasPinching.current = pinching
   }, [pinching, hoveredPage, onSelect])
+
+  useEffect(() => {
+    onHoverChange?.(hoveredPage)
+  }, [hoveredPage, onHoverChange])
 
   return (
     <div className="relative" style={{ width: (radiusX + 60) * 2, height: (radiusY + 60) * 2 }}>

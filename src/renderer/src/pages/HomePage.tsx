@@ -27,6 +27,7 @@ import { currentStep } from '../lib/workSteps'
 import { toggleVoiceSession, useVoice, type VoiceSnapshot } from '../lib/voiceClient'
 import { useHandTracking } from '../lib/useHandTracking'
 import { useClapActivation } from '../lib/useClapActivation'
+import { useWindowDrag } from '../lib/useWindowDrag'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadTasks = (): Promise<Task[]> => window.api.tasks.list()
@@ -112,11 +113,19 @@ function HomePage({
     status: handStatus,
     pinching: handPinching,
     handPoint,
-    twoHandSpread
+    twoHandSpread,
+    handNormalized
   } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
   const orbScale = handControlOn && twoHandSpread !== null ? orbScaleFromSpread(twoHandSpread) : 1
   // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses
   useClapActivation(true, () => onHandControlChange(!handControlOn))
+  // Yörüngede bir şeyin üstündeyken pinch normal seçim yapar; boşlukta pinch pencere kavrar
+  const [hoveredOrbitItem, setHoveredOrbitItem] = useState<PageId | null>(null)
+  const { dragging: draggingWindow } = useWindowDrag(
+    handControlOn && !hoveredOrbitItem,
+    handPinching,
+    handNormalized
+  )
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const orbLayer = useRef<HTMLDivElement>(null)
   const tileLayer = useRef<HTMLDivElement>(null)
@@ -134,7 +143,9 @@ function HomePage({
         ? 'El kontrolü açılıyor...'
         : handStatus === 'error'
           ? 'El kontrolü hata verdi (iki alkışla kapat)'
-          : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç; iki elle küreyi büyüt/küçült (kapatmak için iki alkış)'
+          : draggingWindow
+            ? "Pencere sürükleniyor — bırakmak için pinch'i aç"
+            : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç; boşlukta pinch pencere sürükler; iki elle küreyi büyüt/küçült (kapatmak için iki alkış)'
       : state === 'idle'
         ? voiceHint(voice)
         : running
@@ -268,6 +279,7 @@ function HomePage({
                     handPoint={handPoint}
                     pinching={handPinching}
                     onSelect={onNavigate}
+                    onHoverChange={setHoveredOrbitItem}
                     radiusX={HAND_ORBIT_RADIUS_X}
                     radiusY={HAND_ORBIT_RADIUS_Y}
                     hoverDistance={HAND_ORBIT_HOVER_DISTANCE}

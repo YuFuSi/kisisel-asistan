@@ -52,12 +52,47 @@ Add-Type -Namespace JarvisWin -Name Native -MemberDefinition '
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr hAfter, int x, int y, int cx, int cy, uint flags);
 '
 $p = Get-Process -Id ${id}
 if ($p.MainWindowHandle -eq 0) { throw 'Bu sürecin görünür bir penceresi yok.' }
 ${action}
 `
   await run('powershell.exe', [...PS_ARGS, script], { windowsHide: true, timeout: TIMEOUT_MS })
+}
+
+// SetWindowPos bayrakları: konum/boyut değişmeyen kısım korunur, öne getirme/odaklama yapılmaz
+const SWP_NOSIZE = 0x0001
+const SWP_NOMOVE = 0x0002
+const SWP_NOZORDER = 0x0004
+const SWP_NOACTIVATE = 0x0010
+
+export function isValidCoordinate(n: number): boolean {
+  return Number.isInteger(n) && Math.abs(n) < 20000
+}
+
+export function isValidSize(n: number): boolean {
+  return Number.isInteger(n) && n > 0 && n < 20000
+}
+
+/** Pencereyi ekranda verilen konuma taşır; boyutu değişmez */
+export function moveWindow(id: number, x: number, y: number): Promise<void> {
+  if (!isValidCoordinate(x) || !isValidCoordinate(y)) throw new Error('Geçersiz konum.')
+  const flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
+  return runWindowAction(
+    id,
+    `[JarvisWin.Native]::SetWindowPos($p.MainWindowHandle, [IntPtr]::Zero, ${x}, ${y}, 0, 0, ${flags}) | Out-Null`
+  )
+}
+
+/** Pencereyi verilen boyuta getirir; konumu (sol üst köşe) değişmez */
+export function resizeWindow(id: number, width: number, height: number): Promise<void> {
+  if (!isValidSize(width) || !isValidSize(height)) throw new Error('Geçersiz boyut.')
+  const flags = SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
+  return runWindowAction(
+    id,
+    `[JarvisWin.Native]::SetWindowPos($p.MainWindowHandle, [IntPtr]::Zero, 0, 0, ${width}, ${height}, ${flags}) | Out-Null`
+  )
 }
 
 /** Pencereyi öne getirir (önce simge durumundan çıkarır) */
@@ -75,6 +110,30 @@ export function minimizeWindow(id: number): Promise<void> {
     id,
     `[JarvisWin.Native]::ShowWindow($p.MainWindowHandle, ${SW_MINIMIZE}) | Out-Null`
   )
+}
+
+/**
+ * O anda öndeki (odaklanmış) pencerenin süreç kimliğini (pid) döner; kamera el kontrolündeki
+ * "sürükle" jesti hangi pencereyi taşıyacağını buradan öğrenir. Görünür pencere yoksa null.
+ */
+export async function getForegroundWindowId(): Promise<number | null> {
+  const script = `
+$ErrorActionPreference = 'Stop'
+Add-Type -Namespace JarvisWin -Name Fg -MemberDefinition '
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+'
+$h = [JarvisWin.Fg]::GetForegroundWindow()
+$procId = 0
+[JarvisWin.Fg]::GetWindowThreadProcessId($h, [ref]$procId) | Out-Null
+$procId
+`
+  const { stdout } = await run('powershell.exe', [...PS_ARGS, script], {
+    windowsHide: true,
+    timeout: TIMEOUT_MS
+  })
+  const pid = parseInt(stdout.trim(), 10)
+  return Number.isInteger(pid) && pid > 0 ? pid : null
 }
 
 // WM_CLOSE: programın kendi "kapat" mantığını çalıştırır (kaydetme sorusu vb. çıkabilir),

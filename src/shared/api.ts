@@ -779,4 +779,15 @@ export interface Api {
     /** Ana pencereyi öne getirip verilen sayfayı açar (HUD'daki yörüngeden seçim yapılınca) */
     navigate(page: string): Promise<void>
   }
+  /**
+   * Kamera el kontrolündeki "pencere sürükle" jesti için: sohbetten/onaydan bağımsız, doğrudan
+   * çağrı. Kullanıcının kendi eliyle sürüklemesi fareyle sürüklemekle aynı güven seviyesinde
+   * sayılır, bu yüzden AI aracı onayı gerektirmez (bkz. tools/windows.ts'teki karşılıkları).
+   */
+  windows: {
+    /** O anda öndeki (odaklanmış) pencerenin pid'si; görünür pencere yoksa null */
+    foreground(): Promise<number | null>
+    /** Pencereyi ekranda verilen konuma taşır; boyutu değişmez */
+    move(id: number, x: number, y: number): Promise<void>
+  }
 }
