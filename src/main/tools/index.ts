@@ -2,6 +2,7 @@ import type { ToolSet } from 'ai'
 import { recordActivity } from '../activity'
 import { describeToolInput } from '../lib/activityText'
 import { summarizeToolOutput } from '../lib/toolHistory'
+import { pickToolNames } from '../lib/toolCategories'
 import taskTools from './tasks'
 import automationTools from './automations'
 import reminderTools from './reminders'
@@ -130,10 +131,25 @@ function guardModule(module: ToolModule): ToolSet {
   return tools
 }
 
-/** Şu an kullanılabilen araçlar; her cevapta yeniden hesaplanır (ör. Google sonradan bağlanabilir) */
-export function getAssistantTools(): ToolSet {
+/**
+ * Şu an kullanılabilen araçlar; her cevapta yeniden hesaplanır (ör. Google sonradan bağlanabilir).
+ * `message` verilirse (kullanıcının son isteği), sadece ilgili kategorideki araçlar gönderilir —
+ * küçük yerel modeller çok sayıda araç arasından güvenilir seçim yapamıyor (bkz. lib/toolCategories.ts).
+ * Hiçbir kategori eşleşmezse (veya mesaj verilmezse) tüm araçlar gönderilir, geriye dönük güvenli.
+ */
+export function getAssistantTools(message?: string): ToolSet {
   const available = modules.filter((m) => m.isAvailable?.() ?? true)
-  return Object.assign({}, ...available.map(guardModule))
+  const all: ToolSet = Object.assign({}, ...available.map(guardModule))
+  if (!message) return all
+
+  const picked = pickToolNames(message)
+  if (!picked) return all
+
+  const filtered: ToolSet = {}
+  for (const [name, definition] of Object.entries(all)) {
+    if (picked.has(name)) filtered[name] = definition
+  }
+  return filtered
 }
 
 export function toolLabel(name: string): string {

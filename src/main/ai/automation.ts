@@ -50,7 +50,7 @@ export async function runAutomationTurn(
         model: getModel(),
         instructions,
         messages: [{ role: 'user', content: prompt }],
-        tools: getAssistantTools(),
+        tools: getAssistantTools(prompt),
         stopWhen: isStepCount(AUTOMATION_MAX_STEPS),
         abortSignal: controller.signal,
         ...getModelOptions()
