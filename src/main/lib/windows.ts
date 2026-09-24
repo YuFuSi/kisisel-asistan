@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { daemonForegroundWindowId, daemonMoveWindow } from './windowDaemon'
 
 const run = promisify(execFile)
 const TIMEOUT_MS = 15_000
@@ -62,7 +63,6 @@ ${action}
 }
 
 // SetWindowPos bayrakları: konum/boyut değişmeyen kısım korunur, öne getirme/odaklama yapılmaz
-const SWP_NOSIZE = 0x0001
 const SWP_NOMOVE = 0x0002
 const SWP_NOZORDER = 0x0004
 const SWP_NOACTIVATE = 0x0010
@@ -75,14 +75,15 @@ export function isValidSize(n: number): boolean {
   return Number.isInteger(n) && n > 0 && n < 20000
 }
 
-/** Pencereyi ekranda verilen konuma taşır; boyutu değişmez */
+/**
+ * Pencereyi ekranda verilen konuma taşır; boyutu değişmez. Kalıcı PowerShell sürecinden
+ * (windowDaemon.ts) geçer — her taşımada yeni süreç başlatmanın (~100-300ms) elle sürüklerken
+ * yarattığı gözle görülür gecikmeyi önler.
+ */
 export function moveWindow(id: number, x: number, y: number): Promise<void> {
+  if (!isValidWindowId(id)) throw new Error('Geçersiz pencere kimliği.')
   if (!isValidCoordinate(x) || !isValidCoordinate(y)) throw new Error('Geçersiz konum.')
-  const flags = SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
-  return runWindowAction(
-    id,
-    `[JarvisWin.Native]::SetWindowPos($p.MainWindowHandle, [IntPtr]::Zero, ${x}, ${y}, 0, 0, ${flags}) | Out-Null`
-  )
+  return daemonMoveWindow(id, x, y)
 }
 
 /** Pencereyi verilen boyuta getirir; konumu (sol üst köşe) değişmez */
@@ -115,25 +116,10 @@ export function minimizeWindow(id: number): Promise<void> {
 /**
  * O anda öndeki (odaklanmış) pencerenin süreç kimliğini (pid) döner; kamera el kontrolündeki
  * "sürükle" jesti hangi pencereyi taşıyacağını buradan öğrenir. Görünür pencere yoksa null.
+ * Kalıcı PowerShell sürecinden (windowDaemon.ts) geçer.
  */
-export async function getForegroundWindowId(): Promise<number | null> {
-  const script = `
-$ErrorActionPreference = 'Stop'
-Add-Type -Namespace JarvisWin -Name Fg -MemberDefinition '
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-'
-$h = [JarvisWin.Fg]::GetForegroundWindow()
-$procId = 0
-[JarvisWin.Fg]::GetWindowThreadProcessId($h, [ref]$procId) | Out-Null
-$procId
-`
-  const { stdout } = await run('powershell.exe', [...PS_ARGS, script], {
-    windowsHide: true,
-    timeout: TIMEOUT_MS
-  })
-  const pid = parseInt(stdout.trim(), 10)
-  return Number.isInteger(pid) && pid > 0 ? pid : null
+export function getForegroundWindowId(): Promise<number | null> {
+  return daemonForegroundWindowId()
 }
 
 // WM_CLOSE: programın kendi "kapat" mantığını çalıştırır (kaydetme sorusu vb. çıkabilir),

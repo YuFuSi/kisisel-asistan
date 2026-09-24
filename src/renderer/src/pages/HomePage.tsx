@@ -273,7 +273,7 @@ function HomePage({
                   notice={notice}
                 />
               </button>
-              {handControlOn && (
+              {handControlOn && !draggingWindow && (
                 <div className="pointer-events-none absolute">
                   <OrbitTools
                     handPoint={handPoint}
