@@ -7,7 +7,23 @@ import { useEffect, useRef, useState } from 'react'
 const WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
-const PINCH_THRESHOLD = 0.06
+// Histerezis: tek bir sabit eşik, mesafe tam sınırdayken kare-kare true/false arasında titreyip
+// yanlışlıkla art arda kavrama/bırakma tetikliyordu. Girişte daha sıkı (PINCH_ENTER), çıkışta
+// daha gevşek (PINCH_EXIT) bir eşik kullanmak bu titremeyi ortadan kaldırıyor.
+const PINCH_ENTER = 0.05
+const PINCH_EXIT = 0.075
+// Ham parmak ucu konumu kare-kare titrek geliyor; üstel hareketli ortalama (EMA) ile yumuşatılıyor.
+// handPoint (yörünge hover'ı) ve handNormalized (pencere sürükleme, ekran mutlak konumu) ZIT
+// ihtiyaçlar: hover'da titremesizlik, sürüklemede gecikmesizlik önemli. Tek bir ortak alfa ikisi
+// arasında hep taviz oluyordu (biri iyileşince öteki kötüleşiyordu); bu yüzden ikisi artık ayrı
+// EMA zincirleriyle, aynı ham konumdan bağımsız hesaplanıyor.
+const HOVER_SMOOTHING = 0.35
+const DRAG_SMOOTHING = 0.65
+// El hızlı hareket ederken veya kısa bir an bulanıklaşınca MediaPipe tek bir karede eli kaçırabiliyor.
+// Bunu anında "el yok" sayıp pinch/sürükleme/kavrama durumunu sıfırlamak yerine, birkaç ardışık kare
+// (yaklaşık 150 ms, 60 kare/sn'de) boyunca son bilinen durum korunuyor; el gerçekten gittiyse bu süre
+// sonunda sıfırlanıyor.
+const MISSED_FRAMES_TOLERANCE = 9
 
 export type HandTrackingStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -83,7 +99,12 @@ export function useHandTracking(
         const landmarker = await HandLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
           runningMode: 'VIDEO',
-          numHands: 2
+          numHands: 2,
+          // Varsayılanlar (0.5) sınırda titriyordu — daha yüksek güven eşiği daha kararlı
+          // algılama sağlıyor, karşılığında biraz daha geç algılama kabul ediliyor
+          minHandDetectionConfidence: 0.7,
+          minHandPresenceConfidence: 0.7,
+          minTrackingConfidence: 0.7
         })
         if (cancelled) return
 
@@ -99,38 +120,86 @@ export function useHandTracking(
         setStatus('ready')
 
         let smoothedSpread: number | null = null
+        let hoverX: number | null = null
+        let hoverY: number | null = null
+        let dragX: number | null = null
+        let dragY: number | null = null
+        let isPinching = false
+        let missedFrames = 0
+        let wasTwoHand = false
+        let twoHandMissedFrames = 0
 
         function loop(): void {
           if (cancelled || !video) return
           const result = landmarker.detectForVideo(video, performance.now())
           const hand = result.landmarks[0]
           const secondHand = result.landmarks[1]
+          if (!hand && !secondHand && missedFrames < MISSED_FRAMES_TOLERANCE) {
+            // Tek karelik kayıp: son bilinen durum korunur, hiçbir şey sıfırlanmaz
+            missedFrames += 1
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+          if (hand || secondHand) missedFrames = 0
+          // Eller üst üste bindiğinde veya biri kadraj kenarına yaklaştığında MediaPipe iki elden
+          // birini bir anlığına kaçırabiliyor; bu, zoom jesti sırasında küre ölçeğinin aniden 1'e
+          // sıçramasına yol açıyordu. İki elliyken tek el görünür hâle gelirse birkaç kare son
+          // bilinen mesafe korunur, ikinci el gerçekten gittiyse bu süre sonunda tek-el moduna geçilir.
+          if (wasTwoHand && hand && !secondHand && twoHandMissedFrames < MISSED_FRAMES_TOLERANCE) {
+            twoHandMissedFrames += 1
+            rafId = requestAnimationFrame(loop)
+            return
+          }
           if (secondHand) {
             // İki el birden görünüyorsa yörünge hover/pinch'i devre dışı bırakılır (karışmasın);
             // avuç içi merkezi (landmark 9) elin kendisi kadar sabit, parmak ucuna göre daha az titrek
+            isPinching = false
             setPinching(false)
             setHandPoint(null)
             setHandNormalized(null)
+            hoverX = null
+            hoverY = null
+            dragX = null
+            dragY = null
             smoothedSpread = smooth(
               smoothedSpread,
               distance(hand[9], secondHand[9]),
               SPREAD_SMOOTHING
             )
             setTwoHandSpread(smoothedSpread)
+            wasTwoHand = true
+            twoHandMissedFrames = 0
           } else if (hand) {
-            setPinching(distance(hand[4], hand[8]) < PINCH_THRESHOLD)
+            const pinchDistance = distance(hand[4], hand[8])
+            // Histerezis: kavrarken sıkı eşik, bırakırken gevşek eşik — sınırda titremeyi önler
+            isPinching = isPinching ? pinchDistance < PINCH_EXIT : pinchDistance < PINCH_ENTER
+            setPinching(isPinching)
+            // Ham parmak ucu konumu (mirror düzeltmeden önce) iki ayrı hızda yumuşatılır
+            hoverX = smooth(hoverX, hand[8].x, HOVER_SMOOTHING)
+            hoverY = smooth(hoverY, hand[8].y, HOVER_SMOOTHING)
+            dragX = smooth(dragX, hand[8].x, DRAG_SMOOTHING)
+            dragY = smooth(dragY, hand[8].y, DRAG_SMOOTHING)
             // MediaPipe koordinatı aynalanmamış ham görüntüye göre; kullanıcı ekranda kendini
             // aynalanmış görüyor, bu yüzden x ters çevrilip merkeze göre px'e çevriliyor
-            setHandPoint({ x: (0.5 - hand[8].x) * gainX, y: (hand[8].y - 0.5) * gainY })
-            setHandNormalized({ x: 1 - hand[8].x, y: hand[8].y })
+            setHandPoint({ x: (0.5 - hoverX) * gainX, y: (hoverY - 0.5) * gainY })
+            setHandNormalized({ x: 1 - dragX, y: dragY })
             smoothedSpread = null
             setTwoHandSpread(null)
+            wasTwoHand = false
+            twoHandMissedFrames = 0
           } else {
+            isPinching = false
             setPinching(false)
             setHandPoint(null)
             setHandNormalized(null)
+            hoverX = null
+            hoverY = null
+            dragX = null
+            dragY = null
             smoothedSpread = null
             setTwoHandSpread(null)
+            wasTwoHand = false
+            twoHandMissedFrames = 0
           }
           rafId = requestAnimationFrame(loop)
         }

@@ -38,6 +38,9 @@ const ITEMS: OrbitItem[] = [
 const DEFAULT_RADIUS_X = 180
 const DEFAULT_RADIUS_Y = 60
 const DEFAULT_HOVER_DISTANCE = 55
+// Histerezis: el tam sınırda dururken hover'ın kare-kare açılıp kapanmasını (ikon titremesi)
+// önlemek için çıkış eşiği girişten biraz daha geniş tutuluyor
+const HOVER_EXIT_MARGIN = 12
 const DEGREES_PER_SECOND = 18
 
 interface ItemLayout {
@@ -53,14 +56,18 @@ function layoutItems(
   handPoint: { x: number; y: number } | null | undefined,
   radiusX: number,
   radiusY: number,
-  hoverDistance: number
+  hoverDistance: number,
+  currentHoveredPage: PageId | null
 ): ItemLayout[] {
   const projected = projectRing(ITEMS.length, angle)
   return ITEMS.map((item, index) => {
     const p = projected[index]
     const x = p.x * radiusX
     const y = p.y * radiusY
-    const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < hoverDistance
+    // Zaten hover'da olan nesne için eşik biraz genişletilir (histerezis) — sınırdaki titreme önlenir
+    const threshold =
+      item.page === currentHoveredPage ? hoverDistance + HOVER_EXIT_MARGIN : hoverDistance
+    const hovered = !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < threshold
     return { item, x, y, depth: p.depth, hovered }
   })
 }
@@ -91,7 +98,11 @@ export default function OrbitTools({
   const [angle, setAngle] = useState(0)
   const rafRef = useRef(0)
   const lastRef = useRef(0)
-  const wasPinching = useRef(false)
+  // Bu bileşen açılırken (ör. Ana Sayfa yüklenirken el kontrolü zaten açıksa) el hâlâ pinch
+  // durumunda olabilir; başlangıcı false yapmak bu devam eden pinch'i "yeni" sanıp hover'da
+  // hiçbir şey yokken bile yanlışlıkla bir sayfaya atlayabilirdi (TaskOrbit'te bulunan aynı hata)
+  const wasPinching = useRef(pinching)
+  const [stableHoveredPage, setStableHoveredPage] = useState<PageId | null>(null)
 
   useEffect(() => {
     function tick(now: number): void {
@@ -105,7 +116,7 @@ export default function OrbitTools({
     return () => cancelAnimationFrame(rafRef.current)
   }, [])
 
-  const layout = layoutItems(angle, handPoint, radiusX, radiusY, hoverDistance)
+  const layout = layoutItems(angle, handPoint, radiusX, radiusY, hoverDistance, stableHoveredPage)
   const hoveredPage = layout.find((l) => l.hovered)?.item.page ?? null
 
   // Pinch'in "başladığı" an (false -> true geçişi) hover'daki nesneyi seçer; basılı tutmak
@@ -118,6 +129,7 @@ export default function OrbitTools({
   }, [pinching, hoveredPage, onSelect])
 
   useEffect(() => {
+    void Promise.resolve().then(() => setStableHoveredPage(hoveredPage))
     onHoverChange?.(hoveredPage)
   }, [hoveredPage, onHoverChange])
 

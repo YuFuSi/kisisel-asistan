@@ -11,6 +11,8 @@ const MAX_TASKS = 6
 const RADIUS_X = 200
 const RADIUS_Y = 70
 const HOVER_DISTANCE = 55
+// OrbitTools'taki ile aynı histerezis: sınırdaki titremeyi önler
+const HOVER_EXIT_MARGIN = 12
 const DEGREES_PER_SECOND = 14
 // Kartı küreye bu kadar yaklaştırıp bırakınca "tamamlandı" sayılır
 const DROP_ZONE_DISTANCE = 90
@@ -47,6 +49,7 @@ export default function TaskOrbit({
   const wasPinching = useRef(pinching)
   const [grabbedId, setGrabbedId] = useState<number | null>(null)
   const grabbedNearOrb = useRef(false)
+  const [stableHoveredId, setStableHoveredId] = useState<number | null>(null)
 
   useEffect(() => {
     function tick(now: number): void {
@@ -65,13 +68,17 @@ export default function TaskOrbit({
     const p = projected[index]
     const x = p.x * RADIUS_X
     const y = p.y * RADIUS_Y
+    const threshold =
+      task.id === stableHoveredId ? HOVER_DISTANCE + HOVER_EXIT_MARGIN : HOVER_DISTANCE
     const hovered =
-      grabbedId === null &&
-      !!handPoint &&
-      Math.hypot(handPoint.x - x, handPoint.y - y) < HOVER_DISTANCE
+      grabbedId === null && !!handPoint && Math.hypot(handPoint.x - x, handPoint.y - y) < threshold
     return { task, x, y, depth: p.depth, hovered }
   })
   const hoveredId = layout.find((l) => l.hovered)?.task.id ?? null
+
+  useEffect(() => {
+    void Promise.resolve().then(() => setStableHoveredId(hoveredId))
+  }, [hoveredId])
 
   // Pinch'in başladığı an: hover'daki kartı kavra; hiçbir şey hover'da değilse "geri dön"
   useEffect(() => {
