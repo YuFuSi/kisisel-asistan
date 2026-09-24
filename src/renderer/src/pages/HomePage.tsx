@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MessageSquare, Square } from 'lucide-react'
 import type { Reminder, Task } from '@shared/api'
 import AuroraBackground from '../components/home/AuroraBackground'
@@ -6,6 +6,7 @@ import CommandBox from '../components/home/CommandBox'
 import FloatingTile from '../components/home/FloatingTile'
 import Orb from '../components/jarvis/Orb'
 import OrbitTools from '../components/jarvis/OrbitTools'
+import TaskOrbit from '../components/jarvis/TaskOrbit'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
@@ -121,11 +122,29 @@ function HomePage({
   useClapActivation(true, () => onHandControlChange(!handControlOn))
   // Yörüngede bir şeyin üstündeyken pinch normal seçim yapar; boşlukta pinch pencere kavrar
   const [hoveredOrbitItem, setHoveredOrbitItem] = useState<PageId | null>(null)
+  // "Görevler"e pinch yapınca sayfaya gitmek yerine gerçek görev kartları gösterilir
+  const [taskMode, setTaskMode] = useState(false)
+  // El kontrolü kapanınca (alkışla) bir dahaki açılış ana menüden başlasın
+  useEffect(() => {
+    if (!handControlOn) void Promise.resolve().then(() => setTaskMode(false))
+  }, [handControlOn])
   const { dragging: draggingWindow } = useWindowDrag(
-    handControlOn && !hoveredOrbitItem,
+    handControlOn && !taskMode && !hoveredOrbitItem,
     handPinching,
     handNormalized
   )
+
+  function handleOrbitSelect(page: PageId): void {
+    if (page === 'tasks') {
+      setTaskMode(true)
+      return
+    }
+    onNavigate(page)
+  }
+
+  function completeTaskByHand(id: number): void {
+    void window.api.tasks.update(id, { done: true })
+  }
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const orbLayer = useRef<HTMLDivElement>(null)
   const tileLayer = useRef<HTMLDivElement>(null)
@@ -145,7 +164,9 @@ function HomePage({
           ? 'El kontrolü hata verdi (iki alkışla kapat)'
           : draggingWindow
             ? "Pencere sürükleniyor — bırakmak için pinch'i aç"
-            : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç; boşlukta pinch pencere sürükler; iki elle küreyi büyüt/küçült (kapatmak için iki alkış)'
+            : taskMode
+              ? 'Bir görevi kavrayıp küreye sürükle: tamamlanır. Boşlukta pinch: geri dön.'
+              : 'El ile kontrol açık — bir araca yaklaş, pinch ile seç; boşlukta pinch pencere sürükler; iki elle küreyi büyüt/küçült (kapatmak için iki alkış)'
       : state === 'idle'
         ? voiceHint(voice)
         : running
@@ -273,17 +294,27 @@ function HomePage({
                   notice={notice}
                 />
               </button>
-              {handControlOn && !draggingWindow && (
+              {handControlOn && !draggingWindow && (taskMode || tasks) && (
                 <div className="pointer-events-none absolute">
-                  <OrbitTools
-                    handPoint={handPoint}
-                    pinching={handPinching}
-                    onSelect={onNavigate}
-                    onHoverChange={setHoveredOrbitItem}
-                    radiusX={HAND_ORBIT_RADIUS_X}
-                    radiusY={HAND_ORBIT_RADIUS_Y}
-                    hoverDistance={HAND_ORBIT_HOVER_DISTANCE}
-                  />
+                  {taskMode ? (
+                    <TaskOrbit
+                      tasks={tasks ?? []}
+                      handPoint={handPoint}
+                      pinching={handPinching}
+                      onComplete={completeTaskByHand}
+                      onExit={() => setTaskMode(false)}
+                    />
+                  ) : (
+                    <OrbitTools
+                      handPoint={handPoint}
+                      pinching={handPinching}
+                      onSelect={handleOrbitSelect}
+                      onHoverChange={setHoveredOrbitItem}
+                      radiusX={HAND_ORBIT_RADIUS_X}
+                      radiusY={HAND_ORBIT_RADIUS_Y}
+                      hoverDistance={HAND_ORBIT_HOVER_DISTANCE}
+                    />
+                  )}
                 </div>
               )}
             </div>
