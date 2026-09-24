@@ -25,6 +25,9 @@ export interface HandTrackingResult {
   /** İki el birden görünüyorsa aralarındaki normalize (0-1) mesafe; tek elde/elsizde null.
    *  İki elle büyütme/küçültme jesti için — eller açılıp kapanınca değişir. */
   twoHandSpread: number | null
+  /** İşaret parmağı ucunun ham, aynalanmış normalize (0-1) konumu; ekran mutlak konumuna
+   *  eşlemek (ör. pencere sürükleme) için — handPoint'in aksine kazanç uygulanmamıştır. */
+  handNormalized: HandPoint | null
 }
 
 function distance(a: HandPoint, b: HandPoint): number {
@@ -53,6 +56,7 @@ export function useHandTracking(
   const [pinching, setPinching] = useState(false)
   const [handPoint, setHandPoint] = useState<HandPoint | null>(null)
   const [twoHandSpread, setTwoHandSpread] = useState<number | null>(null)
+  const [handNormalized, setHandNormalized] = useState<HandPoint | null>(null)
 
   useEffect(() => {
     if (!enabled) {
@@ -62,6 +66,7 @@ export function useHandTracking(
         setPinching(false)
         setHandPoint(null)
         setTwoHandSpread(null)
+        setHandNormalized(null)
       })
       return
     }
@@ -105,6 +110,7 @@ export function useHandTracking(
             // avuç içi merkezi (landmark 9) elin kendisi kadar sabit, parmak ucuna göre daha az titrek
             setPinching(false)
             setHandPoint(null)
+            setHandNormalized(null)
             smoothedSpread = smooth(
               smoothedSpread,
               distance(hand[9], secondHand[9]),
@@ -116,11 +122,13 @@ export function useHandTracking(
             // MediaPipe koordinatı aynalanmamış ham görüntüye göre; kullanıcı ekranda kendini
             // aynalanmış görüyor, bu yüzden x ters çevrilip merkeze göre px'e çevriliyor
             setHandPoint({ x: (0.5 - hand[8].x) * gainX, y: (hand[8].y - 0.5) * gainY })
+            setHandNormalized({ x: 1 - hand[8].x, y: hand[8].y })
             smoothedSpread = null
             setTwoHandSpread(null)
           } else {
             setPinching(false)
             setHandPoint(null)
+            setHandNormalized(null)
             smoothedSpread = null
             setTwoHandSpread(null)
           }
@@ -144,5 +152,5 @@ export function useHandTracking(
     }
   }, [enabled, gainX, gainY])
 
-  return { videoRef, status, errorMessage, pinching, handPoint, twoHandSpread }
+  return { videoRef, status, errorMessage, pinching, handPoint, twoHandSpread, handNormalized }
 }

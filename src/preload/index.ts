@@ -145,6 +145,10 @@ const api: Api = {
   hud: {
     resize: (width, height) => ipcRenderer.invoke('hud:resize', width, height),
     navigate: (page) => ipcRenderer.invoke('hud:navigate', page)
+  },
+  windows: {
+    foreground: () => ipcRenderer.invoke('windows:foreground'),
+    move: (id, x, y) => ipcRenderer.invoke('windows:move', id, x, y)
   }
 }
 

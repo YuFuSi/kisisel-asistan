@@ -112,6 +112,30 @@ export function minimizeWindow(id: number): Promise<void> {
   )
 }
 
+/**
+ * O anda öndeki (odaklanmış) pencerenin süreç kimliğini (pid) döner; kamera el kontrolündeki
+ * "sürükle" jesti hangi pencereyi taşıyacağını buradan öğrenir. Görünür pencere yoksa null.
+ */
+export async function getForegroundWindowId(): Promise<number | null> {
+  const script = `
+$ErrorActionPreference = 'Stop'
+Add-Type -Namespace JarvisWin -Name Fg -MemberDefinition '
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+'
+$h = [JarvisWin.Fg]::GetForegroundWindow()
+$procId = 0
+[JarvisWin.Fg]::GetWindowThreadProcessId($h, [ref]$procId) | Out-Null
+$procId
+`
+  const { stdout } = await run('powershell.exe', [...PS_ARGS, script], {
+    windowsHide: true,
+    timeout: TIMEOUT_MS
+  })
+  const pid = parseInt(stdout.trim(), 10)
+  return Number.isInteger(pid) && pid > 0 ? pid : null
+}
+
 // WM_CLOSE: programın kendi "kapat" mantığını çalıştırır (kaydetme sorusu vb. çıkabilir),
 // süreci zorla öldürmez
 const WM_CLOSE = 0x0010

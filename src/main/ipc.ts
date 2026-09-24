@@ -8,6 +8,7 @@ import { logRendererError, openLogDirectory } from './system/logger'
 import { getSystemStatus } from './system/status'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
 import { resizeHud } from './system/hud'
+import { getForegroundWindowId, moveWindow } from './lib/windows'
 import { sendCommand, showMainWindow } from './system/window'
 import {
   getVoiceState,
@@ -124,6 +125,10 @@ export function registerIpcHandlers(): void {
     showMainWindow()
     sendCommand(`open-page:${page}`)
   })
+
+  // Kamera el kontrolündeki "pencere sürükle" jesti: doğrudan, onaysız (fare sürüklemesiyle eşdeğer)
+  ipcMain.handle('windows:foreground', () => getForegroundWindowId())
+  ipcMain.handle('windows:move', (_event, id: number, x: number, y: number) => moveWindow(id, x, y))
 
   // Yedekler ve etkinlik kaydı
   ipcMain.handle('backups:list', () => listBackups(backupDirectory()))
