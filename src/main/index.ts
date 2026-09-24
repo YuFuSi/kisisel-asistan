@@ -19,6 +19,7 @@ import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
 import { applyOpenAtLogin, wasStartedHidden } from './system/startup'
 import { createTray, destroyTray } from './system/tray'
 import { disposeVoiceSession, initVoiceSession } from './voice/session'
+import { disposeWindowDaemon } from './lib/windowDaemon'
 import {
   createMainWindow,
   getMainWindow,
@@ -165,6 +166,7 @@ if (!app.requestSingleInstanceLock()) {
       await waitForActiveAutomations(AUTOMATION_SHUTDOWN_WAIT_MS)
       // Arka plandaki whisper ve Piper programları da kapansın
       disposeVoiceSession()
+      disposeWindowDaemon()
       closeDb()
       app.quit()
     })()
