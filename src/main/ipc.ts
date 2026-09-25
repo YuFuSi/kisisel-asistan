@@ -50,8 +50,14 @@ import {
   scheduleNoteEmbedding,
   searchNotesSemantic
 } from './ai/noteEmbeddings'
-import { createMemory, deleteMemory, listMemories, updateMemory } from './data/memories'
-import { createNote, deleteNote, listNotes, updateNote } from './data/notes'
+import {
+  createMemory,
+  deleteMemory,
+  listMemories,
+  listMemoriesWithEmbeddings,
+  updateMemory
+} from './data/memories'
+import { createNote, deleteNote, listNotes, listNotesWithEmbeddings, updateNote } from './data/notes'
 import {
   createReminder,
   deleteReminder,
@@ -322,6 +328,12 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('notes:remove', (_event, id: number) => changing('notes', () => deleteNote(id)))
   ipcMain.handle('notes:backfillEmbeddings', () => backfillNoteEmbeddings())
   ipcMain.handle('notes:search', (_event, query: string) => searchNotesSemantic(query))
+  ipcMain.handle('notes:listWithEmbeddings', () =>
+    listNotesWithEmbeddings().map((note) => ({
+      ...note,
+      embedding: note.embedding ? Array.from(note.embedding) : null
+    }))
+  )
 
   // Hafıza
   ipcMain.handle('memories:list', () => listMemories())
@@ -344,4 +356,10 @@ export function registerIpcHandlers(): void {
   )
   ipcMain.handle('memories:backfillEmbeddings', () => backfillMemoryEmbeddings())
   ipcMain.handle('memories:search', (_event, query: string) => searchMemoriesSemantic(query))
+  ipcMain.handle('memories:listWithEmbeddings', () =>
+    listMemoriesWithEmbeddings().map((memory) => ({
+      ...memory,
+      embedding: memory.embedding ? Array.from(memory.embedding) : null
+    }))
+  )
 }
