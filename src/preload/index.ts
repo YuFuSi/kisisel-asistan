@@ -95,7 +95,8 @@ const api: Api = {
     update: (id, patch) => ipcRenderer.invoke('notes:update', id, patch),
     remove: (id) => ipcRenderer.invoke('notes:remove', id),
     backfillEmbeddings: () => ipcRenderer.invoke('notes:backfillEmbeddings'),
-    search: (query) => ipcRenderer.invoke('notes:search', query)
+    search: (query) => ipcRenderer.invoke('notes:search', query),
+    listWithEmbeddings: () => ipcRenderer.invoke('notes:listWithEmbeddings')
   },
   memories: {
     list: () => ipcRenderer.invoke('memories:list'),
@@ -103,7 +104,8 @@ const api: Api = {
     update: (id, content) => ipcRenderer.invoke('memories:update', id, content),
     remove: (id) => ipcRenderer.invoke('memories:remove', id),
     backfillEmbeddings: () => ipcRenderer.invoke('memories:backfillEmbeddings'),
-    search: (query) => ipcRenderer.invoke('memories:search', query)
+    search: (query) => ipcRenderer.invoke('memories:search', query),
+    listWithEmbeddings: () => ipcRenderer.invoke('memories:listWithEmbeddings')
   },
   speech: {
     transcribe: (audio, mimeType) => ipcRenderer.invoke('speech:transcribe', audio, mimeType)
