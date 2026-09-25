@@ -57,7 +57,13 @@ import {
   listMemoriesWithEmbeddings,
   updateMemory
 } from './data/memories'
-import { createNote, deleteNote, listNotes, listNotesWithEmbeddings, updateNote } from './data/notes'
+import {
+  createNote,
+  deleteNote,
+  listNotes,
+  listNotesWithEmbeddings,
+  updateNote
+} from './data/notes'
 import {
   createReminder,
   deleteReminder,
