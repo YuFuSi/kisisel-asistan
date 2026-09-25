@@ -71,6 +71,11 @@ const REST_LENGTH = 2.2
 const SPRING_STRENGTH = 0.02
 const DAMPING = 0.85
 const INITIAL_RADIUS = 5
+// Zayıf merkezleme (yerçekimi) kuvveti: her düğüm orijine doğru hafifçe çekilir (orijinde
+// çapa'lı bir yay gibi). Kenarı olmayan düğümler sadece itme kuvvetiyle sınırsız uzaklaşırdı;
+// bu, REPULSION/SPRING_STRENGTH'e göre kasıtlı olarak çok zayıf tutulur (kümeyi sıkıştırmaz,
+// sadece izole düğümleri sınırlı bir yarıçapta tutar).
+const CENTERING_STRENGTH = 0.012
 
 /** Basit, deterministik olmayan (rastgele başlangıçlı) ama sabit sayıda iterasyonda duran 3B
  *  kuvvet yönlendirmeli yerleşim. Konumlar bir kez hesaplanıp çağıran tarafından önbelleğe
@@ -144,6 +149,15 @@ export function layoutGraph(
       fb.x -= fx
       fb.y -= fy
       fb.z -= fz
+    }
+
+    // Merkezleme: her düğüm orijine doğru mesafesiyle orantılı zayıf bir kuvvetle çekilir
+    for (const node of nodes) {
+      const p = position.get(node.id)!
+      const f = force.get(node.id)!
+      f.x -= p.x * CENTERING_STRENGTH
+      f.y -= p.y * CENTERING_STRENGTH
+      f.z -= p.z * CENTERING_STRENGTH
     }
 
     for (const node of nodes) {

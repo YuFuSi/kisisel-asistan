@@ -85,4 +85,19 @@ describe('layoutGraph', () => {
     const b = positions.get('b')!
     expect(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)).toBeGreaterThan(0.01)
   })
+
+  it('kenarsız (bağlantısız) düğümler bile orijinden sınırsız uzaklaşmaz (merkezleme kuvveti)', () => {
+    // En kötü durum: hiçbir kenar yok, sadece itme kuvveti var. Merkezleme kuvveti olmadan
+    // bu düğümler DEFAULT_ITERATIONS boyunca birbirini iterek orijinden çok uzağa savrulur.
+    const nodes: GraphNode[] = Array.from({ length: 9 }, (_, i) => ({
+      id: `n${i}`,
+      embedding: null
+    }))
+    const positions = layoutGraph(nodes, [])
+    for (const node of nodes) {
+      const p = positions.get(node.id)!
+      const dist = Math.hypot(p.x, p.y, p.z)
+      expect(dist).toBeLessThan(15)
+    }
+  })
 })
