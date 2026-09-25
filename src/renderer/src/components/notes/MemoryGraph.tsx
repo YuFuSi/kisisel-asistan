@@ -3,12 +3,19 @@ import { Info } from 'lucide-react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import type { MemoryWithEmbedding, NoteWithEmbedding, SettingsView } from '@shared/api'
-import { buildEdges, layoutGraph, type GraphNode } from '../../lib/graphLayout'
+import {
+  buildEdges,
+  layoutGraph,
+  type GraphEdge,
+  type GraphNode,
+  type Vec3
+} from '../../lib/graphLayout'
 import { useLiveData } from '../../lib/useLiveData'
 import { secondaryButtonClass, inputClass } from '../../lib/styles'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
 import Modal from '../ui/Modal'
+import Skeleton from '../ui/Skeleton'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
@@ -22,7 +29,11 @@ interface MapItem {
   id: string
   kind: 'note' | 'memory'
   refId: number
+  /** Yörünge/etiket/tooltip için kısaltılmış görüntüleme metni. */
   title: string
+  /** Düzenleme kipinin başlangıç değeri: notta gerçek başlık (boş olabilir), hafızada tam içerik.
+   *  Görüntüleme için kısaltılmış `title`'dan asla üretilmez. */
+  raw: string
   embedding: Float32Array | null
 }
 
@@ -35,6 +46,23 @@ function firstWords(text: string, max = 40): string {
   return clean.length > max ? `${clean.slice(0, max)}…` : clean
 }
 
+/** İki düğüm kümesinin gerçekten aynı grafiği (kimlikler + embedding değerleri) üretip
+ *  üretmediğini ucuzca ayırt etmek için imza. Sadece başlık/içerik değişirse (embedding aynı
+ *  kalırsa) imza değişmez — bu, düzenleme sonrası yeniden yerleşimi (relayout) önlemek için kasıtlı. */
+function embeddingSignature(items: MapItem[]): string {
+  return items
+    .map((item) => `${item.id}:${item.embedding ? hashFloats(item.embedding) : 'yok'}`)
+    .join('|')
+}
+
+function hashFloats(values: Float32Array): string {
+  let hash = 0
+  for (let i = 0; i < values.length; i++) {
+    hash = (hash * 31 + Math.round(values[i] * 1000)) | 0
+  }
+  return hash.toString(36)
+}
+
 interface MemoryGraphProps {
   /** ChatPage/CalendarPage'deki ile aynı desen: App.tsx sayfayı 'settings' yapar */
   onOpenSettings: () => void
@@ -44,6 +72,8 @@ function MemoryGraph({ onOpenSettings }: MemoryGraphProps): React.JSX.Element {
   const settings = useLiveData(loadSettings, 'settings')
   const notes = useLiveData(loadNotes, 'notes')
   const memories = useLiveData(loadMemories, 'memories')
+  const toast = useToast()
+  const [indexing, setIndexing] = useState(false)
 
   const semanticSearchEnabled = settings.data?.semanticSearchEnabled ?? false
 
@@ -54,6 +84,7 @@ function MemoryGraph({ onOpenSettings }: MemoryGraphProps): React.JSX.Element {
         kind: 'note' as const,
         refId: n.id,
         title: n.title || firstWords(n.content) || 'Başlıksız not',
+        raw: n.title,
         embedding: n.embedding ? Float32Array.from(n.embedding) : null
       })) ?? []
     const memoryItems: MapItem[] =
@@ -62,14 +93,60 @@ function MemoryGraph({ onOpenSettings }: MemoryGraphProps): React.JSX.Element {
         kind: 'memory' as const,
         refId: m.id,
         title: firstWords(m.content),
+        raw: m.content,
         embedding: m.embedding ? Float32Array.from(m.embedding) : null
       })) ?? []
     return [...noteItems, ...memoryItems]
   }, [notes.data, memories.data])
 
+  // Yerleşim (layout) rastgele başlangıçlı olduğu için her render'da yeniden hesaplanırsa harita
+  // sürekli karışır (bkz. graphLayout.ts). İmza sadece kimlik + embedding değiştiğinde değişir;
+  // başlık/içerik düzenlenip kayıt yeniden çekildiğinde (useLiveData) imza aynı kalır ve
+  // aşağıdaki useMemo eski `edges`/`positions` referansını korur.
+  const graphKey = useMemo(() => embeddingSignature(items), [items])
+  const { edges, positions } = useMemo<{
+    edges: GraphEdge[]
+    positions: Map<string, Vec3>
+  }>(() => {
+    const graphNodes = items.map(toGraphNode)
+    const builtEdges = buildEdges(graphNodes)
+    const builtPositions = layoutGraph(graphNodes, builtEdges)
+    return { edges: builtEdges, positions: builtPositions }
+    // items kasıtlı olarak dependency listesinde değil: sadece graphKey (kimlik + embedding)
+    // değiştiğinde yeniden hesaplanmalı, her `items` referansı değişiminde değil.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphKey])
+
+  const loading = settings.data === null || notes.data === null || memories.data === null
   const hasAnyEmbedding = items.some((item) => item.embedding !== null)
 
-  if (!semanticSearchEnabled || !hasAnyEmbedding) {
+  async function backfillEmbeddings(): Promise<void> {
+    setIndexing(true)
+    try {
+      const [noteCount, memoryCount] = await Promise.all([
+        window.api.notes.backfillEmbeddings(),
+        window.api.memories.backfillEmbeddings()
+      ])
+      const total = noteCount + memoryCount
+      toast.success(
+        total === 0 ? 'Zaten güncel, indekslenecek kayıt yok.' : `${total} kayıt indekslendi.`
+      )
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setIndexing(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <Skeleton className="h-40 w-40 rounded-full" />
+      </div>
+    )
+  }
+
+  if (!semanticSearchEnabled) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <Info className="text-faint" size={28} />
@@ -91,9 +168,23 @@ function MemoryGraph({ onOpenSettings }: MemoryGraphProps): React.JSX.Element {
     )
   }
 
-  const graphNodes = items.map(toGraphNode)
-  const edges = buildEdges(graphNodes)
-  const positions = layoutGraph(graphNodes, edges)
+  if (!hasAnyEmbedding) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+        <Info className="text-faint" size={28} />
+        <p className="max-w-sm text-sm text-muted">
+          Haritayı görmek için notların ve hafıza kayıtlarının indekslenmesi gerekiyor.
+        </p>
+        <button
+          className={secondaryButtonClass}
+          disabled={indexing}
+          onClick={() => void backfillEmbeddings()}
+        >
+          {indexing ? 'İndeksleniyor...' : 'İndeksle'}
+        </button>
+      </div>
+    )
+  }
 
   return <MemoryGraphScene items={items} edges={edges} positions={positions} />
 }
@@ -252,7 +343,7 @@ function MemoryGraphEditModal({
   onClose: () => void
 }): React.JSX.Element {
   const toast = useToast()
-  const [text, setText] = useState(item.title)
+  const [text, setText] = useState(item.raw)
   const [saving, setSaving] = useState(false)
 
   async function save(): Promise<void> {
@@ -274,11 +365,12 @@ function MemoryGraphEditModal({
   return (
     <Modal open onClose={onClose}>
       <h2 className="mb-3 text-sm font-medium text-muted">
-        {item.kind === 'note' ? 'Not' : 'Hafıza kaydı'}
+        {item.kind === 'note' ? 'Not başlığı' : 'Hafıza kaydı'}
       </h2>
       <textarea
         className={`${inputClass} min-h-24 resize-none`}
         value={text}
+        placeholder={item.kind === 'note' ? 'Başlıksız (boş bırakılabilir)' : undefined}
         onChange={(e) => setText(e.target.value)}
       />
       <div className="mt-3 flex justify-end gap-2">
