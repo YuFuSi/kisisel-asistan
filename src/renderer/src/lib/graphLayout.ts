@@ -1,6 +1,6 @@
 // Hafıza haritası: notlar/hafıza kayıtları arasındaki anlamsal benzerlikten kenar listesi kurma
 // ve basit bir kuvvet yönlendirmeli (force-directed) 3B yerleşim. Yeni bir kütüphane eklemeden
-// (three.js sadece render için kullanılacak, burası saf matematik) — bu yüzden üç.js tipine değil
+// (three.js sadece render için kullanılacak, burası saf matematik) — bu yüzden three.js tipine değil
 // düz {x,y,z} nesnesine (Vec3) döner.
 import { cosineSimilarity } from './cosine'
 
@@ -93,14 +93,6 @@ export function layoutGraph(
       z: INITIAL_RADIUS * Math.cos(phi) * Math.random()
     })
     velocity.set(node.id, { x: 0, y: 0, z: 0 })
-  }
-
-  const edgesByNode = new Map<string, GraphEdge[]>()
-  for (const edge of edges) {
-    if (!edgesByNode.has(edge.source)) edgesByNode.set(edge.source, [])
-    if (!edgesByNode.has(edge.target)) edgesByNode.set(edge.target, [])
-    edgesByNode.get(edge.source)!.push(edge)
-    edgesByNode.get(edge.target)!.push(edge)
   }
 
   for (let step = 0; step < iterations; step++) {
