@@ -451,6 +451,12 @@ export interface Note {
   updatedAt: string
 }
 
+/** Harita görünümü için: embedding vektörü de dahil (normal `Note`'ta yok, IPC payload'ı
+ *  büyümesin diye sadece bu uç nokta embedding taşır). */
+export interface NoteWithEmbedding extends Note {
+  embedding: number[] | null
+}
+
 export interface NotePatch {
   title?: string
   content?: string
@@ -460,6 +466,11 @@ export interface Memory {
   id: number
   content: string
   createdAt: string
+}
+
+/** Harita görünümü için: embedding vektörü de dahil. */
+export interface MemoryWithEmbedding extends Memory {
+  embedding: number[] | null
 }
 
 // ---- Güvenilirlik: araç izinleri, etkinlik kaydı, yedekler ----
@@ -726,6 +737,8 @@ export interface Api {
     backfillEmbeddings(): Promise<number>
     /** Notlarda arama (anlamsal arama açıksa anlam benzerliğine göre) */
     search(query: string): Promise<Note[]>
+    /** Hafıza haritası için: embedding vektörleriyle birlikte tüm notlar */
+    listWithEmbeddings(): Promise<NoteWithEmbedding[]>
   }
   memories: {
     list(): Promise<Memory[]>
@@ -736,6 +749,8 @@ export interface Api {
     backfillEmbeddings(): Promise<number>
     /** Hafızada arama (anlamsal arama açıksa anlam benzerliğine göre) */
     search(query: string): Promise<Memory[]>
+    /** Hafıza haritası için: embedding vektörleriyle birlikte tüm hafıza kayıtları */
+    listWithEmbeddings(): Promise<MemoryWithEmbedding[]>
   }
   speech: {
     /** Ses kaydını yazıya çevirir */
