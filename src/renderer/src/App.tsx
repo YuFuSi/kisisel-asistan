@@ -110,7 +110,10 @@ function App(): React.JSX.Element {
           )}
           {page === 'notes' && (
             <div className="animate-fade h-full">
-              <NotesPage onOpenSettings={() => setPage('settings')} />
+              <NotesPage
+                onOpenSettings={() => setPage('settings')}
+                onOpenConversation={openConversation}
+              />
             </div>
           )}
           {page === 'automations' && (

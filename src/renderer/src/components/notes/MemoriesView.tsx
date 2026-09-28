@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Brain, Pencil, Plus, Search, Trash2 } from 'lucide-react'
-import type { Memory, SettingsView } from '@shared/api'
+import { Brain, Check, MessageSquare, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react'
+import {
+  MEMORY_KIND_LABELS,
+  MEMORY_KINDS,
+  type Memory,
+  type MemoryKind,
+  type SettingsView
+} from '@shared/api'
+import Button from '../ui/Button'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
 import {
@@ -18,8 +25,14 @@ const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
 // Yazmayı bıraktıktan bu kadar süre sonra arama gönderilir
 const SEARCH_DELAY_MS = 400
 
-function MemoriesView(): React.JSX.Element {
+interface MemoriesViewProps {
+  /** "Şu sohbetten öğrenildi" bağlantısı: sohbet sayfasında o sohbeti açar */
+  onOpenConversation?: (conversationId: number) => void
+}
+
+function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Element {
   const memories = useLiveData(loadMemories, 'memories')
+  const [processing, setProcessing] = useState(false)
   const settings = useLiveData(loadSettings, 'settings')
   const [draft, setDraft] = useState('')
   // Düzenlenen kayıt ve yeni metni
@@ -79,6 +92,30 @@ function MemoriesView(): React.JSX.Element {
     }
   }
 
+  // Otomatik öğrenilip henüz bakılmamış kayıtlar ("yeni öğrendiklerim")
+  const unreviewed = (memories.data ?? []).filter((memory) => !memory.reviewed)
+
+  async function processNow(): Promise<void> {
+    setProcessing(true)
+    try {
+      const result = await window.api.memories.processNow()
+      if (result.conversations === 0) {
+        toast.success('İşlenecek yeni konuşma yok, hafıza güncel.')
+      } else {
+        const learned = result.added + result.updated
+        toast.success(
+          `${result.conversations} konuşma işlendi` +
+            (learned > 0 ? `, ${result.added} yeni bilgi öğrenildi.` : ', yeni bilgi çıkmadı.') +
+            (result.remaining > 0 ? ` ${result.remaining} konuşma sonraya kaldı.` : '')
+        )
+      }
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   async function run(action: () => Promise<unknown>): Promise<boolean> {
     try {
       await action()
@@ -108,10 +145,64 @@ function MemoriesView(): React.JSX.Element {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl space-y-4 p-8">
         <p className="text-sm text-muted">
-          Asistan buradaki bilgileri her sohbette hatırlar. Sohbette &quot;bunu hatırla&quot;
-          dediğinde buraya eklenir; çok benzer bir bilgi zaten varsa yenisiyle güncellenir. Bir
-          bilgiye tıklayarak düzeltebilir veya silebilirsin.
+          Jarvis buradaki bilgileri hangi model seçili olursa olsun her sohbette hatırlar.
+          Konuşmalarından önemli bilgileri kendisi de çıkarır (bilgisayarında, yerel modelle); çok
+          benzer bir bilgi zaten varsa yenisiyle güncellenir. Bir bilgiye tıklayarak düzeltebilir,
+          türünü değiştirebilir veya silebilirsin. &quot;Profil&quot; türündekiler her sohbette
+          mutlaka hatırlanır.
         </p>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5">
+          <p className="text-sm text-muted">
+            Konuşmalar, bilgisayarı birkaç dakika kullanmadığında kendiliğinden işlenir.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Sparkles}
+            loading={processing}
+            onClick={() => void processNow()}
+          >
+            Şimdi işle
+          </Button>
+        </div>
+
+        {unreviewed.length > 0 && !isSearching && (
+          <section className="space-y-2 rounded-lg border border-accent/40 bg-accent/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
+                <Sparkles className="h-4 w-4 text-accent" />
+                Yeni öğrendiklerim ({unreviewed.length})
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={Check}
+                onClick={() => void run(() => window.api.memories.markReviewed())}
+              >
+                Hepsi doğru
+              </Button>
+            </div>
+            <p className="text-xs text-muted">
+              Konuşmalarından çıkardığım bilgiler. Yanlış olanı düzelt veya sil; doğruysa onayla.
+            </p>
+            <ul className="space-y-1">
+              {unreviewed.map((memory) => (
+                <li key={memory.id} className="flex items-center gap-2 text-sm text-ink">
+                  <span className="min-w-0 flex-1">{memory.content}</span>
+                  <button
+                    onClick={() => void run(() => window.api.memories.markReviewed([memory.id]))}
+                    aria-label="Doğru, onayla"
+                    title="Doğru"
+                    className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-positive"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {settings.data?.semanticSearchEnabled && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5">
@@ -185,6 +276,23 @@ function MemoriesView(): React.JSX.Element {
                 className="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface"
               >
                 <Brain className="h-4 w-4 shrink-0 text-accent" />
+                <select
+                  value={memory.kind}
+                  onChange={(e) =>
+                    void run(() =>
+                      window.api.memories.setKind(memory.id, e.target.value as MemoryKind)
+                    )
+                  }
+                  aria-label="Bilginin türü"
+                  title="Tür"
+                  className="shrink-0 rounded-md border border-line bg-transparent px-1.5 py-0.5 text-xs text-muted outline-none hover:border-line-strong focus:border-accent/70"
+                >
+                  {MEMORY_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {MEMORY_KIND_LABELS[kind]}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={() => setEditing({ id: memory.id, text: memory.content })}
                   title="Düzenlemek için tıkla"
@@ -192,6 +300,16 @@ function MemoriesView(): React.JSX.Element {
                 >
                   {memory.content}
                 </button>
+                {memory.sourceConversationId !== null && onOpenConversation && (
+                  <button
+                    onClick={() => onOpenConversation(memory.sourceConversationId!)}
+                    aria-label="Öğrenildiği sohbeti aç"
+                    title="Bu bilgiyi öğrendiğim sohbeti aç"
+                    className={iconButtonClass}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => setEditing({ id: memory.id, text: memory.content })}
                   aria-label="Bilgiyi düzenle"
