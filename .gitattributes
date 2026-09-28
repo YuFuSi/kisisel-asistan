@@ -7,3 +7,4 @@
 *.onnx binary
 *.wav binary
 *.woff2 binary
+*.task binary

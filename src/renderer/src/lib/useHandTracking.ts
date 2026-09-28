@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import wasmLoaderPath from '@mediapipe/tasks-vision/vision_wasm_internal.js?url'
+import wasmBinaryPath from '@mediapipe/tasks-vision/vision_wasm_internal.wasm?url'
+import MODEL_URL from '../assets/models/hand_landmarker.task?url'
 
 // Tur O: MediaPipe HandLandmarker ile pinch algılama ve el konumu. `enabled` false iken kamera
-// hiç açılmaz. Model ve wasm CDN'den yükleniyor (jsdelivr / storage.googleapis.com); bu yüzden
-// index.html'deki CSP'ye bu iki kaynak eklendi. Özellik kalıcı olursa self-host edilip
-// çevrimdışı çalışacak şekilde taşınmalı (bkz. holo-gestures örneği).
-const WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-const MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
+// hiç açılmaz. Wasm npm paketinden, model (hand_landmarker.task, float16 v1, Apache 2.0)
+// depodan uygulamayla birlikte gelir: internetsiz çalışır ve dışarıdan doğrulanmamış kod yüklenmez.
 // Histerezis: tek bir sabit eşik, mesafe tam sınırdayken kare-kare true/false arasında titreyip
 // yanlışlıkla art arda kavrama/bırakma tetikliyordu. Girişte daha sıkı (PINCH_ENTER), çıkışta
 // daha gevşek (PINCH_EXIT) bir eşik kullanmak bu titremeyi ortadan kaldırıyor.
@@ -96,8 +95,10 @@ export function useHandTracking(
     async function start(): Promise<void> {
       setStatus('loading')
       try {
-        const { FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision')
-        const vision = await FilesetResolver.forVisionTasks(WASM_BASE)
+        const { HandLandmarker } = await import('@mediapipe/tasks-vision')
+        // FilesetResolver'ın klasör tabanlı yüklemesi yerine dosyalar doğrudan verilir (SIMD'li
+        // sürüm; Electron'un Chromium'u SIMD destekliyor)
+        const vision = { wasmLoaderPath, wasmBinaryPath }
         const created = await HandLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
           runningMode: 'VIDEO',
