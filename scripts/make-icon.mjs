@@ -8,26 +8,26 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ICO_SIZES = [16, 20, 24, 32, 40, 48, 64, 128, 256]
 
-// Koyu lacivert yuvarlak kare üzerinde ışıyan mavi halka ve ses dalgası (arayüzdeki küre gibi)
+// Grafit yuvarlak kare üzerinde ışıyan lila halka ve ses dalgası (uygulamanın tema renkleri)
 const SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
   <defs>
     <radialGradient id="bg" cx="50%" cy="42%" r="72%">
-      <stop offset="0" stop-color="#0e2757"/>
-      <stop offset="1" stop-color="#040914"/>
+      <stop offset="0" stop-color="#1c1f28"/>
+      <stop offset="1" stop-color="#0b0c0f"/>
     </radialGradient>
     <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8fe8ff"/>
-      <stop offset="0.45" stop-color="#3cc4ff"/>
-      <stop offset="1" stop-color="#2f7dff"/>
+      <stop offset="0" stop-color="#e0e5ff"/>
+      <stop offset="0.45" stop-color="#a3b0ff"/>
+      <stop offset="1" stop-color="#6f7fe6"/>
     </linearGradient>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="16"/>
     </filter>
   </defs>
   <rect x="12" y="12" width="488" height="488" rx="116" fill="url(#bg)"/>
-  <circle cx="256" cy="256" r="148" fill="none" stroke="#3cc4ff" stroke-width="52" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#8b9bff" stroke-width="52" opacity="0.5" filter="url(#glow)"/>
   <circle cx="256" cy="256" r="148" fill="none" stroke="url(#ring)" stroke-width="36"/>
-  <path d="M168 258 h36 l22 -54 l30 108 l28 -78 l18 24 h42" fill="none" stroke="#c9f4ff"
+  <path d="M168 258 h36 l22 -54 l30 108 l28 -78 l18 24 h42" fill="none" stroke="#eef1ff"
         stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`
 
