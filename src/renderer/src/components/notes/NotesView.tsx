@@ -6,7 +6,7 @@ import Skeleton from '../ui/Skeleton'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import { inputClass, secondaryButtonClass } from '../../lib/styles'
+import { buttonClass, inputClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
@@ -135,7 +135,7 @@ function NotesView(): React.JSX.Element {
               <button
                 onClick={() => void backfillEmbeddings()}
                 disabled={indexing}
-                className={`${secondaryButtonClass} w-full text-xs`}
+                className={`${buttonClass('secondary', 'sm')} w-full`}
               >
                 {indexing ? 'İndeksleniyor...' : 'İndeksle'}
               </button>

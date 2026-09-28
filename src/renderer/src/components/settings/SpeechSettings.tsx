@@ -342,7 +342,7 @@ function SpeechSettings({
 
       <button
         onClick={() => speakText('Merhaba, ben Jarvis. Sana nasıl yardımcı olabilirim?')}
-        className={`${secondaryButtonClass} inline-flex items-center gap-1.5`}
+        className={secondaryButtonClass}
       >
         <Volume2 className="h-4 w-4" />
         Sesi dene

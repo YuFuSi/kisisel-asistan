@@ -1,3 +1,5 @@
+import { buttonClass } from '../components/ui/buttonStyles'
+
 // Birden çok bileşende kullanılan Tailwind sınıfları.
 // Renkler main.css içindeki tasarım belirteçlerinden gelir (surface, line, ink, accent...).
 
@@ -10,12 +12,11 @@ export const inputClass = `w-full ${fieldBase}`
 /** Genişliği ayrıca verilen (tarih seçici gibi) giriş kutusu */
 export const compactInputClass = `shrink-0 ${fieldBase}`
 
-// Açık vurgu rengi üzerinde koyu yazı okunur kalır
-export const primaryButtonClass =
-  'shrink-0 rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-app transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40'
-
-export const secondaryButtonClass =
-  'shrink-0 rounded-[10px] border border-line bg-transparent px-4 py-2 text-sm text-ink transition-colors hover:border-line-strong hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-40'
+// Düz <button> için düğme sınıfları; görünüm components/ui/Button ile aynı kaynaktan gelir.
+// Küçük düğme için buttonClass('secondary', 'sm') kullanılır (py/text sınıfı eklenip çakıştırılmaz).
+export { buttonClass }
+export const primaryButtonClass = buttonClass('primary')
+export const secondaryButtonClass = buttonClass('secondary')
 
 export const sectionTitleClass = 'text-xs font-medium tracking-wide text-faint'
 

@@ -7,7 +7,7 @@ import type { ChatRole, ToolActivity, ToolStatus } from '@shared/api'
 import { splitAttachments } from '@shared/attachments'
 import CodeBlock from './CodeBlock'
 import { speakText } from '../../lib/voice'
-import { primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
+import { buttonClass } from '../../lib/styles'
 
 interface MessageBubbleProps {
   role: ChatRole
@@ -121,10 +121,10 @@ function MessageBubble({
               className="w-full resize-none bg-transparent text-sm leading-6 text-ink outline-none"
             />
             <div className="mt-2 flex justify-end gap-2">
-              <button onClick={() => setDraft(null)} className={`${secondaryButtonClass} py-1.5`}>
+              <button onClick={() => setDraft(null)} className={buttonClass('secondary', 'sm')}>
                 Vazgeç
               </button>
-              <button onClick={saveEdit} className={`${primaryButtonClass} py-1.5`}>
+              <button onClick={saveEdit} className={buttonClass('primary', 'sm')}>
                 Gönder
               </button>
             </div>
