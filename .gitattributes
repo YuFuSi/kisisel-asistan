@@ -1,0 +1,9 @@
+# Depoda ve çalışma kopyasında her zaman LF (Prettier kuralıyla uyumlu).
+# core.autocrlf=true olan makinede bile dosyalar CRLF açılmasın, lint gürültüsü olmasın.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.onnx binary
+*.wav binary
+*.woff2 binary
