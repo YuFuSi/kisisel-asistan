@@ -71,7 +71,8 @@ export function createMainWindow(options: { startHidden: boolean }): BrowserWind
     icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      // Preload sadece contextBridge/ipcRenderer kullanıyor; arayüz ele geçirilse bile Node erişimi olmasın
+      sandbox: true
     }
   })
   mainWindow = window

@@ -54,7 +54,8 @@ function createHudWindow(): BrowserWindow {
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      // Preload sadece contextBridge/ipcRenderer kullanıyor; arayüz ele geçirilse bile Node erişimi olmasın
+      sandbox: true
     }
   })
   window.setAlwaysOnTop(true, 'screen-saver')
