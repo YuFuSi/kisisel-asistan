@@ -9,3 +9,8 @@ out
 .claude/worktrees/
 .serena/
 .specify/
+graphify-out/
+.claude/skills/
+coverage/
+.env
+.env.*
