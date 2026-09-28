@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import type { Note, SettingsView } from '@shared/api'
 import NoteEditor from './NoteEditor'
 import Skeleton from '../ui/Skeleton'
+import ConfirmDialog from '../ui/ConfirmDialog'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
 import { inputClass, secondaryButtonClass } from '../../lib/styles'
@@ -26,6 +27,7 @@ function NotesView(): React.JSX.Element {
   const [indexing, setIndexing] = useState(false)
   const [semanticResults, setSemanticResults] = useState<Note[] | null>(null)
   const [searching, setSearching] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
   const toast = useToast()
   const semanticSearchEnabled = settings.data?.semanticSearchEnabled ?? false
 
@@ -95,7 +97,6 @@ function NotesView(): React.JSX.Element {
   }
 
   async function deleteNote(id: number): Promise<void> {
-    if (!window.confirm('Bu not silinsin mi?')) return
     try {
       await window.api.notes.remove(id)
       setSelectedId(null)
@@ -184,7 +185,7 @@ function NotesView(): React.JSX.Element {
           <NoteEditor
             key={selected.id}
             note={selected}
-            onDelete={() => void deleteNote(selected.id)}
+            onDelete={() => setPendingDeleteId(selected.id)}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-8 text-sm text-faint">
@@ -194,6 +195,19 @@ function NotesView(): React.JSX.Element {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Bu not silinsin mi?"
+        tone="danger"
+        confirmLabel="Sil"
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          const id = pendingDeleteId
+          setPendingDeleteId(null)
+          if (id !== null) void deleteNote(id)
+        }}
+      />
     </div>
   )
 }
