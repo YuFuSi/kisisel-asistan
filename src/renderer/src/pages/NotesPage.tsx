@@ -13,10 +13,11 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 interface NotesPageProps {
+  onOpenConversation?: (conversationId: number) => void
   onOpenSettings: () => void
 }
 
-function NotesPage({ onOpenSettings }: NotesPageProps): React.JSX.Element {
+function NotesPage({ onOpenSettings, onOpenConversation }: NotesPageProps): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('notes')
   const [view, setView] = useState<View>('list')
 
@@ -50,7 +51,7 @@ function NotesPage({ onOpenSettings }: NotesPageProps): React.JSX.Element {
         ) : tab === 'notes' ? (
           <NotesView />
         ) : (
-          <MemoriesView />
+          <MemoriesView onOpenConversation={onOpenConversation} />
         )}
       </div>
     </div>
