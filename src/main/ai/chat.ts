@@ -56,6 +56,11 @@ const TONE_INSTRUCTIONS: Record<AssistantTone, string> = {
 // Şu an cevap yazılan sohbetler (durdurabilmek için)
 const activeChats = new Map<number, AbortController>()
 
+/** Şu an cevap yazılan bir sohbet var mı (arka plan model işleri beklesin diye) */
+export function isAnyChatActive(): boolean {
+  return activeChats.size > 0
+}
+
 export interface ReplyResult {
   message: ChatMessage | null
   /** Kullanıcıya gösterilecek hata; başarılıysa null */

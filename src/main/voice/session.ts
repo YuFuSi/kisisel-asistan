@@ -23,6 +23,7 @@ import { WAKE_CHUNK_SAMPLES } from './wakeword'
 import { plainForSpeech } from '../../shared/speechText'
 import { encodeWav, normalizeGain } from '../../shared/wav'
 import type { VoiceEvent, VoicePhase, VoiceState } from '../../shared/api'
+import { requestMemoryProcessing } from '../scheduler/memory'
 
 // Sesli sohbet: "hey jarvis" → dinle → yazıya çevir → asistana sor → cümle cümle seslendir → yeniden dinle.
 // Mikrofon sesi arayüzden 80 ms'lik parçalar halinde gelir; bütün kararlar burada verilir.
@@ -224,6 +225,8 @@ function startCapture(): void {
 
 function endSession(): void {
   clearTimeout(captureTimer)
+  // Sesli konuşma bitti: hafıza işleyici ilk uygun anda bu sohbeti öncelikle işlesin
+  if (conversationId !== null) requestMemoryProcessing(conversationId)
   sessionActive = false
   pendingApprovalId = null
   misunderstood = 0

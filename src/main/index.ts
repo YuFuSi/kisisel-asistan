@@ -5,6 +5,7 @@ import { closeDb } from './db'
 import { interruptStaleRunningRuns } from './data/automations'
 import { registerIpcHandlers } from './ipc'
 import { startAutomationScheduler, waitForActiveAutomations } from './scheduler/automations'
+import { startMemoryScheduler, waitForMemoryProcessing } from './scheduler/memory'
 import { startBatteryScheduler } from './scheduler/battery'
 import { startBriefScheduler } from './scheduler/brief'
 import { safeCheckpoint, startMaintenance } from './scheduler/maintenance'
@@ -36,6 +37,7 @@ let stopProactiveScheduler: (() => void) | null = null
 let stopBatteryScheduler: (() => void) | null = null
 let stopAutomationScheduler: (() => void) | null = null
 let stopUpdater: (() => void) | null = null
+let stopMemoryScheduler: (() => void) | null = null
 
 // Global kısayol: pencere öndeyse gizle, değilse göster ve sohbet kutusuna odaklan
 function toggleFromShortcut(): void {
@@ -121,6 +123,7 @@ if (!app.requestSingleInstanceLock()) {
     stopBatteryScheduler = startBatteryScheduler()
     stopAutomationScheduler = startAutomationScheduler()
     stopUpdater = startUpdater()
+    stopMemoryScheduler = startMemoryScheduler()
     // "Hey Jarvis" açıksa modeller yüklenir ve arayüz mikrofonu dinlemeye başlar
     initVoiceSession()
   })
@@ -167,7 +170,10 @@ if (!app.requestSingleInstanceLock()) {
       stopBatteryScheduler?.()
       stopAutomationScheduler?.()
       stopUpdater?.()
+      stopMemoryScheduler?.()
       await waitForActiveAutomations(AUTOMATION_SHUTDOWN_WAIT_MS)
+      // Yarım kalan hafıza işlemesi kısa süre beklenir; bitmezse sonraki açılışta baştan yapılır
+      await waitForMemoryProcessing(5_000)
       // Arka plandaki whisper ve Piper programları da kapansın
       disposeVoiceSession()
       disposeWindowDaemon()

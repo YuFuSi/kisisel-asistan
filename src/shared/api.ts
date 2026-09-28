@@ -483,6 +483,15 @@ export const MEMORY_KIND_LABELS: Record<MemoryKind, string> = {
   plan: 'Plan'
 }
 
+export interface MemoryProcessingResult {
+  /** İşlenen sohbet sayısı */
+  conversations: number
+  added: number
+  updated: number
+  /** Kalan (bu turda işlenemeyen) sohbet sayısı */
+  remaining: number
+}
+
 /** arac: model hafizaya_kaydet ile yazdı; otomatik: hafıza işleyici çıkardı; kullanici: elle */
 export type MemorySource = 'arac' | 'otomatik' | 'kullanici'
 
@@ -781,6 +790,13 @@ export interface Api {
     search(query: string): Promise<Memory[]>
     /** Hafıza haritası için: embedding vektörleriyle birlikte tüm hafıza kayıtları */
     listWithEmbeddings(): Promise<MemoryWithEmbedding[]>
+    /** Otomatik öğrenilip henüz gözden geçirilmemiş kayıtlar */
+    listUnreviewed(): Promise<Memory[]>
+    /** Kayıtları gözden geçirildi sayar; ids verilmezse hepsini */
+    markReviewed(ids?: number[]): Promise<void>
+    setKind(id: number, kind: MemoryKind): Promise<void>
+    /** Bekleyen sohbetleri kullanıcının boşta olmasını beklemeden şimdi işler */
+    processNow(): Promise<MemoryProcessingResult>
   }
   speech: {
     /** Ses kaydını yazıya çevirir */
