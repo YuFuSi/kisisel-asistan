@@ -23,4 +23,20 @@ describe('cleanTitle', () => {
   it('boş metin için boş döner', () => {
     expect(cleanTitle('<think>bos</think>')).toBe('')
   })
+
+  it('düşünce önekiyle başlayan tek satırı reddeder', () => {
+    expect(cleanTitle('THOUGHTS: The user wants a short title (max 5 words)')).toBe('')
+  })
+
+  it('çok satırlı çıktıda son satırı başlık alır', () => {
+    expect(cleanTitle('Thinking: kısa bir başlık lazım.\n\nKahve tarifi')).toBe('Kahve tarifi')
+  })
+
+  it('kapanmamış düşünme bloğunu atar', () => {
+    expect(cleanTitle('<think>hangi başlık olsun, kısa olmalı')).toBe('')
+  })
+
+  it('başıboş kapanış etiketinden öncesini atar', () => {
+    expect(cleanTitle('kullanıcı tarif istiyor</think>Kahve tarifi')).toBe('Kahve tarifi')
+  })
 })
