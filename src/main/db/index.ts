@@ -145,6 +145,28 @@ const migrations: string[] = [
   );
 
   CREATE INDEX idx_automation_runs_automation ON automation_runs(automation_id, started_at);
+  `,
+  // 11: Güçlü hafıza. Kayıt türü, nereden öğrenildiği ve kullanım zamanı; otomatik öğrenilenler
+  // gözden geçirilene kadar reviewed = 0. source_conversation_id yabancı anahtar değil: sohbet
+  // silinse de öğrenilen bilgi kalır. Sohbet başına tarihli özet (konuşma hafızası) ayrı tabloda,
+  // sohbet silinince özeti de silinir.
+  `
+  ALTER TABLE memories ADD COLUMN kind TEXT NOT NULL DEFAULT 'bilgi';
+  ALTER TABLE memories ADD COLUMN source TEXT NOT NULL DEFAULT 'arac';
+  ALTER TABLE memories ADD COLUMN source_conversation_id INTEGER;
+  ALTER TABLE memories ADD COLUMN updated_at TEXT;
+  ALTER TABLE memories ADD COLUMN last_used_at TEXT;
+  ALTER TABLE memories ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 1;
+
+  CREATE TABLE conversation_digests (
+    conversation_id      INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+    summary              TEXT NOT NULL,
+    processed_until      INTEGER NOT NULL,
+    started_at           TEXT NOT NULL,
+    ended_at             TEXT NOT NULL,
+    embedding            BLOB,
+    updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
+  );
   `
 ]
 

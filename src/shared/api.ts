@@ -462,10 +462,40 @@ export interface NotePatch {
   content?: string
 }
 
+/** Hafıza kaydının türü; `profil` her sohbette modele gider (çekirdek profil) */
+export type MemoryKind = 'profil' | 'bilgi' | 'tercih' | 'kisi' | 'olay' | 'plan'
+
+export const MEMORY_KINDS: readonly MemoryKind[] = [
+  'profil',
+  'bilgi',
+  'tercih',
+  'kisi',
+  'olay',
+  'plan'
+]
+
+export const MEMORY_KIND_LABELS: Record<MemoryKind, string> = {
+  profil: 'Profil',
+  bilgi: 'Bilgi',
+  tercih: 'Tercih',
+  kisi: 'Kişi',
+  olay: 'Olay',
+  plan: 'Plan'
+}
+
+/** arac: model hafizaya_kaydet ile yazdı; otomatik: hafıza işleyici çıkardı; kullanici: elle */
+export type MemorySource = 'arac' | 'otomatik' | 'kullanici'
+
 export interface Memory {
   id: number
   content: string
   createdAt: string
+  kind: MemoryKind
+  source: MemorySource
+  /** Bilginin öğrenildiği sohbet (silinmiş olabilir) */
+  sourceConversationId: number | null
+  /** Otomatik öğrenilen kayıt kullanıcı gözden geçirene kadar false */
+  reviewed: boolean
 }
 
 /** Harita görünümü için: embedding vektörü de dahil. */
