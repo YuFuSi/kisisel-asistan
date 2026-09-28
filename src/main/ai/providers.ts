@@ -36,6 +36,16 @@ export function getModel(): LanguageModel {
   }
 }
 
+/**
+ * Seçili sağlayıcıdan bağımsız olarak her zaman yerel (Ollama) modeli döndürür. Kişisel bilgi
+ * işleyen arka plan işleri (hafıza işleyici) bulut modeli seçiliyken bile veriyi dışarı göndermesin.
+ */
+export function getLocalModel(): LanguageModel {
+  const { models, ollamaBaseUrl } = getSettings()
+  const modelId = models.ollama || PROVIDERS.ollama.defaultModel
+  return createOllama({ baseURL: `${ollamaBaseUrl}/api` })(modelId)
+}
+
 type ModelCallOptions = Pick<Parameters<typeof generateText>[0], 'temperature' | 'providerOptions'>
 
 /** Ayarlardaki yaratıcılık ve (Ollama için) bağlam uzunluğu; model çağrılarına eklenir */
