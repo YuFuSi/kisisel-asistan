@@ -514,6 +514,7 @@ export function stopVoiceSpeaking(): void {
 }
 
 export function disposeVoiceSession(): void {
+  clearTimeout(captureTimer)
   unsubscribeApproval?.()
   unsubscribeApproval = null
   cancelSpeech()

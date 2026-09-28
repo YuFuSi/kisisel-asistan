@@ -90,13 +90,15 @@ export function useHandTracking(
     let cancelled = false
     let stream: MediaStream | null = null
     let rafId = 0
+    // GPU/WASM belleği tutar; kapatılmazsa her açılışta (ve hassasiyet değişince) birikir
+    let landmarker: { close(): void } | null = null
 
     async function start(): Promise<void> {
       setStatus('loading')
       try {
         const { FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision')
         const vision = await FilesetResolver.forVisionTasks(WASM_BASE)
-        const landmarker = await HandLandmarker.createFromOptions(vision, {
+        const created = await HandLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
           runningMode: 'VIDEO',
           numHands: 2,
@@ -106,7 +108,11 @@ export function useHandTracking(
           minHandPresenceConfidence: 0.7,
           minTrackingConfidence: 0.7
         })
-        if (cancelled) return
+        if (cancelled) {
+          created.close()
+          return
+        }
+        landmarker = created
 
         stream = await navigator.mediaDevices.getUserMedia({ video: true })
         if (cancelled) {
@@ -131,7 +137,7 @@ export function useHandTracking(
 
         function loop(): void {
           if (cancelled || !video) return
-          const result = landmarker.detectForVideo(video, performance.now())
+          const result = created.detectForVideo(video, performance.now())
           const hand = result.landmarks[0]
           const secondHand = result.landmarks[1]
           if (!hand && !secondHand && missedFrames < MISSED_FRAMES_TOLERANCE) {
@@ -218,6 +224,8 @@ export function useHandTracking(
       cancelled = true
       cancelAnimationFrame(rafId)
       stream?.getTracks().forEach((t) => t.stop())
+      landmarker?.close()
+      landmarker = null
     }
   }, [enabled, gainX, gainY])
 
