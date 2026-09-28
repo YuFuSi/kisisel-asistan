@@ -55,7 +55,9 @@ function App(): React.JSX.Element {
         return
       }
       if (command.startsWith('open-page:')) {
-        setPage(command.slice('open-page:'.length) as PageId)
+        const target = command.slice('open-page:'.length)
+        // Bilinmeyen bir kimlik boş sayfa göstermesin
+        if (target in PAGE_LABELS) setPage(target as PageId)
         return
       }
       setPage('chat')
