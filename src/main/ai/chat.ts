@@ -23,7 +23,8 @@ import { cancelApprovals } from '../tools/approval'
 import { runWithToolContext } from '../tools/context'
 import { getModel, getModelOptions } from './providers'
 import { describeError } from './errors'
-import { rankMemoriesForChat } from './memoryEmbeddings'
+import { recallFor } from './recall'
+import { formatRecall } from '../lib/recallFormat'
 import type {
   AssistantTone,
   ChatEvent,
@@ -37,8 +38,6 @@ import type {
 const HISTORY_LIMIT = 40
 // Bir cevapta en fazla kaç adım (araç çağrısı + cevap) yapılabilir
 const MAX_STEPS = 6
-// Sistem talimatına eklenecek en fazla hafıza kaydı (fazlası alakaya göre seçilir)
-const MEMORY_LIMIT = 30
 // Özet, eski kısımda en az bu kadar yeni mesaj birikince güncellenir
 const SUMMARY_BATCH = 10
 // Tek seferde özetlenecek en fazla mesaj (çok eski uzun sohbetler küçük modeli boğmasın)
@@ -84,7 +83,8 @@ export interface ReplyOptions {
 export async function buildInstructions(
   query: string,
   summary: string,
-  source: ToolSource
+  source: ToolSource,
+  conversationId?: number | null
 ): Promise<string> {
   const settings = getSettings()
   const googleConnected = getGoogleStatus().connected
@@ -132,14 +132,8 @@ export async function buildInstructions(
     lines.push('', 'Kullanıcının kendisi hakkında yazdıkları:', settings.aboutMe)
   }
 
-  const memories = await rankMemoriesForChat(query, MEMORY_LIMIT)
-  if (memories.length > 0) {
-    lines.push(
-      '',
-      'Kullanıcı hakkında bildiklerin (hafıza):',
-      ...memories.map((m) => `- ${m.content}`)
-    )
-  }
+  // Hafıza + başka sohbetlerden hatırlananlar (modelden bağımsız; bkz. ai/recall.ts)
+  lines.push(...formatRecall(await recallFor(query, conversationId), now))
 
   if (summary) {
     lines.push(
@@ -308,7 +302,7 @@ async function streamReply(
 
     // Araçlar hangi sohbette çalıştıklarını bu bağlamdan öğrenir (onay kartı göndermek için gerekli)
     await runWithToolContext({ conversationId, sender, source }, async () => {
-      const instructions = await buildInstructions(query, summary, source)
+      const instructions = await buildInstructions(query, summary, source, conversationId)
       const result = streamText({
         model: getModel(),
         instructions,
@@ -399,6 +393,7 @@ async function nameConversation(conversationId: number): Promise<void> {
 
     const { text } = await generateText({
       model: getModel(),
+      ...getModelOptions(),
       instructions:
         'Sana bir soru ve cevabı verilecek. Bu sohbet için en fazla 5 kelimelik kısa bir başlık yaz. ' +
         'Sadece başlığı yaz: tırnak, noktalama, açıklama veya "Başlık:" gibi bir önek ekleme. ' +

@@ -5,7 +5,12 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOllama } from 'ollama-ai-provider-v2'
 import { getSecret, getSettings } from '../settings'
 import { describeError } from './errors'
-import { PROVIDERS, type CloudProviderId, type ConnectionResult } from '../../shared/api'
+import {
+  DEFAULT_OLLAMA_CONTEXT,
+  PROVIDERS,
+  type CloudProviderId,
+  type ConnectionResult
+} from '../../shared/api'
 
 function requireApiKey(provider: CloudProviderId): string {
   const key = getSecret(provider)
@@ -48,16 +53,28 @@ export function getLocalModel(): LanguageModel {
 
 type ModelCallOptions = Pick<Parameters<typeof generateText>[0], 'temperature' | 'providerOptions'>
 
-/** Ayarlardaki yaratıcılık ve (Ollama için) bağlam uzunluğu; model çağrılarına eklenir */
+// Aynı modele farklı bağlam uzunluğuyla gelen her istek Ollama'da modeli yeniden yükletir
+// (saniyeler sürer); bu yüzden yerel modele giden BÜTÜN çağrılar aynı değeri gönderir.
+function ollamaOptions(): ModelCallOptions['providerOptions'] {
+  const { contextLength } = getSettings()
+  return { ollama: { options: { num_ctx: contextLength ?? DEFAULT_OLLAMA_CONTEXT } } }
+}
+
+/**
+ * Ayarlardaki yaratıcılık ve (Ollama için) bağlam uzunluğu; seçili modele giden tüm çağrılara
+ * (sohbet, başlık, özet, rutin) eklenir.
+ */
 export function getModelOptions(): ModelCallOptions {
-  const { provider, temperature, contextLength } = getSettings()
+  const { provider, temperature } = getSettings()
   return {
     temperature: temperature ?? undefined,
-    providerOptions:
-      provider === 'ollama' && contextLength
-        ? { ollama: { options: { num_ctx: contextLength } } }
-        : undefined
+    providerOptions: provider === 'ollama' ? ollamaOptions() : undefined
   }
+}
+
+/** getLocalModel() ile yapılan çağrıların seçenekleri (bağlam uzunluğu sohbetle aynı) */
+export function getLocalModelOptions(): ModelCallOptions {
+  return { providerOptions: ollamaOptions() }
 }
 
 export async function listOllamaModels(): Promise<string[]> {

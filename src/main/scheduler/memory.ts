@@ -32,9 +32,9 @@ export function requestMemoryProcessing(conversationId: number): void {
  * başlarsa kalanı sonraya bırakır. Ollama/model hatası yukarı fırlatılır.
  */
 async function runQueue(waitForIdle: boolean): Promise<MemoryProcessingResult> {
-  const pending = listConversationsPendingDigest(CONVERSATION_IDLE_MINUTES).map(
-    (item) => item.conversationId
-  )
+  // Kullanıcı "şimdi işle" dediyse az önce biten sohbetler de beklemeden işlenir
+  const idleMinutes = waitForIdle ? CONVERSATION_IDLE_MINUTES : 0
+  const pending = listConversationsPendingDigest(idleMinutes).map((item) => item.conversationId)
   const queue = [...priority, ...pending.filter((id) => !priority.has(id))]
   priority.clear()
   const result: MemoryProcessingResult = { conversations: 0, added: 0, updated: 0, remaining: 0 }

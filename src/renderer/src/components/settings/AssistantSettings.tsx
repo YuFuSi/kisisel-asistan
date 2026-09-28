@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   CONTEXT_LENGTHS,
+  DEFAULT_OLLAMA_CONTEXT,
   TONE_LABELS,
   type AssistantTone,
   type SettingsPatch,
@@ -102,7 +103,9 @@ function AssistantSettings({ settings, onUpdate }: AssistantSettingsProps): Reac
           }
           className={`${compactInputClass} w-56`}
         >
-          <option value="">Ollama varsayılanı</option>
+          <option value="">
+            Önerilen ({DEFAULT_OLLAMA_CONTEXT.toLocaleString('tr-TR')} token)
+          </option>
           {CONTEXT_LENGTHS.map((length) => (
             <option key={length} value={String(length)}>
               {length.toLocaleString('tr-TR')} token

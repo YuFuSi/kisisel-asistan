@@ -5,7 +5,7 @@ import {
   setMemoryEmbedding
 } from '../data/memories'
 import { floatsToBlob } from '../lib/embeddingBlob'
-import { rankMemories, rankMemoriesBySimilarity } from '../lib/memoryRank'
+import { rankMemories } from '../lib/memoryRank'
 import { sortBySimilarity } from '../lib/semanticSearch'
 import { getSettings } from '../settings'
 import type { Memory } from '../../shared/api'
@@ -48,31 +48,6 @@ export async function backfillMemoryEmbeddings(): Promise<number> {
     await embedMemory(memory.id, memory.content)
   }
   return missing.length
-}
-
-/**
- * Sohbete eklenecek hafıza kayıtlarını seçer. Anlamsal arama kapalıysa veya kayıtların bir kısmı
- * henüz indekslenmemişse (ya da sorgu embedding'i hesaplanamazsa) tutarlı davranış için doğrudan
- * anahtar kelime sıralamasına (rankMemories) düşülür — sohbet asla bu yüzden hata vermez.
- */
-export async function rankMemoriesForChat(query: string, limit: number): Promise<Memory[]> {
-  if (!getSettings().semanticSearchEnabled) {
-    return rankMemories(listMemories(), query, limit)
-  }
-
-  const memories = listMemoriesWithEmbeddings()
-  if (memories.length <= limit) return memories.map(stripEmbedding)
-  if (memories.some((memory) => memory.embedding === null)) {
-    return rankMemories(memories, query, limit).map(stripEmbedding)
-  }
-
-  try {
-    const queryEmbedding = await embedText(query)
-    return rankMemoriesBySimilarity(memories, queryEmbedding, limit).map(stripEmbedding)
-  } catch (err) {
-    console.error('Anlamsal hafıza sıralaması başarısız, anahtar kelimeye düşülüyor:', err)
-    return rankMemories(memories, query, limit).map(stripEmbedding)
-  }
 }
 
 /**

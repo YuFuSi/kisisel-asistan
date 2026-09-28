@@ -1,16 +1,23 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { scheduleMemoryEmbedding } from '../ai/memoryEmbeddings'
+import { searchPastConversations } from '../ai/pastSearch'
 import { createMemory, deleteMemory, listMemories } from '../data/memories'
 import { notifyDataChanged } from '../events'
 import type { ToolModule } from './types'
 
 const memoryTools: ToolModule = {
-  risks: { hafizaya_kaydet: 'write', hafizayi_listele: 'read', hafizadan_sil: 'write' },
+  risks: {
+    hafizaya_kaydet: 'write',
+    hafizayi_listele: 'read',
+    hafizadan_sil: 'write',
+    gecmiste_ara: 'read'
+  },
   labels: {
     hafizaya_kaydet: 'Hafızaya kaydetme',
     hafizayi_listele: 'Hafızaya bakma',
-    hafizadan_sil: 'Hafızadan silme'
+    hafizadan_sil: 'Hafızadan silme',
+    gecmiste_ara: 'Geçmiş konuşmalarda arama'
   },
   tools: {
     hafizaya_kaydet: tool({
@@ -58,6 +65,18 @@ const memoryTools: ToolModule = {
         deleteMemory(input.id)
         notifyDataChanged('memories')
         return { silindi: true, bilgi: memory.content }
+      }
+    }),
+
+    gecmiste_ara: tool({
+      description:
+        'Kullanıcıyla daha önceki (başka) sohbetlerde konuşulanları arar. Kullanıcı "geçen sefer", "daha önce", "hangi gün ... konuşmuştuk", "sana ... demiştim" gibi bir şey sorarsa veya bir bilgiyi hatırlamıyorsan "hatırlamıyorum" demeden ÖNCE bunu kullan.',
+      inputSchema: z.object({
+        sorgu: z.string().describe('Aranan konu, ör. "iş ilanı" veya "annemin doğum günü"')
+      }),
+      execute: async (input) => {
+        const sonuclar = await searchPastConversations(input.sorgu)
+        return { bulunan: sonuclar.length, sonuclar }
       }
     })
   }

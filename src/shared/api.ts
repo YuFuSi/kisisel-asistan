@@ -138,6 +138,13 @@ export const TONE_LABELS: Record<AssistantTone, string> = {
 /** Ollama bağlam uzunluğu seçenekleri (token) */
 export const CONTEXT_LENGTHS = [4096, 8192, 16384, 32768]
 
+/**
+ * Ayar boşken Ollama'ya gönderilen bağlam uzunluğu. Ollama'nın kendi varsayılanı (4096) Jarvis'in
+ * talimat + araç tanımlarına (~7000 token) yetmiyor; fazlası sessizce kesilip hafıza ve araçlar
+ * modele hiç ulaşmıyordu (2026-09-28'de bulundu).
+ */
+export const DEFAULT_OLLAMA_CONTEXT = 16384
+
 export interface SpeechProviderInfo {
   label: string
   description: string
