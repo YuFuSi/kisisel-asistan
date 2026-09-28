@@ -55,8 +55,13 @@ import {
   deleteMemory,
   listMemories,
   listMemoriesWithEmbeddings,
+  listUnreviewedMemories,
+  markMemoriesReviewed,
+  normalizeMemoryKind,
+  setMemoryKind,
   updateMemory
 } from './data/memories'
+import { processPendingNow } from './scheduler/memory'
 import {
   createNote,
   deleteNote,
@@ -362,6 +367,16 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('memories:remove', (_event, id: number) =>
     changing('memories', () => deleteMemory(id))
   )
+  ipcMain.handle('memories:listUnreviewed', () => listUnreviewedMemories())
+  ipcMain.handle('memories:markReviewed', (_event, ids?: number[]) =>
+    changing('memories', () =>
+      markMemoriesReviewed(Array.isArray(ids) ? ids.filter(Number.isInteger) : undefined)
+    )
+  )
+  ipcMain.handle('memories:setKind', (_event, id: number, kind: string) =>
+    changing('memories', () => setMemoryKind(id, normalizeMemoryKind(kind)))
+  )
+  ipcMain.handle('memories:processNow', () => processPendingNow())
   ipcMain.handle('memories:backfillEmbeddings', () => backfillMemoryEmbeddings())
   ipcMain.handle('memories:search', (_event, query: string) => searchMemoriesSemantic(query))
   ipcMain.handle('memories:listWithEmbeddings', () =>

@@ -105,7 +105,11 @@ const api: Api = {
     remove: (id) => ipcRenderer.invoke('memories:remove', id),
     backfillEmbeddings: () => ipcRenderer.invoke('memories:backfillEmbeddings'),
     search: (query) => ipcRenderer.invoke('memories:search', query),
-    listWithEmbeddings: () => ipcRenderer.invoke('memories:listWithEmbeddings')
+    listWithEmbeddings: () => ipcRenderer.invoke('memories:listWithEmbeddings'),
+    listUnreviewed: () => ipcRenderer.invoke('memories:listUnreviewed'),
+    markReviewed: (ids) => ipcRenderer.invoke('memories:markReviewed', ids),
+    setKind: (id, kind) => ipcRenderer.invoke('memories:setKind', id, kind),
+    processNow: () => ipcRenderer.invoke('memories:processNow')
   },
   speech: {
     transcribe: (audio, mimeType) => ipcRenderer.invoke('speech:transcribe', audio, mimeType)
