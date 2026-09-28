@@ -49,5 +49,11 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-# Otomatik güncelleme henüz yok (GitHub deposu kurulunca electron-updater eklenecek)
-publish: null
+# Otomatik güncelleme (electron-updater): kaynak kod gizli depoda, kurulum dosyaları ve
+# latest.yml açık sürüm deposunun GitHub sürümlerinde (uygulamaya anahtar gömülmez).
+# Yayın: npm run build:win → dist'teki setup.exe, .blockmap ve latest.yml bir GitHub sürümüne yüklenir.
+publish:
+  provider: github
+  owner: YuFuSi
+  repo: jarvis-releases
+  releaseType: release

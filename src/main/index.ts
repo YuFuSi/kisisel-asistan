@@ -14,6 +14,7 @@ import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
 import { disposeHud, toggleHud } from './system/hud'
+import { startUpdater } from './system/updater'
 import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
 import { applyOpenAtLogin, wasStartedHidden } from './system/startup'
@@ -34,6 +35,7 @@ let stopMaintenance: (() => void) | null = null
 let stopProactiveScheduler: (() => void) | null = null
 let stopBatteryScheduler: (() => void) | null = null
 let stopAutomationScheduler: (() => void) | null = null
+let stopUpdater: (() => void) | null = null
 
 // Global kısayol: pencere öndeyse gizle, değilse göster ve sohbet kutusuna odaklan
 function toggleFromShortcut(): void {
@@ -118,6 +120,7 @@ if (!app.requestSingleInstanceLock()) {
     stopProactiveScheduler = startProactiveScheduler()
     stopBatteryScheduler = startBatteryScheduler()
     stopAutomationScheduler = startAutomationScheduler()
+    stopUpdater = startUpdater()
     // "Hey Jarvis" açıksa modeller yüklenir ve arayüz mikrofonu dinlemeye başlar
     initVoiceSession()
   })
@@ -163,6 +166,7 @@ if (!app.requestSingleInstanceLock()) {
       stopProactiveScheduler?.()
       stopBatteryScheduler?.()
       stopAutomationScheduler?.()
+      stopUpdater?.()
       await waitForActiveAutomations(AUTOMATION_SHUTDOWN_WAIT_MS)
       // Arka plandaki whisper ve Piper programları da kapansın
       disposeVoiceSession()
