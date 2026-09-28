@@ -1,8 +1,6 @@
 import { Loader2, type LucideIcon } from 'lucide-react'
 import type { ButtonHTMLAttributes } from 'react'
-
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
-type ButtonSize = 'sm' | 'md'
+import { buttonClass, ICON_SIZE_CLASS, type ButtonSize, type ButtonVariant } from './buttonStyles'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -10,24 +8,6 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: LucideIcon
   iconPosition?: 'left' | 'right'
   loading?: boolean
-}
-
-const VARIANT_CLASS: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-app hover:bg-accent-hover',
-  secondary:
-    'border border-line bg-transparent text-ink hover:border-line-strong hover:bg-elevated',
-  ghost: 'text-muted hover:bg-elevated hover:text-ink',
-  danger: 'bg-negative/90 text-app hover:bg-negative'
-}
-
-const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: 'gap-1.5 rounded-lg px-3 py-1.5 text-xs',
-  md: 'gap-2 rounded-[10px] px-4 py-2 text-sm'
-}
-
-const ICON_SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: 'h-3.5 w-3.5',
-  md: 'h-4 w-4'
 }
 
 // Ortak düğme: variant/size ile tutarlı görünüm, ikon ve yükleniyor durumu destekler
@@ -53,7 +33,7 @@ function Button({
     <button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex shrink-0 items-center justify-center font-medium transition-colors transition-transform duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]} ${className}`}
+      className={`${buttonClass(variant, size)} ${className}`}
       {...rest}
     >
       {iconPosition === 'left' && content}

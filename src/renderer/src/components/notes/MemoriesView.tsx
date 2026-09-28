@@ -150,11 +150,7 @@ function MemoriesView(): React.JSX.Element {
             maxLength={300}
             className={inputClass}
           />
-          <button
-            type="submit"
-            disabled={!draft.trim()}
-            className={`${primaryButtonClass} inline-flex items-center gap-1.5`}
-          >
+          <button type="submit" disabled={!draft.trim()} className={primaryButtonClass}>
             <Plus className="h-4 w-4" />
             Ekle
           </button>

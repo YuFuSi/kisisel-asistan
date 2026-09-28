@@ -22,11 +22,7 @@ function ConnectionTest(): React.JSX.Element {
 
   return (
     <div className="space-y-3">
-      <button
-        onClick={() => void run()}
-        disabled={testing}
-        className={`${secondaryButtonClass} inline-flex items-center gap-2`}
-      >
+      <button onClick={() => void run()} disabled={testing} className={secondaryButtonClass}>
         {testing && <Loader2 className="h-4 w-4 animate-spin" />}
         {testing ? 'Test ediliyor...' : 'Bağlantıyı test et'}
       </button>

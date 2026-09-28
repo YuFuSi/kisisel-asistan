@@ -82,11 +82,7 @@ function ReminderSection({
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className={`${primaryButtonClass} inline-flex items-center gap-1.5`}
-        >
+        <button type="submit" disabled={!canSubmit} className={primaryButtonClass}>
           <Plus className="h-4 w-4" />
           Kur
         </button>

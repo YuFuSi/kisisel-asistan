@@ -58,11 +58,7 @@ function NewTaskForm({ onCreate }: NewTaskFormProps): React.JSX.Element {
           className={`${compactInputClass} w-28`}
         />
       )}
-      <button
-        type="submit"
-        disabled={!title.trim()}
-        className={`${primaryButtonClass} inline-flex items-center gap-1.5`}
-      >
+      <button type="submit" disabled={!title.trim()} className={primaryButtonClass}>
         <Plus className="h-4 w-4" />
         Ekle
       </button>
