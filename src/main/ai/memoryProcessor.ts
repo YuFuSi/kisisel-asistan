@@ -19,7 +19,7 @@ import {
 } from '../lib/memoryExtraction'
 import { findSimilarMemory } from '../lib/memoryRank'
 import { embedText } from './embeddings'
-import { getLocalModel } from './providers'
+import { getLocalModel, getLocalModelOptions } from './providers'
 
 // Hafıza işleyici: bitmiş bir sohbetten (veya sohbetin yeni kısmından) özet ve kalıcı bilgileri
 // yerel modelle çıkarır; bilgileri tekilleştirerek hafızaya, özeti konuşma hafızasına yazar.
@@ -123,6 +123,7 @@ export async function processConversation(conversationId: number): Promise<Proce
   )
   const { text } = await generateText({
     model: getLocalModel(),
+    ...getLocalModelOptions(),
     instructions: EXTRACTION_INSTRUCTIONS,
     prompt,
     temperature: 0.2

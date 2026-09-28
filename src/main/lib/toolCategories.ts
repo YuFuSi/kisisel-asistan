@@ -17,7 +17,8 @@ export const CORE_TOOLS = [
   'hatirlatma_iptal',
   'hafizaya_kaydet',
   'hafizayi_listele',
-  'hafizadan_sil'
+  'hafizadan_sil',
+  'gecmiste_ara'
 ]
 
 interface ToolCategory {
