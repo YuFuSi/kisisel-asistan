@@ -15,11 +15,11 @@ import { embedText } from './embeddings'
 // listMemoriesWithEmbeddings'ten gelen kayıtlar embedding (Float32Array) taşıyor; IPC üzerinden
 // renderer'a veya sohbet talimatına giden hiçbir yol bu ham veriyi taşımamalı (hem gereksiz büyük
 // hem de dahili bir gösterim). Dönüş öncesi her zaman bu şekilde soyulur.
-const stripEmbedding = (memory: MemoryWithEmbedding): Memory => ({
-  id: memory.id,
-  content: memory.content,
-  createdAt: memory.createdAt
-})
+const stripEmbedding = (memory: MemoryWithEmbedding): Memory => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { embedding, ...rest } = memory
+  return rest
+}
 
 /** Bir hafıza kaydının gömme vektörünü hesaplayıp veritabanına yazar. Ayar kapalıysa hiçbir şey yapmaz. */
 export async function embedMemory(id: number, content: string): Promise<void> {
