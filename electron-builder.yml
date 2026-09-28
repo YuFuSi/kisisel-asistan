@@ -12,6 +12,9 @@ files:
   - '!{CLAUDE.md,vitest.config.ts}'
   - '!scripts/*'
   - '!.claude/*'
+  # Paket sadece Windows x64: onnxruntime'ın diğer platform dosyaları (~180 MB) alınmaz
+  - '!node_modules/onnxruntime-node/bin/napi-v*/{darwin,linux}/**'
+  - '!node_modules/onnxruntime-node/bin/napi-v*/win32/arm64/**'
 asarUnpack:
   - resources/**
   # Konuşma algılama ve "hey jarvis" modelleri için yerel ONNX çalıştırıcısı (.node ve .dll dosyaları)

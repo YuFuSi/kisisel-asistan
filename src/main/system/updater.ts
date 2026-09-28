@@ -17,10 +17,9 @@ let interval: ReturnType<typeof setInterval> | undefined
 let notifiedVersion: string | null = null
 
 function check(): void {
-  autoUpdater.checkForUpdates().catch((err: unknown) => {
-    // İnternet yoksa veya sürüm deposuna ulaşılamazsa sessizce bir sonraki denemeye kalır
-    console.warn('Güncelleme denetlenemedi:', err instanceof Error ? err.message : err)
-  })
+  // Hata (internet yok, depoya ulaşılamadı) autoUpdater.logger ile zaten günlüğe yazılıyor;
+  // burada sadece yakalanmamış hata olmasın diye yutulur, bir sonraki denemeye kalır
+  autoUpdater.checkForUpdates().catch(() => {})
 }
 
 /** Paketlenmiş uygulamada güncelleme denetimini başlatır. Durdurmak için dönen fonksiyon çağrılır. */
@@ -42,7 +41,6 @@ export function startUpdater(): () => void {
       icon
     }).show()
   })
-  autoUpdater.on('error', (err) => console.warn('Güncelleme hatası:', err.message))
 
   firstTimer = setTimeout(check, FIRST_CHECK_DELAY_MS)
   interval = setInterval(check, CHECK_INTERVAL_MS)

@@ -102,16 +102,10 @@ textarea {
 /* Katmanda tanımlı ki Tailwind sınıfları (ör. hover:border-accent/50) bunları ezebilsin */
 @layer components {
   /* Düz kart: dolgu ve ince çizgi; degrade, ışıma ve bulanıklık yok */
-  .card,
-  .glass-card {
+  .card {
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
-  }
-
-  /* Sayfa zemini: düz; eski sınıf adı sayfalar taşınana kadar korunur */
-  .jarvis-backdrop {
-    background: var(--color-app);
   }
 }
 
