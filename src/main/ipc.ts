@@ -134,6 +134,8 @@ export function registerIpcHandlers(): void {
   // HUD: el ile kontrol açılınca büyür, yörüngeden bir araç seçilince ana pencere o sayfayı açar
   ipcMain.handle('hud:resize', (_event, width: number, height: number) => resizeHud(width, height))
   ipcMain.handle('hud:navigate', (_event, page: string) => {
+    // Sadece sayfa kimliği biçimi ("tasks" gibi); komut metnine başka bir şey eklenemesin
+    if (typeof page !== 'string' || !/^[a-z]{1,20}$/.test(page)) return
     showMainWindow()
     sendCommand(`open-page:${page}`)
   })

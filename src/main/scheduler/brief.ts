@@ -53,15 +53,16 @@ export async function showDailyBrief(): Promise<void> {
 export function startBriefScheduler(): () => void {
   const check = async (): Promise<void> => {
     if (collecting) return
-    const settings = getSettings()
-    const now = new Date()
-    if (!settings.briefEnabled) return
-    if (!isBriefDue(now, settings.briefTime, getStoredValue(LAST_SHOWN_KEY) ?? null)) return
-
     collecting = true
-    // Önce işaretlenir: veri toplama hata verse de aynı gün tekrar tekrar denenmesin
-    setStoredValue(LAST_SHOWN_KEY, toLocalDate(now))
     try {
+      // Veritabanı okuması da try içinde: geri yükleme sırasında (kapalı veritabanı) hata verirse
+      // collecting sonsuza kadar true kalıp özet bir daha hiç çalışmamazlık etmesin
+      const settings = getSettings()
+      const now = new Date()
+      if (!settings.briefEnabled) return
+      if (!isBriefDue(now, settings.briefTime, getStoredValue(LAST_SHOWN_KEY) ?? null)) return
+      // Önce işaretlenir: veri toplama hata verse de aynı gün tekrar tekrar denenmesin
+      setStoredValue(LAST_SHOWN_KEY, toLocalDate(now))
       await showDailyBrief()
     } catch (err) {
       console.error('Sabah özeti gösterilemedi:', err)

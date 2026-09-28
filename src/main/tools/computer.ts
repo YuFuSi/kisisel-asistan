@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { basename } from 'node:path'
+import { basename, extname } from 'node:path'
 import { tool } from 'ai'
 import { z } from 'zod'
 import { app, shell } from 'electron'
@@ -8,6 +8,31 @@ import { searchFiles } from '../lib/files'
 import { assertWithinRoot } from '../lib/safePath'
 import { requireApproval } from './approval'
 import type { ToolModule } from './types'
+
+// dosya_ac ile açılmayacak uzantılar: açmak yerine program/betik olarak çalışırlar
+const BLOCKED_OPEN_EXTENSIONS = new Set([
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.com',
+  '.msi',
+  '.ps1',
+  '.vbs',
+  '.vbe',
+  '.js',
+  '.jse',
+  '.wsf',
+  '.wsh',
+  '.scr',
+  '.pif',
+  '.lnk',
+  '.url',
+  '.hta',
+  '.cpl',
+  '.reg',
+  '.jar',
+  '.appref-ms'
+])
 
 // Dosya aramasında taranan kullanıcı klasörleri
 function userFolders(): string[] {
@@ -95,15 +120,25 @@ const computerTools: ToolModule = {
       }),
       execute: async (input) => {
         const target = input.yol.trim()
-        const stat = await fs.stat(target).catch(() => null)
-        if (!stat) throw new Error('Bu yolda bir dosya veya klasör bulunamadı.')
 
         // path.relative ile gerçek alt yol kontrolü (salt "startsWith" kardeş klasöre kanar,
         // ör. "C:\Users\ysfll2\..."); realpath symlink/junction ile kaçışı da engeller.
+        // Varlık kontrolünden önce yapılır: klasör dışındaki yolların varlığı sızmasın.
         const home = app.getPath('home')
-        const safeMessage =
-          'Güvenlik için sadece kullanıcı klasörünün içindeki dosyalar açılabilir.'
-        const realTarget = await assertWithinRoot(home, target, safeMessage)
+        const realTarget = await assertWithinRoot(
+          home,
+          target,
+          'Bu yolda dosya bulunamadı ya da yol kullanıcı klasörünün dışında (güvenlik için sadece kullanıcı klasörü açılabilir).'
+        )
+        const stat = await fs.stat(realTarget)
+
+        // Program/betik dosyaları açılmak yerine çalışır; web/e-posta içeriğinden gelen bir
+        // yönlendirmeyle (prompt injection) tek tıklık onayla program çalıştırılmasın
+        if (stat.isFile() && BLOCKED_OPEN_EXTENSIONS.has(extname(realTarget).toLowerCase())) {
+          throw new Error(
+            'Güvenlik için program ve betik dosyaları (.exe, .bat, .ps1 vb.) açılamaz. Kullanıcı kendisi açabilir.'
+          )
+        }
 
         await requireApproval({
           toolName: 'dosya_ac',

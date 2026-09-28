@@ -114,11 +114,17 @@ function checkEmbeddingBacklog(now: Date): void {
  */
 export function startProactiveScheduler(): () => void {
   const check = (): void => {
-    const now = new Date()
-    checkStaleTasks(now)
-    checkStaleReminders(now)
-    checkBacklogGrowth(now)
-    checkEmbeddingBacklog(now)
+    // Kurallar kendi hatalarını yakalıyor ama veritabanı okumaları (ör. yedekten geri yükleme
+    // sırasında kapalı veritabanı) setInterval içinde yakalanmamış hata olarak düşmesin
+    try {
+      const now = new Date()
+      checkStaleTasks(now)
+      checkStaleReminders(now)
+      checkBacklogGrowth(now)
+      checkEmbeddingBacklog(now)
+    } catch (err) {
+      console.error('Proaktif kontrol yapılamadı:', err)
+    }
   }
 
   check()

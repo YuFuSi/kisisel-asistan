@@ -32,10 +32,22 @@ function showTrayHintOnce(): void {
   }).show()
 }
 
-// Sesli komut için mikrofon izni; başka izinler (kamera, konum vb.) reddedilir
+// İzin sadece uygulamanın kendi sayfalarına verilir (geliştirmede vite sunucusu, pakette file://);
+// dışarıdan yüklenen bir sayfa/çerçeve kamera veya mikrofon alamasın
+function isAppUrl(url: string): boolean {
+  const devUrl = process.env['ELECTRON_RENDERER_URL']
+  return url.startsWith('file://') || (!!devUrl && url.startsWith(devUrl))
+}
+
+// Sesli komut için mikrofon, el kontrolü için kamera izni ('media' ikisini de kapsar);
+// başka izinler (konum, bildirim penceresi vb.) reddedilir
 function allowMicrophoneOnly(): void {
-  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
-    callback(permission === 'media')
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback, details) => {
+    callback(permission === 'media' && isAppUrl(details.requestingUrl))
+  })
+  session.defaultSession.setPermissionCheckHandler((_contents, permission, requestingOrigin) => {
+    if (permission !== 'media') return false
+    return isAppUrl(requestingOrigin)
   })
 }
 
