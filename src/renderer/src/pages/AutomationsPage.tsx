@@ -9,6 +9,7 @@ import { useLiveData } from '../lib/useLiveData'
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadAutomations = (): Promise<Automation[]> => window.api.automations.list()
 
+// Planlama sayfasının "Rutinler" sekmesi (eskiden ayrı "Otomasyonlar" sayfasıydı)
 function AutomationsPage(): React.JSX.Element {
   const { data, error } = useLiveData(loadAutomations, 'automations')
   const toast = useToast()
@@ -24,15 +25,7 @@ function AutomationsPage(): React.JSX.Element {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Otomasyonlar</h1>
-        <p className="mt-1 text-sm text-muted">
-          Jarvis&apos;in belirlediğin saatte sohbet beklemeden kendiliğinden yaptığı işler. Sohbette
-          &quot;rutin kur&quot; diyerek de oluşturabilirsin.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <NewAutomationForm
         onCreate={(input: AutomationInput) => run(() => window.api.automations.create(input))}
       />

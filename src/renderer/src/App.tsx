@@ -5,12 +5,10 @@ import { PAGE_LABELS, type PageId } from './lib/pages'
 import TitleBar from './components/TitleBar'
 import HomePage from './pages/HomePage'
 import ChatPage from './pages/ChatPage'
-import TasksPage from './pages/TasksPage'
+import PlanningPage, { type PlanningTab } from './pages/PlanningPage'
 import CalendarPage from './pages/CalendarPage'
 import NotesPage from './pages/NotesPage'
-import AutomationsPage from './pages/AutomationsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
-import AchievementsPage from './pages/AchievementsPage'
 import GesturesPage from './pages/GesturesPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
@@ -20,6 +18,7 @@ import { noteNotification } from './lib/assistantState'
 
 function App(): React.JSX.Element {
   const [page, setPage] = useState<PageId>('home')
+  const [planningTab, setPlanningTab] = useState<PlanningTab>('tasks')
   const [paletteOpen, setPaletteOpen] = useState(false)
   // El ile kontrol açıkken sürükleyici (Iron Man tarzı) görünüm için sidebar gizlenir
   const [handControlOn, setHandControlOn] = useState(false)
@@ -47,23 +46,40 @@ function App(): React.JSX.Element {
         return
       }
       if (command === 'open-tasks') {
+        setPlanningTab('tasks')
         setPage('tasks')
         return
       }
       if (command === 'open-automations') {
-        setPage('automations')
+        navigate('automations')
         return
       }
       if (command.startsWith('open-page:')) {
         const target = command.slice('open-page:'.length)
         // Bilinmeyen bir kimlik boş sayfa göstermesin
-        if (target in PAGE_LABELS) setPage(target as PageId)
+        if (target in PAGE_LABELS) navigate(target as PageId)
         return
       }
       setPage('chat')
       focusComposer()
     })
   }, [])
+
+  // Tasarım turunda birleştirilen sayfaların eski kimlikleri yeni yerlerine gider: Otomasyonlar →
+  // Planlama'nın Rutinler sekmesi, Başarımlar → Analizler. Bildirim, komut paleti ve yörünge
+  // hâlâ eski kimlikleri kullanabildiği için hiçbir bağlantı kırılmaz.
+  function navigate(target: PageId): void {
+    if (target === 'automations') {
+      setPlanningTab('routines')
+      setPage('tasks')
+      return
+    }
+    if (target === 'achievements') {
+      setPage('analytics')
+      return
+    }
+    setPage(target)
+  }
 
   // Ana Sayfa'daki komut kutusu: sohbet sayfasına geç, istek yeni sohbette cevaplansın
   function ask(text: string): void {
@@ -81,12 +97,12 @@ function App(): React.JSX.Element {
       <TitleBar page={PAGE_LABELS[page]} />
 
       <div className="flex min-h-0 flex-1">
-        {!handControlOn && <Sidebar active={page} onSelect={setPage} />}
+        {!handControlOn && <Sidebar active={page} onSelect={navigate} />}
         <main className="min-w-0 flex-1 bg-surface">
           {page === 'home' && (
             <div className="animate-fade h-full">
               <HomePage
-                onNavigate={setPage}
+                onNavigate={navigate}
                 onAsk={ask}
                 onOpenConversation={openConversation}
                 handControlOn={handControlOn}
@@ -100,7 +116,7 @@ function App(): React.JSX.Element {
           </div>
           {page === 'tasks' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <TasksPage />
+              <PlanningPage tab={planningTab} onTabChange={setPlanningTab} />
             </div>
           )}
           {page === 'calendar' && (
@@ -116,24 +132,14 @@ function App(): React.JSX.Element {
               />
             </div>
           )}
-          {page === 'automations' && (
-            <div className="animate-fade h-full overflow-y-auto">
-              <AutomationsPage />
-            </div>
-          )}
           {page === 'analytics' && (
             <div className="animate-fade h-full overflow-y-auto">
               <AnalyticsPage />
             </div>
           )}
-          {page === 'achievements' && (
-            <div className="animate-fade h-full overflow-y-auto">
-              <AchievementsPage />
-            </div>
-          )}
           {page === 'gestures' && (
             <div className="animate-fade h-full overflow-y-auto">
-              <GesturesPage onNavigate={setPage} />
+              <GesturesPage onNavigate={navigate} />
             </div>
           )}
           {page === 'settings' && (
@@ -148,7 +154,7 @@ function App(): React.JSX.Element {
         <CommandPalette
           onClose={() => setPaletteOpen(false)}
           currentPage={page}
-          onNavigate={setPage}
+          onNavigate={navigate}
         />
       )}
     </div>

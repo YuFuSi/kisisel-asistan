@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Flame, Wrench } from 'lucide-react'
 import type { UsageStats } from '@shared/api'
+import AchievementsSection from '../components/analytics/AchievementsSection'
 import Card from '../components/ui/Card'
 import PageHeader from '../components/ui/PageHeader'
 import Skeleton from '../components/ui/Skeleton'
@@ -165,6 +166,10 @@ function AnalyticsPage(): React.JSX.Element {
           )}
         </div>
       )}
+
+      <div className="mt-8">
+        <AchievementsSection />
+      </div>
     </div>
   )
 }

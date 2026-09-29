@@ -6,8 +6,6 @@ import {
   MessageSquare,
   Brain,
   Settings,
-  Trophy,
-  Workflow,
   type LucideIcon
 } from 'lucide-react'
 import type { PageId } from '../../lib/pages'
@@ -25,13 +23,12 @@ interface OrbitItem {
 }
 
 const ITEMS: OrbitItem[] = [
-  { page: 'tasks', icon: ListTodo, label: 'Görevler' },
+  // Menüyle aynı 6 hedef (tasarım turu); 8 simge 3B halkada üst üste biniyordu
+  { page: 'tasks', icon: ListTodo, label: 'Planlama' },
   { page: 'notes', icon: Brain, label: 'Hafıza' },
   { page: 'calendar', icon: CalendarDays, label: 'Takvim' },
   { page: 'chat', icon: MessageSquare, label: 'Asistan' },
-  { page: 'automations', icon: Workflow, label: 'Otomasyonlar' },
   { page: 'analytics', icon: BarChart3, label: 'Analizler' },
-  { page: 'achievements', icon: Trophy, label: 'Başarımlar' },
   { page: 'settings', icon: Settings, label: 'Ayarlar' }
 ]
 
