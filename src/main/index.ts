@@ -15,7 +15,7 @@ import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
 import { disposeHud, toggleHud } from './system/hud'
-import { startUpdater } from './system/updater'
+import { installDownloadedUpdate, startUpdater } from './system/updater'
 import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
 import { applyOpenAtLogin, wasStartedHidden } from './system/startup'
@@ -72,7 +72,11 @@ if (!app.requestSingleInstanceLock()) {
   // Günlük dosyası: %APPDATA%\kisisel-asistan\logs\main.log
   initLogging()
 
-  app.on('second-instance', () => showMainWindow())
+  app.on('second-instance', () => {
+    // Kullanıcı Jarvis zaten açıkken (ör. tepsideyken) yeniden açmaya çalıştı
+    console.info('Jarvis zaten açık; mevcut pencere öne getiriliyor')
+    showMainWindow()
+  })
 
   app.whenReady().then(() => {
     // Windows bildirimlerinde ve görev çubuğunda uygulama kimliği
@@ -159,6 +163,12 @@ if (!app.requestSingleInstanceLock()) {
     if (quitting) return
     quitting = true
     event.preventDefault()
+    console.info('Jarvis kapanıyor')
+    // Kapanış adımlarından biri takılırsa uygulama penceresiz asılı kalmasın
+    setTimeout(() => {
+      console.warn('Kapanış 30 sn içinde bitmedi, zorla çıkılıyor')
+      app.exit(0)
+    }, 30_000).unref()
     ;(async () => {
       disposeGlobalShortcut()
       disposeHud()
@@ -178,7 +188,11 @@ if (!app.requestSingleInstanceLock()) {
       disposeVoiceSession()
       disposeWindowDaemon()
       closeDb()
-      app.quit()
-    })()
+      // İndirilmiş güncelleme varsa kurulup Jarvis yeniden açılır; yoksa normal çıkış
+      if (!installDownloadedUpdate()) app.quit()
+    })().catch((err: unknown) => {
+      console.error('Kapanış sırasında hata:', err)
+      app.exit(0)
+    })
   })
 }
