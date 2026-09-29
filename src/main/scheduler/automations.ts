@@ -1,5 +1,3 @@
-import { Notification } from 'electron'
-import icon from '../../../resources/icon.png?asset'
 import { runAutomationTurn } from '../ai/automation'
 import {
   finishAutomationRun,
@@ -7,7 +5,8 @@ import {
   takeDueAutomations
 } from '../data/automations'
 import { notifyDataChanged } from '../events'
-import { notifyPulse, sendCommand, showMainWindow } from '../system/window'
+import { showJarvisNotice } from '../system/jarvisNotice'
+import { sendCommand } from '../system/window'
 import type { Automation, AutomationRun } from '../../shared/api'
 
 const CHECK_INTERVAL_MS = 30_000
@@ -20,28 +19,21 @@ const runningAutomationIds = new Set<number>()
 // Uygulama kapanırken devam eden çalıştırmaları bekleyebilmek için (bkz. waitForActiveAutomations)
 const activeRuns = new Set<Promise<unknown>>()
 
-// Bildirim nesneleri çöp toplayıcıya gitmesin (yoksa tıklama olayı kaybolabilir)
-const visibleNotifications = new Set<Notification>()
-
 function showAutomationResult(automation: Automation, run: AutomationRun): void {
   const base = run.status === 'error' ? `Hata: ${run.summary}` : run.summary || 'Tamamlandı.'
   const body =
     run.skippedTools.length > 0
       ? `${base} (${run.skippedTools.length} adım izin yetersizliğinden atlandı)`
       : base
-  const notification = new Notification({ title: automation.name, body, icon })
-  visibleNotifications.add(notification)
-  const release = (): void => {
-    visibleNotifications.delete(notification)
-  }
-  notification.on('click', () => {
-    release()
-    showMainWindow()
-    sendCommand('open-automations')
+  showJarvisNotice({
+    title: automation.name,
+    body,
+    spoken:
+      run.status === 'error'
+        ? `${automation.name} rutini çalışırken bir sorun oldu.`
+        : `${automation.name} rutini bitti. ${run.summary}`,
+    onClick: () => sendCommand('open-automations')
   })
-  notification.on('close', release)
-  notification.show()
-  notifyPulse()
 }
 
 /**

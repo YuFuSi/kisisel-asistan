@@ -43,6 +43,16 @@ function HudApp(): React.JSX.Element {
   const [handControlOn, setHandControlOn] = useState(false)
   const now = useClock()
   const resizedRef = useRef(false)
+  // Jarvis bir uyarı gösterince (hatırlatma, pil, proaktif) HUD küresi de nabız atar
+  const [notice, setNotice] = useState(0)
+
+  useEffect(
+    () =>
+      window.api.events.onCommand((command) => {
+        if (command === 'notified') setNotice((n) => n + 1)
+      }),
+    []
+  )
 
   useEffect(() => {
     window.api.voice.state().then(
@@ -106,7 +116,7 @@ function HudApp(): React.JSX.Element {
       {handControlOn ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 pb-3">
           <div className="relative flex items-center justify-center">
-            <Orb state={state} size={90} />
+            <Orb state={state} size={90} notice={notice} />
             <div className="pointer-events-none absolute">
               <OrbitTools
                 handPoint={handPoint}
@@ -128,7 +138,7 @@ function HudApp(): React.JSX.Element {
             title={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
             className="no-drag shrink-0 cursor-pointer rounded-full"
           >
-            <Orb state={state} size={120} />
+            <Orb state={state} size={120} notice={notice} />
           </button>
           <div className="min-w-0 flex-1 leading-tight">
             <div className="truncate text-sm font-medium text-ink">Jarvis</div>

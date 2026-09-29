@@ -198,6 +198,11 @@ export interface AppSettings {
   briefCity: string
   /** Sabah özeti gösterilince ayrıca sesli de okunsun mu (Jarvis'in ilk gerçek otomasyonu) */
   briefSpoken: boolean
+  /** Hatırlatma, proaktif uyarı, pil ve rutin bildirimlerini Jarvis sesli de söylesin */
+  noticesSpoken: boolean
+  /** Sessiz saatler (SS:DD); bu aralıkta uyarılar sadece yazılı gelir. Gece yarısını aşabilir */
+  quietStart: string
+  quietEnd: string
   /** Kullanıcının kendini anlattığı metin; her sohbette asistana verilir */
   aboutMe: string
   tone: AssistantTone
@@ -237,6 +242,9 @@ export interface SettingsPatch {
   briefTime?: string
   briefCity?: string
   briefSpoken?: boolean
+  noticesSpoken?: boolean
+  quietStart?: string
+  quietEnd?: string
   aboutMe?: string
   tone?: AssistantTone
   temperature?: number | null

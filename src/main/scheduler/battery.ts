@@ -1,12 +1,10 @@
-import { Notification } from 'electron'
 import si from 'systeminformation'
-import icon from '../../../resources/icon.png?asset'
 import {
   shouldResetLowBatteryWarning,
   shouldWarnLowBattery,
   type BatteryReading
 } from '../lib/battery'
-import { notifyPulse } from '../system/window'
+import { showJarvisNotice } from '../system/jarvisNotice'
 
 // Otomasyon motorunun ikinci hazır senaryosu: zamana değil pil durumuna bağlı bir tetikleyici.
 // Sabah özetinden farklı olarak "günde bir kez" değil, "düşük pil bölümü başına bir kez" mantığı var:
@@ -39,12 +37,12 @@ async function check(): Promise<void> {
 
   if (shouldWarnLowBattery(reading, warned)) {
     warned = true
-    new Notification({
+    const percent = Math.round(reading.percent)
+    showJarvisNotice({
       title: 'Pil azaldı',
-      body: `Pil %${Math.round(reading.percent)} kaldı. Şarja takmayı unutma.`,
-      icon
-    }).show()
-    notifyPulse()
+      body: `Pil %${percent} kaldı. Şarja takmayı unutma.`,
+      spoken: `Pil yüzde ${percent} kaldı, şarja takmayı unutma.`
+    })
   }
 }
 

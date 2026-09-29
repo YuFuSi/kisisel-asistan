@@ -1,5 +1,3 @@
-import { Notification } from 'electron'
-import icon from '../../../resources/icon.png?asset'
 import { listMemoriesMissingEmbedding } from '../data/memories'
 import { listNotesMissingEmbedding } from '../data/notes'
 import { listReminders } from '../data/reminders'
@@ -19,7 +17,8 @@ import {
   type ProactiveNotification
 } from '../lib/proactive'
 import { getSettings, getStoredValue, setStoredValue } from '../settings'
-import { notifyPulse, sendCommand, showMainWindow } from '../system/window'
+import { showJarvisNotice } from '../system/jarvisNotice'
+import { sendCommand } from '../system/window'
 
 // Otomasyon motorunu (Tur J) beklemeden sabit kurallar: uzun süredir bekleyen bir görev, unutulmuş
 // bir hatırlatma, sürekli büyüyen bir görev listesi veya indekslenmemiş kayıt birikmesi varsa
@@ -31,21 +30,9 @@ const STALE_REMINDER_KEY = 'proactiveStaleReminderLastShown'
 const BACKLOG_GROWTH_KEY = 'proactiveBacklogGrowthLastShown'
 const EMBEDDING_BACKLOG_KEY = 'proactiveEmbeddingBacklogLastShown'
 
-// Aynı anda gösterilmiş bildirimleri tıklanana kadar canlı tutar (yoksa GC'lenip tıklama olayını
-// kaçırabilir); notification.close() ile kendiliğinden temizlenir.
-const visibleNotifications = new Set<Notification>()
-
 function showProactiveNudge(notification: ProactiveNotification, onClick: () => void): void {
-  const win = new Notification({ title: notification.title, body: notification.body, icon })
-  visibleNotifications.add(win)
-  win.on('click', () => {
-    visibleNotifications.delete(win)
-    showMainWindow()
-    onClick()
-  })
-  win.on('close', () => visibleNotifications.delete(win))
-  win.show()
-  notifyPulse()
+  // Jarvis'in kendi fark ettiği şeyler: sesli söylenirken başlık yerine doğrudan içerik
+  showJarvisNotice({ ...notification, spoken: notification.body, onClick })
 }
 
 function checkStaleTasks(now: Date): void {

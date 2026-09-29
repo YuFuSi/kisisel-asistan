@@ -1,16 +1,12 @@
 import { Notification } from 'electron'
-import icon from '../../../resources/icon.png?asset'
 import { takeDueReminders } from '../data/reminders'
 import { notifyDataChanged } from '../events'
-import { notifyPulse, showMainWindow } from '../system/window'
+import { showJarvisNotice } from '../system/jarvisNotice'
 import type { Reminder } from '../../shared/api'
 
 const CHECK_INTERVAL_MS = 15_000
 // Zamanı bundan daha önce geçmiş hatırlatmalar (ör. uygulama kapalıyken) "kaçırılan" olarak gösterilir
 const MISSED_AFTER_MS = 5 * 60_000
-
-// Bildirim nesneleri çöp toplayıcıya gitmesin (yoksa tıklama olayı kaybolabilir)
-const visibleNotifications = new Set<Notification>()
 
 function showReminder(reminder: Reminder, now: number): void {
   const missed = now - reminder.remindAt > MISSED_AFTER_MS
@@ -20,22 +16,12 @@ function showReminder(reminder: Reminder, now: number): void {
     hour: '2-digit',
     minute: '2-digit'
   })
-  const notification = new Notification({
+  showJarvisNotice({
     title: missed ? 'Kaçırılan hatırlatma' : 'Hatırlatma',
     body: missed ? `${reminder.message} (${time})` : reminder.message,
-    icon
+    spoken: `Hatırlatma: ${reminder.message}`,
+    silent: missed
   })
-  visibleNotifications.add(notification)
-  const release = (): void => {
-    visibleNotifications.delete(notification)
-  }
-  notification.on('click', () => {
-    release()
-    showMainWindow()
-  })
-  notification.on('close', release)
-  notification.show()
-  notifyPulse()
 }
 
 // Zamanı gelen hatırlatmaları düzenli aralıklarla kontrol edip Windows bildirimi gösterir.
