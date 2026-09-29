@@ -69,6 +69,11 @@ function setEmotion(kind: Emotion | null): void {
   else if (kind === 'unsure') playSfx('approval')
   else if (kind === 'success' && voicePhase === 'off') playSfx('done')
 }
+/** Kullanıcı bir işi bitirdi (ör. görev tamamladı): küre yeşil parıltıyla kutlar */
+export function celebrate(): void {
+  setEmotion('success')
+}
+
 // Cevap yazılan sohbetler ve her birinde o an çalışan araçlar
 const replies = new Map<number, Set<string>>()
 let listening = false

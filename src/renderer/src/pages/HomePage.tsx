@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MessageSquare, Square } from 'lucide-react'
-import type { Reminder, Task } from '@shared/api'
+import type { CalendarItem, HomeWeather, Memory, Reminder, Task } from '@shared/api'
 import AuroraBackground from '../components/home/AuroraBackground'
 import CommandBox from '../components/home/CommandBox'
 import FloatingTile from '../components/home/FloatingTile'
@@ -12,6 +12,7 @@ import Card from '../components/ui/Card'
 import Skeleton from '../components/ui/Skeleton'
 import {
   STATE_LABELS,
+  celebrate,
   useAssistantEmotion,
   useAssistantState,
   noteNotification,
@@ -19,7 +20,7 @@ import {
   useWorkSteps
 } from '../lib/assistantState'
 import { requestAttachFiles } from '../lib/chatRequests'
-import { useBattery, useClock, useOnline } from '../lib/deviceStatus'
+import { useClock } from '../lib/deviceStatus'
 import { greeting } from '../lib/greeting'
 import { buildHomeSummary, summarizeToday } from '../lib/homeSummary'
 import type { PageId } from '../lib/pages'
@@ -30,15 +31,26 @@ import { useHandTracking } from '../lib/useHandTracking'
 import { hasCamera, useClapActivation } from '../lib/useClapActivation'
 import { useToast } from '../lib/toast'
 import { useWindowDrag } from '../lib/useWindowDrag'
+import { findUserName } from '../lib/userName'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadTasks = (): Promise<Task[]> => window.api.tasks.list()
 const loadReminders = (): Promise<Reminder[]> => window.api.reminders.list()
-// Kişisel notun yenilenmesi için hafızadaki değişikliğin imzası (içerik değişince değişir)
-const loadMemorySignature = (): Promise<string> =>
-  window.api.memories
-    .list()
-    .then((list) => list.map((m) => `${m.id}:${m.kind}:${m.content}`).join('|'))
+const loadMemories = (): Promise<Memory[]> => window.api.memories.list()
+
+/** "14:30" gibi bugünkü saate kalan süre: "25 dk sonra", "2 sa 10 dk sonra" */
+function countdown(time: string, now: Date): string {
+  const [h, m] = time.split(':').map(Number)
+  const minutes = h * 60 + m - (now.getHours() * 60 + now.getMinutes())
+  if (minutes <= 0) return 'şimdi'
+  if (minutes < 60) return `${minutes} dk sonra`
+  const rest = minutes % 60
+  return `${Math.floor(minutes / 60)} sa${rest ? ` ${rest} dk` : ''} sonra`
+}
+
+function hhmm(ms: number): string {
+  return new Date(ms).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+}
 
 // Yazı yazılırken küre bu kadar süre heyecanlı kalır
 const EXCITE_MS = 700
@@ -109,11 +121,17 @@ function HomePage({
   const notice = useNoticeSeq()
   const voice = useVoice()
   const now = useClock(60_000)
-  const online = useOnline()
-  const battery = useBattery()
   const tasks = useLiveData(loadTasks, 'tasks').data
   const reminders = useLiveData(loadReminders, 'reminders').data
-  const memorySignature = useLiveData(loadMemorySignature, 'memories').data
+  const memories = useLiveData(loadMemories, 'memories').data
+  // Kişisel notun yenilenmesi için hafızadaki değişikliğin imzası (içerik değişince değişir)
+  const memorySignature = memories?.map((m) => `${m.id}:${m.kind}:${m.content}`).join('|')
+  const userName = memories
+    ? findUserName(memories.filter((m) => m.kind === 'profil').map((m) => m.content))
+    : null
+  // Hava ve bugünün takvimi saatte bir yenilenir (ana süreç havayı zaten önbellekte tutar)
+  const [weather, setWeather] = useState<HomeWeather | null>(null)
+  const [events, setEvents] = useState<CalendarItem[]>([])
   // Hafıza + bugünün işleri + takvimden yerel modelle yazılan not; gelene kadar (veya model
   // kullanılamazsa) düz özet gösterilir. Ana süreç aynı bağlam için önbellekten döner.
   const [personalNote, setPersonalNote] = useState<string | null>(null)
@@ -130,6 +148,23 @@ function HomePage({
       active = false
     }
   }, [tasks, reminders, memorySignature, noteHour])
+  useEffect(() => {
+    let active = true
+    const dayStart = new Date()
+    dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(dayStart.getTime() + 86_400_000)
+    window.api.system.weather().then(
+      (value) => active && setWeather(value),
+      () => {}
+    )
+    window.api.calendar.events(dayStart.toISOString(), dayEnd.toISOString()).then(
+      (list) => active && setEvents(list),
+      () => {}
+    )
+    return () => {
+      active = false
+    }
+  }, [noteHour])
   const [excite, setExcite] = useState(0)
   const [dragging, setDragging] = useState(false)
   const {
@@ -186,7 +221,7 @@ function HomePage({
   }
 
   function completeTaskByHand(id: number): void {
-    void window.api.tasks.update(id, { done: true })
+    void window.api.tasks.update(id, { done: true }).then(celebrate, () => {})
   }
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const orbLayer = useRef<HTMLDivElement>(null)
@@ -196,6 +231,14 @@ function HomePage({
   const conversationId = voice.conversationId
   const today = tasks && reminders ? summarizeToday({ tasks, reminders, now }) : null
   const summary = tasks && reminders ? buildHomeSummary({ tasks, reminders, now }) : null
+  // Sıradaki: görev/hatırlatma ile takvimdeki saatli etkinliklerin en yakını
+  const nextEvent = events
+    .filter((event) => !event.allDay && event.start > now.getTime())
+    .sort((a, b) => a.start - b.start)[0]
+  const next =
+    nextEvent && (!today?.next || hhmm(nextEvent.start) < today.next.time)
+      ? { time: hhmm(nextEvent.start), label: nextEvent.title }
+      : (today?.next ?? null)
   // Boştayken ipucu, aksi halde sesli sohbetin ya da asistanın o anki durumu
   const running = currentStep(steps)
   const caption = dragging
@@ -249,9 +292,6 @@ function HomePage({
     }
   }
 
-  const clock = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-  const date = now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })
-
   return (
     <div
       className="relative h-full"
@@ -275,45 +315,47 @@ function HomePage({
                 className="absolute inset-0 transition-transform duration-500 ease-out"
               >
                 <FloatingTile
-                  label="Şimdi"
-                  value={clock}
-                  detail={date}
+                  label="Sıradaki"
+                  value={next ? `${next.time} · ${countdown(next.time, now)}` : 'Boş'}
+                  detail={next ? next.label : 'Bugün saatli iş yok'}
+                  onClick={() =>
+                    onNavigate(nextEvent && next?.label === nextEvent.title ? 'calendar' : 'tasks')
+                  }
                   className="top-[10%] left-0"
                   delayMs={200}
                 />
                 <FloatingTile
-                  label="Sıradaki"
-                  value={today?.next ? today.next.time : 'Boş'}
-                  detail={today?.next ? today.next.label : 'Saatli iş yok'}
+                  label="Hava"
+                  value={weather ? `${weather.temperature}°` : '—'}
+                  detail={
+                    weather
+                      ? [
+                          weather.condition,
+                          weather.min !== null && weather.max !== null
+                            ? `${weather.min}°/${weather.max}°`
+                            : null,
+                          weather.rainChance ? `yağış %${weather.rainChance}` : null
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
+                      : 'Şehir: Ayarlar > Sabah özeti'
+                  }
                   className="top-[10%] right-0"
                   delayMs={320}
                 />
                 <FloatingTile
-                  label="Görevler"
-                  value={today ? `${today.dueTasks} bugün` : '...'}
-                  detail={today && today.overdue > 0 ? `${today.overdue} gecikti` : 'Yolunda'}
+                  label="Bugün"
+                  value={today ? `${today.dueTasks} görev` : '...'}
+                  detail={
+                    today
+                      ? today.overdue > 0
+                        ? `${today.overdue} tanesi gecikti`
+                        : `${today.reminders} hatırlatma · ${events.length} etkinlik`
+                      : undefined
+                  }
                   onClick={() => onNavigate('tasks')}
                   className="bottom-[14%] left-8"
                   delayMs={440}
-                />
-                <FloatingTile
-                  label="Sistem"
-                  value={
-                    battery
-                      ? `%${Math.round(battery.level * 100)}`
-                      : online
-                        ? 'Hazır'
-                        : 'Çevrimdışı'
-                  }
-                  detail={
-                    battery
-                      ? `${battery.charging ? 'Şarj oluyor' : 'Pil'} · ${online ? 'Çevrimiçi' : 'Çevrimdışı'}`
-                      : online
-                        ? 'Çevrimiçi'
-                        : 'İnternet yok'
-                  }
-                  className="right-8 bottom-[14%]"
-                  delayMs={560}
                 />
               </div>
             )}
@@ -367,6 +409,7 @@ function HomePage({
 
           <h1 className="-mt-10 text-[40px] leading-tight font-medium tracking-tight text-ink">
             {greeting(now.getHours())}
+            {userName ? `, ${userName}` : ''}
           </h1>
           <div className="mt-2 flex min-h-6 max-w-2xl items-center justify-center text-center">
             {personalNote ? (

@@ -315,8 +315,10 @@ function Orb({
       const swayX = motionOk ? Math.sin(t * 1.7) * 6 * unsureAmount : 0
       const swayY = motionOk ? Math.cos(t * 1.2) * 3 * unsureAmount : 0
       const swayTilt = motionOk ? Math.sin(t * 1.4) * 0.05 * unsureAmount : 0
+      // Renk dili: başarı yeşil, hata kırmızı, onay bekleme ve uyarı (bildirim) kehribar.
+      // Bildirim tonu gövdeye de yansır ki köşedeki küçük kürede de görünsün.
       const tintHue = burstKind === 'success' ? 150 : burstKind === 'error' ? 355 : 40
-      const tintAlpha = burstKind ? 0.32 * pulse : 0.14 * unsureAmount
+      const tintAlpha = burstKind ? 0.32 * pulse : Math.max(0.14 * unsureAmount, 0.3 * noticeBeat)
 
       // Gövde çevresi: konuşurken yüzey sesle birlikte yumuşakça titrer, aksi halde düz daire
       const wobble = params.speak * (0.005 + barMean * 0.02)
@@ -693,7 +695,7 @@ function Orb({
         }
         if (noticeBeat > 0.01) {
           ctx.lineWidth = 3
-          ctx.strokeStyle = tone(82, noticeBeat * 0.5)
+          ctx.strokeStyle = `hsla(40, 90%, 62%, ${noticeBeat * 0.6})`
           ctx.beginPath()
           ctx.arc(cx, cy, r * (1.04 + noticeBeat * 0.12), 0, TAU)
           ctx.stroke()

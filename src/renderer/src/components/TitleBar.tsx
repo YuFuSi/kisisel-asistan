@@ -1,11 +1,46 @@
 import { BatteryCharging, BatteryFull, BatteryLow, BatteryMedium } from 'lucide-react'
 import Logo from './jarvis/Logo'
+import Orb from './jarvis/Orb'
 import SystemStatusIcons from './SystemStatusIcons'
 import { useBattery, useClock, type BatteryInfo } from '../lib/deviceStatus'
+import {
+  useAssistantEmotion,
+  useAssistantState,
+  useNoticeSeq,
+  useWorkSteps
+} from '../lib/assistantState'
+import { toggleVoiceSession, useVoice } from '../lib/voiceClient'
 
 interface TitleBarProps {
   /** O an açık olan sayfanın adı */
   page: string
+  /** Ana Sayfa dışında logonun yerinde küçük, canlı küre durur (Jarvis her sayfada yanında) */
+  showOrb: boolean
+}
+
+// Ana Sayfa'daki kürenin küçük kopyası: aynı durum, duygu ve bildirim nabzı; tıklayınca konuşur
+function CornerOrb(): React.JSX.Element {
+  const state = useAssistantState()
+  const emotion = useAssistantEmotion()
+  const steps = useWorkSteps()
+  const notice = useNoticeSeq()
+  const voice = useVoice()
+  const label = voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'
+  return (
+    <button
+      onClick={toggleVoiceSession}
+      aria-label={label}
+      title={label}
+      className="no-drag relative h-6 w-6 shrink-0 cursor-pointer rounded-full"
+    >
+      <span
+        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 [&_canvas]:max-w-none"
+        style={{ width: 56, height: 56 }}
+      >
+        <Orb state={state} size={56} emotion={emotion} steps={steps} notice={notice} />
+      </span>
+    </button>
+  )
 }
 
 function BatteryIcon({ level, charging }: BatteryInfo): React.JSX.Element {
@@ -18,7 +53,7 @@ function BatteryIcon({ level, charging }: BatteryInfo): React.JSX.Element {
 
 // Windows'un gri başlık çubuğu yerine uygulamanın kendi çubuğu.
 // Kapat/küçült düğmeleri Windows tarafından sağ tarafa çizilir, o alan boş bırakılır.
-function TitleBar({ page }: TitleBarProps): React.JSX.Element {
+function TitleBar({ page, showOrb }: TitleBarProps): React.JSX.Element {
   const now = useClock()
   const battery = useBattery()
 
@@ -27,7 +62,7 @@ function TitleBar({ page }: TitleBarProps): React.JSX.Element {
       className="drag-region flex h-[var(--titlebar-height)] shrink-0 items-center gap-2.5 border-b border-line bg-app px-3"
       style={{ paddingRight: 150 }}
     >
-      <Logo className="h-5 w-5" />
+      {showOrb ? <CornerOrb /> : <Logo className="h-5 w-5" />}
       <span className="text-sm font-semibold tracking-tight text-ink">Jarvis</span>
       <span className="text-line-strong">/</span>
       <span className="min-w-0 truncate text-sm text-muted">{page}</span>
