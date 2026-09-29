@@ -13,7 +13,8 @@ import GesturesPage from './pages/GesturesPage'
 import SettingsPage from './pages/SettingsPage'
 import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
-import { initVoiceClient } from './lib/voiceClient'
+import { initVoiceClient, toggleVoiceSession } from './lib/voiceClient'
+import VoiceOverlay from './components/jarvis/VoiceOverlay'
 import { noteNotification } from './lib/assistantState'
 
 function App(): React.JSX.Element {
@@ -26,6 +27,12 @@ function App(): React.JSX.Element {
   // Ctrl+K (veya Cmd+K) her yerden komut paletini açar
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
+      // Ctrl+Space: hangi sayfada olursa olsun Jarvis'le konuşmayı başlatır/bitirir
+      if (e.ctrlKey && !e.shiftKey && e.code === 'Space') {
+        e.preventDefault()
+        toggleVoiceSession()
+        return
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPaletteOpen(true)
@@ -98,7 +105,8 @@ function App(): React.JSX.Element {
 
       <div className="flex min-h-0 flex-1">
         {!handControlOn && <Sidebar active={page} onSelect={navigate} />}
-        <main className="min-w-0 flex-1 bg-surface">
+        <main className="relative min-w-0 flex-1 bg-surface">
+          {page !== 'home' && <VoiceOverlay onOpenConversation={openConversation} />}
           {page === 'home' && (
             <div className="animate-fade h-full">
               <HomePage
