@@ -123,7 +123,8 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl space-y-4 p-8">
+      {/* PageLayout'un başlık çerçevesiyle aynı genişlik ve kenar boşluğu (başlıkla hizalı) */}
+      <div className="mx-auto w-full max-w-4xl space-y-4 px-8 py-6">
         <p className="text-sm text-muted">
           Jarvis buradaki bilgileri hangi model seçili olursa olsun her sohbette hatırlar.
           Konuşmalarından önemli bilgileri kendisi de çıkarır (bilgisayarında, yerel modelle); çok

@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Flame, Wrench } from 'lucide-react'
 import type { UsageStats } from '@shared/api'
 import AchievementsSection from '../components/analytics/AchievementsSection'
 import Card from '../components/ui/Card'
-import PageHeader from '../components/ui/PageHeader'
+import PageLayout from '../components/ui/PageLayout'
 import Skeleton from '../components/ui/Skeleton'
 
 // Yerel tarihi "22 Eyl" gibi kısa gösterir
@@ -106,12 +106,10 @@ function AnalyticsPage(): React.JSX.Element {
   }, [])
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
-      <PageHeader
-        title="Analizler"
-        description="Jarvis'i nasıl kullandığın; tamamı bu bilgisayardaki verilerden hesaplanır."
-      />
-
+    <PageLayout
+      title="Analizler"
+      description="Jarvis'i nasıl kullandığın; tamamı bu bilgisayardaki verilerden hesaplanır."
+    >
       {!stats ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -170,7 +168,7 @@ function AnalyticsPage(): React.JSX.Element {
       <div className="mt-8">
         <AchievementsSection />
       </div>
-    </div>
+    </PageLayout>
   )
 }
 

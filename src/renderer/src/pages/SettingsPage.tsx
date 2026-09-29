@@ -18,9 +18,11 @@ import NoticeSettings from '../components/settings/NoticeSettings'
 import AssistantSettings from '../components/settings/AssistantSettings'
 import BackupSettings from '../components/settings/BackupSettings'
 import ActivityList from '../components/activity/ActivityList'
+import PageLayout from '../components/ui/PageLayout'
 import Skeleton from '../components/ui/Skeleton'
+import Tabs from '../components/ui/Tabs'
 import { errorMessage } from '../lib/errors'
-import { sectionTitleClass, tabClass } from '../lib/styles'
+import { sectionTitleClass } from '../lib/styles'
 import { useToast } from '../lib/toast'
 
 type Tab = 'model' | 'asistan' | 'ses' | 'servisler' | 'google' | 'uygulama'
@@ -86,34 +88,21 @@ function SettingsPage(): React.JSX.Element {
 
   if (!settings) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 p-6">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
+      <PageLayout title="Ayarlar">
+        <div className="space-y-4">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </PageLayout>
     )
   }
 
   const provider = settings.provider
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-semibold tracking-tight">Ayarlar</h1>
-
-      <div className="mt-4 flex gap-1 border-b border-line">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setTab(item.id)}
-            className={tabClass(tab === item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="animate-fade space-y-8 py-6">
+    <PageLayout title="Ayarlar" tabs={<Tabs items={TABS} value={tab} onChange={setTab} />}>
+      <div className="animate-fade space-y-8">
         {tab === 'model' && (
           <>
             <Section title="Yapay zeka sağlayıcısı">
@@ -213,7 +202,7 @@ function SettingsPage(): React.JSX.Element {
           </>
         )}
       </div>
-    </div>
+    </PageLayout>
   )
 }
 

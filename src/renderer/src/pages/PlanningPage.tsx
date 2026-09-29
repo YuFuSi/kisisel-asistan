@@ -1,13 +1,17 @@
 import { useState } from 'react'
+import { CheckCircle2, ListTodo } from 'lucide-react'
 import type { Automation, Reminder, Task } from '@shared/api'
 import NewTaskForm from '../components/tasks/NewTaskForm'
 import TaskItem from '../components/tasks/TaskItem'
 import ReminderSection from '../components/tasks/ReminderSection'
+import EmptyState from '../components/ui/EmptyState'
+import InlineError from '../components/ui/InlineError'
+import PageLayout from '../components/ui/PageLayout'
 import Skeleton from '../components/ui/Skeleton'
+import Tabs, { type TabItem } from '../components/ui/Tabs'
 import AutomationsPage from './AutomationsPage'
 import { errorMessage } from '../lib/errors'
 import { useToast } from '../lib/toast'
-import { tabClass } from '../lib/styles'
 import { useLiveData } from '../lib/useLiveData'
 
 // Planlama: "belli bir zamanda olacak şeyler" tek sayfada. Eskiden Görevler (görev + hatırlatma)
@@ -50,38 +54,20 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
   const done = all.filter((task) => task.doneAt !== null)
   const visible = filter === 'pending' ? pending : done
 
-  const tabs: { id: PlanningTab; label: string; count: number | null }[] = [
+  const tabs: TabItem<PlanningTab>[] = [
     { id: 'tasks', label: 'Görevler', count: tasks.data ? pending.length : null },
     { id: 'reminders', label: 'Hatırlatmalar', count: reminders.data?.length ?? null },
     { id: 'routines', label: 'Rutinler', count: automations.data?.length ?? null }
   ]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Planlama</h1>
-        <p className="mt-1 text-sm text-muted">
-          Görevlerin, hatırlatmaların ve Jarvis&apos;in kendiliğinden yaptığı rutinler. Sohbette
-          &quot;listeme ekle&quot;, &quot;yarın 10&apos;da hatırlat&quot; veya &quot;her sabah
-          özetle&quot; diyerek de ekleyebilirsin.
-        </p>
-      </div>
-
-      <div className="flex gap-1 border-b border-line" role="tablist">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            role="tab"
-            aria-selected={tab === item.id}
-            onClick={() => onTabChange(item.id)}
-            className={tabClass(tab === item.id)}
-          >
-            {item.label}
-            {item.count !== null && <span className="ml-1.5 text-faint">{item.count}</span>}
-          </button>
-        ))}
-      </div>
-
+    <PageLayout
+      title="Planlama"
+      description={
+        'Görevlerin, hatırlatmaların ve Jarvis\'in kendiliğinden yaptığı rutinler. Sohbette "listeme ekle", "yarın 10\'da hatırlat" veya "her sabah özetle" diyerek de ekleyebilirsin.'
+      }
+      tabs={<Tabs items={tabs} value={tab} onChange={onTabChange} />}
+    >
       {tab === 'tasks' && (
         <section className="space-y-3">
           <NewTaskForm onCreate={(input) => run(() => window.api.tasks.create(input))} />
@@ -99,9 +85,16 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
           </div>
 
           {tasks.data && visible.length === 0 && (
-            <p className="px-1 py-4 text-sm text-faint">
-              {filter === 'pending' ? 'Bekleyen görev yok.' : 'Henüz tamamlanan görev yok.'}
-            </p>
+            <EmptyState
+              compact
+              icon={filter === 'pending' ? CheckCircle2 : ListTodo}
+              title={filter === 'pending' ? 'Bekleyen görevin yok' : 'Tamamlanan görev yok'}
+              description={
+                filter === 'pending'
+                  ? 'Yukarıdaki kutudan ekleyebilir ya da Jarvis’e "listeme ekle" diyebilirsin.'
+                  : 'Bitirdiğin görevler burada birikir.'
+              }
+            />
           )}
           {!tasks.data && (
             <div className="space-y-2 py-2">
@@ -123,7 +116,7 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
               />
             ))}
           </ul>
-          {tasks.error && <p className="text-sm text-negative select-text">{tasks.error}</p>}
+          <InlineError message={tasks.error} />
         </section>
       )}
 
@@ -139,7 +132,7 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
       )}
 
       {tab === 'routines' && <AutomationsPage />}
-    </div>
+    </PageLayout>
   )
 }
 

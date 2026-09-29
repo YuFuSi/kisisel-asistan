@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Bell, Clock, Plus, Repeat, Trash2 } from 'lucide-react'
 import { REPEAT_LABELS, type Reminder, type RepeatRule } from '@shared/api'
+import EmptyState from '../ui/EmptyState'
 import { formatReminderTime } from '../../lib/dates'
 import {
   compactInputClass,
   iconButtonClass,
   inputClass,
   primaryButtonClass,
-  quietIconButtonClass,
-  sectionTitleClass
+  quietIconButtonClass
 } from '../../lib/styles'
 
 interface ReminderSectionProps {
@@ -54,8 +54,6 @@ function ReminderSection({
 
   return (
     <section className="space-y-3">
-      <h2 className={sectionTitleClass}>Hatırlatmalar</h2>
-
       <form onSubmit={(e) => void submit(e)} className="flex gap-2">
         <input
           value={message}
@@ -89,7 +87,12 @@ function ReminderSection({
       </form>
 
       {reminders && reminders.length === 0 && (
-        <p className="px-1 py-2 text-sm text-faint">Bekleyen hatırlatma yok.</p>
+        <EmptyState
+          compact
+          icon={Bell}
+          title="Bekleyen hatırlatman yok"
+          description={'Yukarıdan kurabilir ya da Jarvis’e "yarın 10’da hatırlat" diyebilirsin.'}
+        />
       )}
       <ul className="space-y-1">
         {reminders?.map((reminder) => (
