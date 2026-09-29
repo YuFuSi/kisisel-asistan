@@ -33,6 +33,11 @@ import { useWindowDrag } from '../lib/useWindowDrag'
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadTasks = (): Promise<Task[]> => window.api.tasks.list()
 const loadReminders = (): Promise<Reminder[]> => window.api.reminders.list()
+// Kişisel notun yenilenmesi için hafızadaki değişikliğin imzası (içerik değişince değişir)
+const loadMemorySignature = (): Promise<string> =>
+  window.api.memories
+    .list()
+    .then((list) => list.map((m) => `${m.id}:${m.kind}:${m.content}`).join('|'))
 
 // Yazı yazılırken küre bu kadar süre heyecanlı kalır
 const EXCITE_MS = 700
@@ -107,6 +112,23 @@ function HomePage({
   const battery = useBattery()
   const tasks = useLiveData(loadTasks, 'tasks').data
   const reminders = useLiveData(loadReminders, 'reminders').data
+  const memorySignature = useLiveData(loadMemorySignature, 'memories').data
+  // Hafıza + bugünün işleri + takvimden yerel modelle yazılan not; gelene kadar (veya model
+  // kullanılamazsa) düz özet gösterilir. Ana süreç aynı bağlam için önbellekten döner.
+  const [personalNote, setPersonalNote] = useState<string | null>(null)
+  const noteHour = now.getHours()
+  useEffect(() => {
+    let active = true
+    window.api.system.personalNote().then(
+      (text) => {
+        if (active && text) setPersonalNote(text)
+      },
+      () => {}
+    )
+    return () => {
+      active = false
+    }
+  }, [tasks, reminders, memorySignature, noteHour])
   const [excite, setExcite] = useState(0)
   const [dragging, setDragging] = useState(false)
   const {
@@ -325,8 +347,12 @@ function HomePage({
           <h1 className="-mt-10 text-[40px] leading-tight font-medium tracking-tight text-ink">
             {greeting(now.getHours())}
           </h1>
-          <div className="mt-2 flex h-6 items-center">
-            {summary ? (
+          <div className="mt-2 flex min-h-6 max-w-2xl items-center justify-center text-center">
+            {personalNote ? (
+              <p key={personalNote} className="animate-fade text-base text-muted">
+                {personalNote}
+              </p>
+            ) : summary ? (
               <p className="animate-fade text-base text-muted">{summary}</p>
             ) : (
               <Skeleton className="h-4 w-72" />

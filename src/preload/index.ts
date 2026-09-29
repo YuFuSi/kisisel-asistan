@@ -35,7 +35,8 @@ const api: Api = {
     events: (from, to) => ipcRenderer.invoke('calendar:events', from, to)
   },
   system: {
-    status: () => ipcRenderer.invoke('system:status')
+    status: () => ipcRenderer.invoke('system:status'),
+    personalNote: () => ipcRenderer.invoke('system:personalNote')
   },
   documents: {
     pathForFile: (file) => webUtils.getPathForFile(file),

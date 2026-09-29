@@ -701,6 +701,11 @@ export interface Api {
   system: {
     /** Ana Sayfa'daki sistem durumu kartının bilgileri */
     status(): Promise<SystemStatus>
+    /**
+     * Ana Sayfa karşılamasının altındaki kişisel not (hafıza + bugünün görev, hatırlatma ve
+     * takvimi, yerel modelle). Üretilemezse null; arayüz düz özete düşer.
+     */
+    personalNote(): Promise<string | null>
   }
   documents: {
     /** Sürükle-bırak ile gelen dosyanın diskteki yolu (Electron'da File.path artık yok) */

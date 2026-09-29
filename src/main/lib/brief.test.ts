@@ -10,6 +10,7 @@ function brief(overrides: Partial<DailyBrief> = {}): DailyBrief {
     hatirlatmalar: [],
     etkinlikler: null,
     okunmamisEposta: null,
+    kisiselNot: null,
     uyarilar: [],
     ...overrides
   }
@@ -94,6 +95,13 @@ describe('briefSpokenText', () => {
     const text = briefSpokenText(brief({ etkinlikler: null, okunmamisEposta: null }))
     expect(text).not.toContain('etkinlik')
     expect(text).not.toContain('e-posta')
+  })
+
+  it('kişisel not varsa tarihten hemen sonra okunur', () => {
+    const text = briefSpokenText(brief({ kisiselNot: 'Yusuf, bugün Pamuk’un aşı günü.' }))
+    expect(text).toBe(
+      'Günaydın! Bugün 16 Eylül Çarşamba. Yusuf, bugün Pamuk’un aşı günü. Bekleyen görevin yok.'
+    )
   })
 
   it('okunmamış e-posta sıfırsa cümleyi eklemez', () => {
