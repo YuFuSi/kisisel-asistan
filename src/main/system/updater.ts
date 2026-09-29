@@ -29,17 +29,25 @@ export function startUpdater(): () => void {
 
   autoUpdater.logger = log
   autoUpdater.autoDownload = true
-  autoUpdater.autoInstallOnAppQuit = true
+  // Çıkışta kurulum index.ts'teki kapanış sırasının sonunda installDownloadedUpdate() ile yapılır:
+  // kütüphanenin kendi "çıkışta kur"u kurulumdan sonra uygulamayı yeniden açmıyordu (Jarvis
+  // güncellenip kapalı kalıyor, kullanıcı "açılmadı" sanıyordu)
+  autoUpdater.autoInstallOnAppQuit = false
 
   autoUpdater.on('update-downloaded', (info) => {
     if (notifiedVersion === info.version) return
     notifiedVersion = info.version
     log.info(`Güncelleme indirildi: ${info.version}`)
-    new Notification({
+    const notification = new Notification({
       title: 'Jarvis güncellemesi hazır',
-      body: `Sürüm ${info.version} indirildi. Uygulamadan çıkınca (tepsi > Çıkış) kurulacak.`,
+      body: `Sürüm ${info.version} indirildi. Şimdi kurmak için tıkla; yoksa çıkışta kurulur ve Jarvis yeniden açılır.`,
       icon
-    }).show()
+    })
+    notification.on('click', () => {
+      log.info('Kullanıcı bildirimden güncellemeyi kurmayı seçti')
+      app.quit()
+    })
+    notification.show()
   })
 
   firstTimer = setTimeout(check, FIRST_CHECK_DELAY_MS)
@@ -48,4 +56,15 @@ export function startUpdater(): () => void {
     clearTimeout(firstTimer)
     clearInterval(interval)
   }
+}
+
+/**
+ * Kapanış sırasının en sonunda çağrılır: indirilmiş güncelleme varsa sessizce kurar ve kurulumdan
+ * sonra Jarvis'i yeniden açar (true döner, çıkışı kütüphane yapar); yoksa false döner.
+ */
+export function installDownloadedUpdate(): boolean {
+  if (!app.isPackaged || !notifiedVersion) return false
+  log.info(`Çıkışta güncelleme kuruluyor (${notifiedVersion}), sonra Jarvis yeniden açılacak`)
+  autoUpdater.quitAndInstall(true, true)
+  return true
 }
