@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Lock, Trophy } from 'lucide-react'
 import type { Achievement } from '@shared/api'
-import Card from '../components/ui/Card'
-import PageHeader from '../components/ui/PageHeader'
-import Skeleton from '../components/ui/Skeleton'
+import Card from '../ui/Card'
+import Skeleton from '../ui/Skeleton'
 
 function AchievementCard({ achievement }: { achievement: Achievement }): React.JSX.Element {
   return (
@@ -25,8 +24,9 @@ function AchievementCard({ achievement }: { achievement: Achievement }): React.J
   )
 }
 
-// Başarımlar: tamamı activity_log'dan hesaplanır, dışarı hiçbir şey gönderilmez
-function AchievementsPage(): React.JSX.Element {
+// Başarımlar: Analizler sayfasının bir bölümü (eskiden ayrı sayfaydı). Tamamı activity_log'dan
+// hesaplanır, dışarı hiçbir şey gönderilmez.
+function AchievementsSection(): React.JSX.Element {
   const [achievements, setAchievements] = useState<Achievement[] | null>(null)
 
   useEffect(() => {
@@ -42,31 +42,24 @@ function AchievementsPage(): React.JSX.Element {
   const achievedCount = achievements?.filter((a) => a.achieved).length ?? 0
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
-      <PageHeader
-        title="Başarımlar"
-        description={
-          achievements
-            ? `${achievedCount} / ${achievements.length} rozet kazanıldı.`
-            : 'Düzenli kullanım için küçük kutlamalar.'
-        }
-      />
-
-      {!achievements ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[72px]" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {achievements.map((achievement) => (
-            <AchievementCard key={achievement.id} achievement={achievement} />
-          ))}
-        </div>
-      )}
-    </div>
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-medium text-ink">Başarımlar</h2>
+        {achievements && (
+          <span className="text-xs text-muted">
+            {achievedCount} / {achievements.length} rozet
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {achievements
+          ? achievements.map((achievement) => (
+              <AchievementCard key={achievement.id} achievement={achievement} />
+            ))
+          : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[72px]" />)}
+      </div>
+    </section>
   )
 }
 
-export default AchievementsPage
+export default AchievementsSection

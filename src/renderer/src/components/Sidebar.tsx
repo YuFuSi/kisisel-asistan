@@ -11,12 +11,10 @@ import {
   PanelLeftOpen,
   Settings,
   Sparkles,
-  Trophy,
   Workflow,
   type LucideIcon
 } from 'lucide-react'
 import type { Automation, AutomationRun, CalendarItem, Reminder, Task } from '@shared/api'
-import { STATE_LABELS, useAssistantState } from '../lib/assistantState'
 import { requestNewChat } from '../lib/chatRequests'
 import { PAGE_LABELS, type PageId } from '../lib/pages'
 import { buildSuggestions, type Suggestion } from '../lib/sidebarSuggestions'
@@ -25,16 +23,15 @@ import { buildWorkers, type Worker } from '../lib/sidebarWorkers'
 import { useClock } from '../lib/deviceStatus'
 import { toIsoDate } from '../lib/dates'
 
+// Tasarım turu: 9 sayfa 6'ya indi (Otomasyonlar → Planlama > Rutinler, Başarımlar → Analizler).
+// Ayarlar ana listede değil, menünün en altında.
 const ITEMS: { id: PageId; icon: LucideIcon }[] = [
   { id: 'home', icon: House },
   { id: 'chat', icon: MessageSquare },
   { id: 'tasks', icon: ListTodo },
   { id: 'calendar', icon: CalendarDays },
   { id: 'notes', icon: Brain },
-  { id: 'automations', icon: Workflow },
-  { id: 'analytics', icon: BarChart3 },
-  { id: 'achievements', icon: Trophy },
-  { id: 'settings', icon: Settings }
+  { id: 'analytics', icon: BarChart3 }
 ]
 
 const STORAGE_KEY = 'sidebar-collapsed'
@@ -181,8 +178,6 @@ interface SidebarProps {
 function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const version = useAppVersion()
-  const assistant = useAssistantState()
-  const busy = assistant !== 'idle'
   const now = useClock(30_000)
   const timeline = useTimeline(now)
   const suggestions = useSuggestions(now)
@@ -327,23 +322,24 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
         </div>
       )}
 
-      <div className="mt-auto space-y-3 pt-3">
-        <div
-          className={`flex items-center gap-2.5 border-t border-line pt-3 ${collapsed ? 'justify-center' : 'px-2'}`}
-          title={collapsed ? STATE_LABELS[assistant] : undefined}
+      <div className="mt-auto space-y-1 border-t border-line pt-3">
+        <button
+          onClick={() => onSelect('settings')}
+          title={collapsed ? PAGE_LABELS.settings : undefined}
+          aria-current={active === 'settings' ? 'page' : undefined}
+          className={`flex h-9 w-full items-center gap-3 rounded-[10px] text-sm transition-colors ${
+            collapsed ? 'justify-center px-0' : 'px-3'
+          } ${
+            active === 'settings'
+              ? 'bg-elevated font-medium text-ink'
+              : 'text-muted hover:bg-surface hover:text-ink'
+          }`}
         >
-          <span
-            className={`h-2 w-2 shrink-0 rounded-full ${busy ? 'animate-pulse bg-accent' : 'bg-positive'}`}
+          <Settings
+            className={`h-[18px] w-[18px] shrink-0 ${active === 'settings' ? 'text-accent' : ''}`}
           />
-          {!collapsed && (
-            <div className="min-w-0 leading-tight">
-              <div className={`truncate text-xs ${busy ? 'text-accent' : 'text-muted'}`}>
-                {busy ? `${STATE_LABELS[assistant]}...` : 'Sistem hazır'}
-              </div>
-              <div className="truncate text-[11px] text-faint">Her zaman yanında</div>
-            </div>
-          )}
-        </div>
+          {!collapsed && <span>{PAGE_LABELS.settings}</span>}
+        </button>
 
         <div className="flex items-center justify-between gap-2">
           {!collapsed && version && <span className="px-2 text-xs text-faint">v{version}</span>}

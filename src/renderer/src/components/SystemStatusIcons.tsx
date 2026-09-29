@@ -114,16 +114,24 @@ function SystemStatusIcons(): React.JSX.Element {
     }
   ]
 
+  // Tasarım turu: her şey yolundayken hiçbir şey gösterilmez (6 etiketsiz simge anlaşılmıyordu);
+  // sadece sorun olan parçalar kısa bir yazıyla görünür. Google isteğe bağlı olduğu için bağlı
+  // olmaması uyarı sayılmaz.
+  const problems = rows.filter(
+    (row) => (row.level === 'warn' || row.level === 'bad') && row.label !== 'Google'
+  )
+  if (problems.length === 0) return <></>
+
   return (
-    <ul className="flex items-center gap-0.5">
-      {rows.map(({ icon: Icon, label, value, level, title }) => (
+    <ul className="flex items-center gap-1.5">
+      {problems.map(({ icon: Icon, label, value, level, title }) => (
         <li key={label}>
           <Tooltip content={title ?? `${label}: ${value}`} side="bottom">
             <span
-              className={`no-drag flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-elevated ${ICON_CLASS[level]}`}
-              aria-label={`${label}: ${value}`}
+              className={`no-drag flex h-7 items-center gap-1.5 rounded-md border border-line px-2 text-xs ${ICON_CLASS[level]}`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
+              {label}: {value}
             </span>
           </Tooltip>
         </li>
