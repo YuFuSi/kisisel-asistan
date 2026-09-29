@@ -37,7 +37,7 @@ function StatTile({ icon: Icon, label, value, tone = 'accent' }: StatTileProps):
       </span>
       <div className="min-w-0">
         <div className="text-xl font-semibold tracking-tight text-ink">{value}</div>
-        <div className="truncate text-xs text-muted">{label}</div>
+        <div className="text-xs leading-snug text-muted">{label}</div>
       </div>
     </Card>
   )

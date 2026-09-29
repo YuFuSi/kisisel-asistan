@@ -10,12 +10,7 @@ import {
 import Button from '../ui/Button'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import {
-  iconButtonClass,
-  inputClass,
-  primaryButtonClass,
-  secondaryButtonClass
-} from '../../lib/styles'
+import { iconButtonClass, inputClass, primaryButtonClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
@@ -37,7 +32,6 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
   const [draft, setDraft] = useState('')
   // Düzenlenen kayıt ve yeni metni
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null)
-  const [indexing, setIndexing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Memory[] | null>(null)
   const [searching, setSearching] = useState(false)
@@ -77,20 +71,6 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
 
   const isSearching = searchQuery.trim().length > 0
   const displayedMemories = isSearching ? (searchResults ?? []) : (memories.data ?? [])
-
-  async function backfillEmbeddings(): Promise<void> {
-    setIndexing(true)
-    try {
-      const count = await window.api.memories.backfillEmbeddings()
-      toast.success(
-        count === 0 ? 'Zaten güncel, indekslenecek kayıt yok.' : `${count} kayıt indekslendi.`
-      )
-    } catch (err) {
-      toast.error(errorMessage(err))
-    } finally {
-      setIndexing(false)
-    }
-  }
 
   // Otomatik öğrenilip henüz bakılmamış kayıtlar ("yeni öğrendiklerim")
   const unreviewed = (memories.data ?? []).filter((memory) => !memory.reviewed)
@@ -202,21 +182,6 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
               ))}
             </ul>
           </section>
-        )}
-
-        {settings.data?.semanticSearchEnabled && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5">
-            <p className="text-sm text-muted">
-              Anlamsal arama açık. Mevcut kayıtların hâlâ indekslenmemiş olabilir.
-            </p>
-            <button
-              onClick={() => void backfillEmbeddings()}
-              disabled={indexing}
-              className={secondaryButtonClass}
-            >
-              {indexing ? 'İndeksleniyor...' : 'İndeksle'}
-            </button>
-          </div>
         )}
 
         <div className="relative">

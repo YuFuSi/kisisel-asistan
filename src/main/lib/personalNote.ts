@@ -73,15 +73,29 @@ export function buildPersonalNotePrompt(
   return { instructions, prompt: lines.join('\n') }
 }
 
+// Başlık saate uygun selamı zaten veriyor ("İyi geceler"); model talimata rağmen "Günaydın Yusuf,"
+// ile başlayınca ikisi çelişiyordu. Baştaki selamlaşma kodla atılır.
+// Türkçe küçük harfe çevrilmiş metinde aranır ("İyi" → "iyi"; /i bayrağı İ ile i'yi eşlemiyor)
+const LEADING_GREETING =
+  /^(günaydın|tünaydın|iyi (sabahlar|günler|akşamlar|geceler)|merhaba|selamlar|selam|hey)(?=[\s,!.]|$)[\s,!.]*/
+
+function stripLeadingGreeting(text: string): string {
+  const match = LEADING_GREETING.exec(text.toLocaleLowerCase('tr-TR'))
+  return match ? text.slice(match[0].length) : text
+}
+
 /** Modelin cevabını gösterilebilir nota çevirir; kullanılamazsa null */
 export function cleanPersonalNote(raw: string): string | null {
-  const text = raw
+  let text = raw
     .replace(/<think>[\s\S]*?<\/think>/gi, '')
     .replace(/^[\s\S]*<\/think>/i, '')
     .replace(/<think>[\s\S]*$/i, '')
     .replace(/[*#`"“”]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+  text = stripLeadingGreeting(text)
+  // Selam atılınca cümle küçük harfle başlayabilir ("yusuf, bugün...")
+  text = text.charAt(0).toLocaleUpperCase('tr-TR') + text.slice(1)
   if (text.length < 8) return null
   return text.length > NOTE_LIMIT ? `${text.slice(0, NOTE_LIMIT - 1).trim()}…` : text
 }
