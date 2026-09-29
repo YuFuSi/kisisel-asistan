@@ -139,7 +139,10 @@ export function showMainWindow(): void {
 
 // Bir bildirim gösterildi: Ana Sayfa'daki küre kısa süre nabız atsın
 export function notifyPulse(): void {
-  sendCommand('notified')
+  // Ana pencere ve (açıksa) HUD: ikisinin küresi de nabız atar
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.webContents.isDestroyed()) window.webContents.send('app:command', 'notified')
+  }
 }
 
 // Tepsi menüsü veya kısayoldan gelen komutu arayüze ilet

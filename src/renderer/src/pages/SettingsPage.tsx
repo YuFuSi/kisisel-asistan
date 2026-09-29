@@ -14,6 +14,7 @@ import GoogleSettings from '../components/settings/GoogleSettings'
 import SpeechSettings from '../components/settings/SpeechSettings'
 import SecretField from '../components/settings/SecretField'
 import BriefSettings from '../components/settings/BriefSettings'
+import NoticeSettings from '../components/settings/NoticeSettings'
 import AssistantSettings from '../components/settings/AssistantSettings'
 import BackupSettings from '../components/settings/BackupSettings'
 import ActivityList from '../components/activity/ActivityList'
@@ -196,6 +197,9 @@ function SettingsPage(): React.JSX.Element {
           <>
             <Section title="Pencere ve kısayollar">
               <AppBehaviorSettings settings={settings} onUpdate={update} />
+            </Section>
+            <Section title="Jarvis'in uyarıları">
+              <NoticeSettings settings={settings} onUpdate={update} />
             </Section>
             <Section title="Sabah özeti">
               <BriefSettings settings={settings} onUpdate={update} />

@@ -36,6 +36,9 @@ const defaults: AppSettings = {
   briefTime: '08:00',
   briefCity: '',
   briefSpoken: false,
+  noticesSpoken: true,
+  quietStart: '22:00',
+  quietEnd: '08:00',
   aboutMe: '',
   tone: 'dengeli',
   temperature: null,
@@ -122,6 +125,15 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   }
   if (typeof patch.briefCity === 'string') next.briefCity = patch.briefCity.trim()
   if (typeof patch.briefSpoken === 'boolean') next.briefSpoken = patch.briefSpoken
+  if (typeof patch.noticesSpoken === 'boolean') next.noticesSpoken = patch.noticesSpoken
+  for (const key of ['quietStart', 'quietEnd'] as const) {
+    const value = patch[key]
+    if (typeof value !== 'string') continue
+    if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(value.trim())) {
+      throw new Error('Sessiz saat SS:DD biçiminde olmalı, ör. 22:00.')
+    }
+    next[key] = value.trim()
+  }
   if (typeof patch.aboutMe === 'string') {
     const about = patch.aboutMe.trim()
     if (about.length > ABOUT_ME_LIMIT) {
