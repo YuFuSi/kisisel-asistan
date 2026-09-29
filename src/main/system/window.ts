@@ -91,6 +91,7 @@ export function createMainWindow(options: { startHidden: boolean }): BrowserWind
   // Windows kapanırken veya oturum kapatılırken pencere gizlenmeye çalışıp kapanışı engellemesin
   window.on('session-end', markQuitting)
   window.on('closed', () => {
+    if (!quitting) console.warn('Ana pencere kapandı ama uygulama kapanmıyor')
     if (mainWindow === window) mainWindow = null
   })
 
@@ -122,7 +123,14 @@ export function getMainWindow(): BrowserWindow | null {
 
 export function showMainWindow(): void {
   const window = mainWindow
-  if (!window) return
+  // Ana pencere bir şekilde kapanmış ama uygulama açık kalmışsa (ör. HUD penceresi açık olduğu
+  // için uygulama kapanmadı) kısayol, bildirim veya yeniden açma hiçbir şey yapmıyordu; kullanıcı
+  // Jarvis'i hiç açamıyordu. Pencere yoksa yeniden oluşturulur.
+  if (!window || window.isDestroyed()) {
+    console.warn('Ana pencere yoktu, yeniden oluşturuluyor')
+    createMainWindow({ startHidden: false })
+    return
+  }
   if (window.isMinimized()) window.restore()
   window.show()
   window.moveTop()
