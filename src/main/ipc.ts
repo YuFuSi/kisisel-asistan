@@ -7,6 +7,7 @@ import { backupDirectory, createBackupNow, restoreBackup } from './system/databa
 import { logRendererError, openLogDirectory } from './system/logger'
 import { getSystemStatus } from './system/status'
 import { getPersonalNote } from './ai/personalNote'
+import { getHomeWeather } from './system/homeWeather'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
 import { resizeHud } from './system/hud'
 import { getForegroundWindowId, moveWindow } from './lib/windows'
@@ -172,6 +173,7 @@ export function registerIpcHandlers(): void {
   // Ana Sayfa ve Takvim
   ipcMain.handle('system:status', () => getSystemStatus())
   ipcMain.handle('system:personalNote', () => getPersonalNote('home'))
+  ipcMain.handle('system:weather', () => getHomeWeather())
 
   // Jarvis sesi. Mikrofon sesi ve "çalma bitti" haberi sık geldiği için cevap beklenmez (on)
   ipcMain.handle('voice:packStatus', () => getVoicePackStatus())

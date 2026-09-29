@@ -36,7 +36,8 @@ const api: Api = {
   },
   system: {
     status: () => ipcRenderer.invoke('system:status'),
-    personalNote: () => ipcRenderer.invoke('system:personalNote')
+    personalNote: () => ipcRenderer.invoke('system:personalNote'),
+    weather: () => ipcRenderer.invoke('system:weather')
   },
   documents: {
     pathForFile: (file) => webUtils.getPathForFile(file),

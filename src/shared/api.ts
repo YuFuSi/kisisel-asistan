@@ -628,6 +628,15 @@ export interface CalendarItem {
   location: string | null
 }
 
+export interface HomeWeather {
+  place: string
+  temperature: number
+  condition: string
+  min: number | null
+  max: number | null
+  rainChance: number | null
+}
+
 export interface SystemStatus {
   /** Seçili yapay zeka modeli ve kullanılabilir olup olmadığı */
   model: { label: string; model: string; ok: boolean; message: string }
@@ -714,6 +723,8 @@ export interface Api {
      * takvimi, yerel modelle). Üretilemezse null; arayüz düz özete düşer.
      */
     personalNote(): Promise<string | null>
+    /** Ana Sayfa hava kartı (sabah özeti şehri); şehir yoksa veya alınamazsa null */
+    weather(): Promise<HomeWeather | null>
   }
   documents: {
     /** Sürükle-bırak ile gelen dosyanın diskteki yolu (Electron'da File.path artık yok) */

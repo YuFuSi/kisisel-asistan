@@ -10,6 +10,7 @@ import PageLayout from '../components/ui/PageLayout'
 import Skeleton from '../components/ui/Skeleton'
 import Tabs, { type TabItem } from '../components/ui/Tabs'
 import AutomationsPage from './AutomationsPage'
+import { celebrate } from '../lib/assistantState'
 import { errorMessage } from '../lib/errors'
 import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
@@ -108,9 +109,14 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
               <TaskItem
                 key={task.id}
                 task={task}
-                onToggle={() =>
-                  void run(() => window.api.tasks.update(task.id, { done: task.doneAt === null }))
-                }
+                onToggle={() => {
+                  const completing = task.doneAt === null
+                  void run(() => window.api.tasks.update(task.id, { done: completing })).then(
+                    (ok) => {
+                      if (ok && completing) celebrate()
+                    }
+                  )
+                }}
                 onRename={(title) => void run(() => window.api.tasks.update(task.id, { title }))}
                 onDelete={() => void run(() => window.api.tasks.remove(task.id))}
               />
