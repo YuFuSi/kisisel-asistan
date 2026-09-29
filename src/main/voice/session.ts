@@ -500,11 +500,15 @@ export function stopVoiceSession(): void {
   endSession()
 }
 
-/** Sohbetteki "sesli oku": metni cümlelere bölüp seçili motorla seslendirir */
-export function speakWithVoice(text: string): void {
+/**
+ * Metni cümlelere bölüp seçili motorla seslendirir. Sohbetteki "sesli oku" önceki konuşmayı keser;
+ * Jarvis'in uyarıları `{ interrupt: false }` ile sıraya eklenir (aynı anda gelen iki uyarı
+ * birbirinin sözünü kesmesin).
+ */
+export function speakWithVoice(text: string, options: { interrupt?: boolean } = {}): void {
   // Sesli sohbet sürerken araya başka metin okunmaz
   if (sessionActive) return
-  cancelSpeech()
+  if (options.interrupt !== false) cancelSpeech()
   const splitter = new SentenceSplitter()
   for (const sentence of splitter.push(text.slice(0, MAX_SPEAK_TEXT))) enqueueSpeech(sentence)
   const rest = splitter.flush()

@@ -42,7 +42,7 @@ export async function showDailyBrief(): Promise<void> {
   // Jarvis'in ilk gerçek otomasyonu: zamanı gelince kendiliğinden konuşur, tıklama beklemez
   if (getSettings().briefSpoken) {
     try {
-      speakWithVoice(briefSpokenText(brief))
+      speakWithVoice(briefSpokenText(brief), { interrupt: false })
     } catch (err) {
       console.error('Sabah özeti sesli okunamadı:', err)
     }
