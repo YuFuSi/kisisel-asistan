@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   backlogGrowthNotificationText,
   detectBacklogGrowth,
-  detectEmbeddingBacklog,
-  embeddingBacklogNotificationText,
   findStaleFiredReminders,
   findStaleTasks,
   isProactiveNudgeDue,
@@ -189,21 +187,5 @@ describe('detectBacklogGrowth', () => {
 describe('backlogGrowthNotificationText', () => {
   it('açık görev sayısını mesaja ekler', () => {
     expect(backlogGrowthNotificationText({ openCount: 7 }).body).toContain('7 açık görevin')
-  })
-})
-
-describe('detectEmbeddingBacklog', () => {
-  it('eksik kayıt yoksa null döner', () => {
-    expect(detectEmbeddingBacklog(0)).toBeNull()
-  })
-
-  it('eksik kayıt varsa sayısını döner', () => {
-    expect(detectEmbeddingBacklog(4)).toEqual({ missingCount: 4 })
-  })
-})
-
-describe('embeddingBacklogNotificationText', () => {
-  it('eksik kayıt sayısını mesaja ekler', () => {
-    expect(embeddingBacklogNotificationText({ missingCount: 4 }).body).toContain('4 kayıt')
   })
 })

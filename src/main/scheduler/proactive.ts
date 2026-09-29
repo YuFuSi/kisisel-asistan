@@ -1,13 +1,14 @@
+import { backfillMemoryEmbeddings } from '../ai/memoryEmbeddings'
+import { backfillNoteEmbeddings } from '../ai/noteEmbeddings'
 import { listMemoriesMissingEmbedding } from '../data/memories'
 import { listNotesMissingEmbedding } from '../data/notes'
 import { listReminders } from '../data/reminders'
 import { listTasks } from '../data/tasks'
+import { notifyDataChanged } from '../events'
 import { toLocalDate } from '../lib/datetime'
 import {
   backlogGrowthNotificationText,
   detectBacklogGrowth,
-  detectEmbeddingBacklog,
-  embeddingBacklogNotificationText,
   findStaleFiredReminders,
   findStaleTasks,
   isProactiveNudgeDue,
@@ -21,14 +22,13 @@ import { showJarvisNotice } from '../system/jarvisNotice'
 import { sendCommand } from '../system/window'
 
 // Otomasyon motorunu (Tur J) beklemeden sabit kurallar: uzun süredir bekleyen bir görev, unutulmuş
-// bir hatırlatma, sürekli büyüyen bir görev listesi veya indekslenmemiş kayıt birikmesi varsa
-// bildirim gösterir. Otomasyon motorunun küçük bir önizlemesi. Her kural kendi "son gösterildi"
+// bir hatırlatma veya sürekli büyüyen bir görev listesi varsa bildirim gösterir; indekslenmemiş
+// kayıtları ise sessizce kendisi indeksler. Otomasyon motorunun küçük bir önizlemesi. Her kural kendi "son gösterildi"
 // anahtarıyla ayrı gater; biri gösterilse diğerlerinin gösterilmesini engellemez.
 const CHECK_INTERVAL_MS = 60_000
 const STALE_TASK_KEY = 'proactiveStaleTaskLastShown'
 const STALE_REMINDER_KEY = 'proactiveStaleReminderLastShown'
 const BACKLOG_GROWTH_KEY = 'proactiveBacklogGrowthLastShown'
-const EMBEDDING_BACKLOG_KEY = 'proactiveEmbeddingBacklogLastShown'
 
 function showProactiveNudge(notification: ProactiveNotification, onClick: () => void): void {
   // Jarvis'in kendi fark ettiği şeyler: sesli söylenirken başlık yerine doğrudan içerik
@@ -78,20 +78,31 @@ function checkBacklogGrowth(now: Date): void {
   }
 }
 
+// İndekslenmemiş kayıtlar: kullanıcıya "İndeksle" diye bildirim göstermek yerine Jarvis kendisi
+// sessizce indeksler (teknik bir iş, kullanıcıya düşmemeli). Ollama kapalıysa bir sonraki denemede.
+const BACKFILL_INTERVAL_MS = 10 * 60_000
+let backfilling = false
+let lastBackfillAt = 0
+
 function checkEmbeddingBacklog(now: Date): void {
   if (!getSettings().semanticSearchEnabled) return
-  if (!isProactiveNudgeDue(now, getStoredValue(EMBEDDING_BACKLOG_KEY) ?? null)) return
+  if (backfilling || now.getTime() - lastBackfillAt < BACKFILL_INTERVAL_MS) return
+  const missing = listMemoriesMissingEmbedding().length + listNotesMissingEmbedding().length
+  if (missing === 0) return
 
-  const missingCount = listMemoriesMissingEmbedding().length + listNotesMissingEmbedding().length
-  const backlog = detectEmbeddingBacklog(missingCount)
-  if (!backlog) return
-
-  setStoredValue(EMBEDDING_BACKLOG_KEY, toLocalDate(now))
-  try {
-    showProactiveNudge(embeddingBacklogNotificationText(backlog), () => {})
-  } catch (err) {
-    console.error('Proaktif bildirim gösterilemedi (indekslenmemiş kayıt):', err)
-  }
+  backfilling = true
+  lastBackfillAt = now.getTime()
+  Promise.all([backfillMemoryEmbeddings(), backfillNoteEmbeddings()])
+    .then(([memories, notes]) => {
+      if (memories + notes === 0) return
+      console.info(`Arka planda indekslendi: ${memories} hafıza, ${notes} not`)
+      notifyDataChanged('memories')
+      notifyDataChanged('notes')
+    })
+    .catch((err: unknown) => console.warn('Arka plan indeksleme yapılamadı:', err))
+    .finally(() => {
+      backfilling = false
+    })
 }
 
 /**

@@ -44,6 +44,18 @@ describe('cleanPersonalNote', () => {
     )
   })
 
+  it('baştaki selamlaşmayı atar (başlıktaki saate uygun selamla çelişmesin)', () => {
+    expect(cleanPersonalNote('Günaydın Yusuf, bugün iş ilanı planın var.')).toBe(
+      'Yusuf, bugün iş ilanı planın var.'
+    )
+    expect(cleanPersonalNote('İyi akşamlar! Yarın 14:00’te toplantın var.')).toBe(
+      'Yarın 14:00’te toplantın var.'
+    )
+    expect(cleanPersonalNote('Selam Yusuf, bugün sakin bir gün.')).toBe(
+      'Yusuf, bugün sakin bir gün.'
+    )
+  })
+
   it('boş veya çok kısa cevapta null döner, uzunu kısaltır', () => {
     expect(cleanPersonalNote('<think>uzun düşünce</think>')).toBeNull()
     expect(cleanPersonalNote('Tamam')).toBeNull()

@@ -3,6 +3,8 @@ interface ToggleProps {
   description?: string
   checked: boolean
   disabled?: boolean
+  /** Etiket görünmesin (satır içi anahtar); ekran okuyucu için aria-label olarak kalır */
+  hideLabel?: boolean
   onChange: (checked: boolean) => void
 }
 
@@ -12,14 +14,19 @@ function Toggle({
   description,
   checked,
   disabled = false,
+  hideLabel = false,
   onChange
 }: ToggleProps): React.JSX.Element {
   return (
-    <div className="flex items-start justify-between gap-6">
-      <div>
-        <div className={`text-sm font-medium ${disabled ? 'text-faint' : 'text-ink'}`}>{label}</div>
-        {description && <div className="mt-0.5 text-xs text-faint">{description}</div>}
-      </div>
+    <div className={hideLabel ? 'flex' : 'flex items-start justify-between gap-6'}>
+      {!hideLabel && (
+        <div>
+          <div className={`text-sm font-medium ${disabled ? 'text-faint' : 'text-ink'}`}>
+            {label}
+          </div>
+          {description && <div className="mt-0.5 text-xs text-faint">{description}</div>}
+        </div>
+      )}
       <button
         role="switch"
         aria-checked={checked}
