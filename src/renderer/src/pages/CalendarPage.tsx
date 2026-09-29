@@ -18,6 +18,7 @@ import {
   type AgendaEntry,
   type AgendaKind
 } from '../lib/calendar'
+import PageLayout from '../components/ui/PageLayout'
 import { toIsoDate } from '../lib/dates'
 import { useClock } from '../lib/deviceStatus'
 import { errorMessage } from '../lib/errors'
@@ -163,179 +164,181 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 p-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Takvim</h1>
-            <p className="mt-1 text-sm text-muted">
-              Etkinlikler, hatırlatmalar ve son tarihli görevler bir arada.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={goToday} className={secondaryButtonClass}>
-              Bugün
-            </button>
-            <button
-              onClick={() => shiftMonth(-1)}
-              aria-label="Önceki ay"
-              className="rounded-lg p-2 text-muted transition-colors hover:bg-elevated hover:text-ink"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-32 text-center text-sm font-medium text-ink capitalize">
-              {monthTitle}
-            </span>
-            <button
-              onClick={() => shiftMonth(1)}
-              aria-label="Sonraki ay"
-              className="rounded-lg p-2 text-muted transition-colors hover:bg-elevated hover:text-ink"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {google && !google.connected && (
-          <p className="mt-4 text-xs text-faint">
-            Google hesabı bağlı değil; takvimde görevlerin ve hatırlatmaların görünüyor.{' '}
-            <button onClick={onOpenSettings} className="text-accent hover:text-accent-hover">
-              Hesabı bağla
-            </button>
-          </p>
-        )}
-        {google?.error && (
-          <p className="mt-4 text-xs text-negative select-text">
-            Takvim etkinlikleri alınamadı: {google.error}
-          </p>
-        )}
-
-        <div className="card mt-4 p-3">
-          <div className="grid grid-cols-7 gap-1 pb-2">
-            {WEEKDAY_LABELS.map((label) => (
-              <div key={label} className="text-center text-xs text-faint">
-                {label}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {cells.map((cell) => {
-              const entries = agendaByDay.get(cell.iso) ?? []
-              const kinds = [...new Set(entries.map((entry) => entry.kind))]
-              const isSelected = cell.iso === selected
-              return (
-                <button
-                  key={cell.iso}
-                  onClick={() => setSelected(cell.iso)}
-                  aria-pressed={isSelected}
-                  className={`flex min-h-20 min-w-0 flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors ${
-                    isSelected
-                      ? 'border-accent/60 bg-accent/10'
-                      : 'border-transparent hover:border-line-strong hover:bg-elevated/50'
-                  } ${cell.inMonth ? 'text-ink' : 'text-faint'}`}
-                >
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                      cell.today ? 'bg-accent font-semibold text-app' : ''
-                    }`}
-                  >
-                    {cell.day}
-                  </span>
-                  {entries[0] && (
-                    <span className="truncate text-[11px] text-muted">{entries[0].title}</span>
-                  )}
-                  <span className="mt-auto flex gap-1">
-                    {kinds.map((kind) => (
-                      <span key={kind} className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`} />
-                    ))}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-4 text-xs text-faint">
-          {(Object.keys(KIND_LABELS) as AgendaKind[]).map((kind) => (
-            <span key={kind} className="flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`} />
-              {KIND_LABELS[kind]}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <aside className="card flex min-w-0 flex-col self-start p-4">
-        <h2 className="text-sm font-medium text-ink capitalize">{selectedTitle}</h2>
-
-        {agenda.length === 0 ? (
-          <p className="mt-3 text-sm text-faint">Bu gün için bir şey yok.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {agenda.map((entry) => (
-              <li
-                key={entry.key}
-                className="flex items-start gap-3 rounded-lg bg-elevated/50 p-2.5"
-              >
-                {entry.kind === 'task' ? (
-                  <button
-                    onClick={() => void toggleTask(entry)}
-                    aria-label={entry.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamla'}
-                    className="mt-0.5 text-positive"
-                  >
-                    {entry.done ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <Circle className="h-4 w-4" />
-                    )}
-                  </button>
-                ) : entry.kind === 'reminder' ? (
-                  <Bell className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                ) : (
-                  <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div
-                    className={`text-sm break-words ${entry.done ? 'text-faint line-through' : 'text-ink'}`}
-                  >
-                    {entry.title}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                    <span>{entryTime(entry)}</span>
-                    {entry.detail && (
-                      <span className="flex min-w-0 items-center gap-1 truncate">
-                        {entry.kind === 'event' && <MapPin className="h-3 w-3 shrink-0" />}
-                        {entry.detail}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="mt-4 flex gap-2 border-t border-line pt-4">
-          <input
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.nativeEvent.isComposing) void addTask()
-            }}
-            placeholder="Bu güne görev ekle"
-            className={inputClass}
-          />
-          <button
-            onClick={() => void addTask()}
-            disabled={!newTask.trim()}
-            aria-label="Görev ekle"
-            className={primaryButtonClass}
-          >
-            <Plus className="h-4 w-4" />
+    <PageLayout
+      title="Takvim"
+      description="Etkinlikler, hatırlatmalar ve son tarihli görevler bir arada."
+      width="wide"
+      actions={
+        <>
+          <button onClick={goToday} className={secondaryButtonClass}>
+            Bugün
           </button>
-        </div>
-      </aside>
-    </div>
+          <button
+            onClick={() => shiftMonth(-1)}
+            aria-label="Önceki ay"
+            className="rounded-lg p-2 text-muted transition-colors hover:bg-elevated hover:text-ink"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-32 text-center text-sm font-medium text-ink capitalize">
+            {monthTitle}
+          </span>
+          <button
+            onClick={() => shiftMonth(1)}
+            aria-label="Sonraki ay"
+            className="rounded-lg p-2 text-muted transition-colors hover:bg-elevated hover:text-ink"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </>
+      }
+    >
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="min-w-0">
+          {google && !google.connected && (
+            <p className="mt-4 text-xs text-faint">
+              Google hesabı bağlı değil; takvimde görevlerin ve hatırlatmaların görünüyor.{' '}
+              <button onClick={onOpenSettings} className="text-accent hover:text-accent-hover">
+                Hesabı bağla
+              </button>
+            </p>
+          )}
+          {google?.error && (
+            <p className="mt-4 text-xs text-negative select-text">
+              Takvim etkinlikleri alınamadı: {google.error}
+            </p>
+          )}
+
+          <div className="card mt-4 p-3">
+            <div className="grid grid-cols-7 gap-1 pb-2">
+              {WEEKDAY_LABELS.map((label) => (
+                <div key={label} className="text-center text-xs text-faint">
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((cell) => {
+                const entries = agendaByDay.get(cell.iso) ?? []
+                const kinds = [...new Set(entries.map((entry) => entry.kind))]
+                const isSelected = cell.iso === selected
+                return (
+                  <button
+                    key={cell.iso}
+                    onClick={() => setSelected(cell.iso)}
+                    aria-pressed={isSelected}
+                    className={`flex min-h-20 min-w-0 flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors ${
+                      isSelected
+                        ? 'border-accent/60 bg-accent/10'
+                        : 'border-transparent hover:border-line-strong hover:bg-elevated/50'
+                    } ${cell.inMonth ? 'text-ink' : 'text-faint'}`}
+                  >
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                        cell.today ? 'bg-accent font-semibold text-app' : ''
+                      }`}
+                    >
+                      {cell.day}
+                    </span>
+                    {entries[0] && (
+                      <span className="truncate text-[11px] text-muted">{entries[0].title}</span>
+                    )}
+                    <span className="mt-auto flex gap-1">
+                      {kinds.map((kind) => (
+                        <span
+                          key={kind}
+                          className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`}
+                        />
+                      ))}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-4 text-xs text-faint">
+            {(Object.keys(KIND_LABELS) as AgendaKind[]).map((kind) => (
+              <span key={kind} className="flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`} />
+                {KIND_LABELS[kind]}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <aside className="card flex min-w-0 flex-col self-start p-4">
+          <h2 className="text-sm font-medium text-ink capitalize">{selectedTitle}</h2>
+
+          {agenda.length === 0 ? (
+            <p className="mt-3 text-sm text-faint">Bu gün için bir şey yok.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {agenda.map((entry) => (
+                <li
+                  key={entry.key}
+                  className="flex items-start gap-3 rounded-lg bg-elevated/50 p-2.5"
+                >
+                  {entry.kind === 'task' ? (
+                    <button
+                      onClick={() => void toggleTask(entry)}
+                      aria-label={entry.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamla'}
+                      className="mt-0.5 text-positive"
+                    >
+                      {entry.done ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4" />
+                      )}
+                    </button>
+                  ) : entry.kind === 'reminder' ? (
+                    <Bell className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  ) : (
+                    <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={`text-sm break-words ${entry.done ? 'text-faint line-through' : 'text-ink'}`}
+                    >
+                      {entry.title}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                      <span>{entryTime(entry)}</span>
+                      {entry.detail && (
+                        <span className="flex min-w-0 items-center gap-1 truncate">
+                          {entry.kind === 'event' && <MapPin className="h-3 w-3 shrink-0" />}
+                          {entry.detail}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-4 flex gap-2 border-t border-line pt-4">
+            <input
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) void addTask()
+              }}
+              placeholder="Bu güne görev ekle"
+              className={inputClass}
+            />
+            <button
+              onClick={() => void addTask()}
+              disabled={!newTask.trim()}
+              aria-label="Görev ekle"
+              className={primaryButtonClass}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        </aside>
+      </div>
+    </PageLayout>
   )
 }
 

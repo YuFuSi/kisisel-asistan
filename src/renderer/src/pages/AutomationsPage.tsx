@@ -1,6 +1,9 @@
+import { Workflow } from 'lucide-react'
 import type { Automation, AutomationInput } from '@shared/api'
 import AutomationItem from '../components/automations/AutomationItem'
 import NewAutomationForm from '../components/automations/NewAutomationForm'
+import EmptyState from '../components/ui/EmptyState'
+import InlineError from '../components/ui/InlineError'
 import Skeleton from '../components/ui/Skeleton'
 import { errorMessage } from '../lib/errors'
 import { useToast } from '../lib/toast'
@@ -37,7 +40,12 @@ function AutomationsPage(): React.JSX.Element {
         </div>
       )}
       {data && data.length === 0 && (
-        <p className="px-1 py-4 text-sm text-faint">Henüz bir rutin kurmadın.</p>
+        <EmptyState
+          compact
+          icon={Workflow}
+          title="İlk rutinini kur"
+          description="Jarvis belirlediğin saatte senin yerine bir işi yapsın: sabah özeti, akşam raporu, haftalık temizlik gibi."
+        />
       )}
       <ul className="space-y-2">
         {data?.map((automation) => (
@@ -53,7 +61,7 @@ function AutomationsPage(): React.JSX.Element {
         ))}
       </ul>
 
-      {error && <p className="text-sm text-negative select-text">{error}</p>}
+      <InlineError message={error} />
     </div>
   )
 }
