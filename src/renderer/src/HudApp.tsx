@@ -6,7 +6,7 @@ import OrbitTools from './components/jarvis/OrbitTools'
 import { STATE_LABELS, type AssistantState } from './lib/assistantState'
 import { useClock } from './lib/deviceStatus'
 import { useHandTracking } from './lib/useHandTracking'
-import { useClapActivation } from './lib/useClapActivation'
+import { hasCamera, useClapActivation } from './lib/useClapActivation'
 
 // HUD, ana pencereden ayrı bir Electron penceresinde (kendi JS ortamında) çalışır; ana sesli sohbet
 // hattını (mikrofon, ses çalma) tekrar başlatmaz, sadece ana sürecin yayınladığı "phase" olayını
@@ -75,7 +75,17 @@ function HudApp(): React.JSX.Element {
     pinching: handPinching,
     handPoint
   } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
-  useClapActivation(true, () => setHandControlOn((v) => !v))
+  // Ana Sayfa'daki gibi: Jarvis konuşurken kendi sesi alkış sayılmasın, kamera yoksa açılmasın
+  useClapActivation(true, () => {
+    if (phase === 'responding' || phase === 'capturing') return
+    if (handControlOn) {
+      setHandControlOn(false)
+      return
+    }
+    void hasCamera().then((available) => {
+      if (available) setHandControlOn(true)
+    })
+  })
 
   useEffect(() => {
     // İlk render'da (henüz hiç değişmemişken) gereksiz bir resize çağrısı atlanır

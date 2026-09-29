@@ -27,7 +27,8 @@ import { useLiveData } from '../lib/useLiveData'
 import { currentStep } from '../lib/workSteps'
 import { toggleVoiceSession, useVoice, type VoiceSnapshot } from '../lib/voiceClient'
 import { useHandTracking } from '../lib/useHandTracking'
-import { useClapActivation } from '../lib/useClapActivation'
+import { hasCamera, useClapActivation } from '../lib/useClapActivation'
+import { useToast } from '../lib/toast'
 import { useWindowDrag } from '../lib/useWindowDrag'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
@@ -140,8 +141,28 @@ function HomePage({
     handNormalized
   } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
   const orbScale = handControlOn && twoHandSpread !== null ? orbScaleFromSpread(twoHandSpread) : 1
-  // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses
-  useClapActivation(true, () => onHandControlChange(!handControlOn))
+  // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses.
+  // Jarvis konuşurken/dinlerken alkış sayılmaz: hoparlörden çıkan kendi sesi mikrofona dönüp
+  // "iki alkış" gibi algılanabiliyor ve el kontrolü kendiliğinden açılıyordu. Kamera yoksa açılmaz.
+  const toast = useToast()
+  const voiceBusy = state === 'speaking' || state === 'listening'
+  useClapActivation(true, () => {
+    if (voiceBusy) return
+    if (handControlOn) {
+      onHandControlChange(false)
+      return
+    }
+    void hasCamera().then((available) => {
+      if (available) onHandControlChange(true)
+      else toast.show('El kontrolü için kamera bulunamadı.', 'info')
+    })
+  })
+  // Kamera açılırken hata verirse el kontrolü birkaç saniye sonra kendiliğinden kapanır
+  useEffect(() => {
+    if (!handControlOn || handStatus !== 'error') return
+    const timer = setTimeout(() => onHandControlChange(false), 4000)
+    return () => clearTimeout(timer)
+  }, [handControlOn, handStatus, onHandControlChange])
   // Yörüngede bir şeyin üstündeyken pinch normal seçim yapar; boşlukta pinch pencere kavrar
   const [hoveredOrbitItem, setHoveredOrbitItem] = useState<PageId | null>(null)
   // "Görevler"e pinch yapınca sayfaya gitmek yerine gerçek görev kartları gösterilir

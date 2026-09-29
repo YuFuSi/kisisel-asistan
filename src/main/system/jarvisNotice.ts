@@ -44,7 +44,7 @@ export function showJarvisNotice(notice: JarvisNotice): void {
   if (notice.silent || !shouldSpeakNotices()) return
   try {
     // Sesli sohbet sürerken speakWithVoice araya girmez; o zaman sadece yazılı kalır
-    speakWithVoice(notice.spoken ?? `${notice.title}. ${notice.body}`)
+    speakWithVoice(notice.spoken ?? `${notice.title}. ${notice.body}`, { interrupt: false })
   } catch (err) {
     console.error('Uyarı sesli söylenemedi:', err)
   }

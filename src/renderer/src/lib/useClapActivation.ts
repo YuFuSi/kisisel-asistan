@@ -16,6 +16,16 @@ const CLAP_REFRACTORY_MS = 150
 const DOUBLE_CLAP_WINDOW_MS = 700
 const FFT_SIZE = 1024
 
+/** Bilgisayarda bağlı bir kamera var mı (el kontrolü kamera yokken hiç açılmasın diye) */
+export async function hasCamera(): Promise<boolean> {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    return devices.some((device) => device.kind === 'videoinput')
+  } catch {
+    return false
+  }
+}
+
 export function useClapActivation(enabled: boolean, onDoubleClap: () => void): void {
   const onDoubleClapRef = useRef(onDoubleClap)
 
