@@ -42,6 +42,8 @@ export function briefNotificationText(counts: BriefCounts): string {
 /** Sabah özetini sesli okumak için doğal, kısa Türkçe cümlelere çevirir */
 export function briefSpokenText(brief: DailyBrief): string {
   const parts: string[] = [`Günaydın! Bugün ${brief.tarih}.`]
+  // Kişisel not (adınla, bugünün en önemli işi) sayılardan önce gelir
+  if (brief.kisiselNot) parts.push(brief.kisiselNot)
 
   if (brief.hava) {
     parts.push(`Hava ${Math.round(brief.hava.sicaklik)} derece, ${brief.hava.durum}.`)

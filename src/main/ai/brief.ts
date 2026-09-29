@@ -4,6 +4,7 @@ import { googleRequest } from '../google/api'
 import { toLocalDate } from '../lib/datetime'
 import { findPlace, getWeather } from '../lib/weather'
 import { getSettings } from '../settings'
+import { getPersonalNote } from './personalNote'
 
 const GMAIL_INBOX = 'https://gmail.googleapis.com/gmail/v1/users/me/labels/INBOX'
 const CALENDAR = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
@@ -25,6 +26,8 @@ export interface DailyBrief {
   hatirlatmalar: { mesaj: string; saat: string }[]
   etkinlikler: { baslik: string; saat: string }[] | null
   okunmamisEposta: number | null
+  /** Hafıza ve bugünün işlerinden yerel modelle yazılan kişisel not; üretilemezse null */
+  kisiselNot: string | null
   uyarilar: string[]
 }
 
@@ -119,7 +122,13 @@ export async function collectDailyBrief(now = new Date()): Promise<DailyBrief> {
     }
   }
 
-  const [hava, etkinlikler, okunmamisEposta] = await Promise.all([weather(), events(), unread()])
+  const note = (): Promise<string | null> => getPersonalNote('brief', now).catch(() => null)
+  const [hava, etkinlikler, okunmamisEposta, kisiselNot] = await Promise.all([
+    weather(),
+    events(),
+    unread(),
+    note()
+  ])
 
   return {
     tarih: now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }),
@@ -128,6 +137,7 @@ export async function collectDailyBrief(now = new Date()): Promise<DailyBrief> {
     hatirlatmalar,
     etkinlikler,
     okunmamisEposta,
+    kisiselNot,
     uyarilar
   }
 }
