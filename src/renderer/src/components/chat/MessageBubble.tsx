@@ -2,10 +2,12 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import { Check, Copy, FileText, Loader2, Pencil, RotateCcw, Volume2, X } from 'lucide-react'
-import type { ChatRole, ToolActivity, ToolStatus } from '@shared/api'
+import { Check, Copy, FileText, Pencil, RotateCcw, Volume2 } from 'lucide-react'
+import type { ChatRole, ToolActivity, ToolApproval } from '@shared/api'
+import type { OutcomeKind } from '../../lib/outcome'
 import { splitAttachments } from '@shared/attachments'
 import CodeBlock from './CodeBlock'
+import ActivitySurface from './ActivitySurface'
 import { speakText } from '../../lib/voice'
 import { buttonClass } from '../../lib/styles'
 
@@ -14,64 +16,28 @@ interface MessageBubbleProps {
   content: string
   tools?: ToolActivity[]
   pending?: boolean
+  outcome?: OutcomeKind
+  approval?: ToolApproval | null
+  onRespond?: (approved: boolean) => void
+  onStop?: () => Promise<void>
   /** Verilirse asistan cevabının altında "yeniden üret" düğmesi çıkar */
   onRegenerate?: () => void
   /** Verilirse kullanıcı mesajı düzenlenebilir */
   onEdit?: (text: string) => void
 }
 
-const STATUS_TEXT: Record<ToolStatus, string> = {
-  running: 'çalışıyor',
-  done: 'tamamlandı',
-  error: 'başarısız'
-}
-
 const actionButtonClass =
   'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink'
-
-function TypingDots(): React.JSX.Element {
-  return (
-    <div className="flex h-6 items-center gap-1" aria-label="Yazıyor">
-      {[0, 150, 300].map((delay) => (
-        <span
-          key={delay}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-faint"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
-    </div>
-  )
-}
-
-// Asistanın kullandığı araçlar: "✓ Görev ekleme" gibi küçük etiketler
-function ToolChips({ tools }: { tools: ToolActivity[] }): React.JSX.Element {
-  return (
-    <div className="mb-2 flex flex-wrap gap-1.5">
-      {tools.map((tool) => (
-        <span
-          key={tool.id}
-          title={`${tool.label}: ${STATUS_TEXT[tool.status]}`}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${
-            tool.status === 'error'
-              ? 'border-negative/30 bg-negative/10 text-negative'
-              : 'border-line bg-elevated text-muted'
-          }`}
-        >
-          {tool.status === 'running' && <Loader2 className="h-3 w-3 animate-spin" />}
-          {tool.status === 'done' && <Check className="h-3 w-3 text-positive" />}
-          {tool.status === 'error' && <X className="h-3 w-3" />}
-          {tool.label}
-        </span>
-      ))}
-    </div>
-  )
-}
 
 function MessageBubble({
   role,
   content,
   tools = [],
   pending = false,
+  outcome,
+  approval,
+  onRespond,
+  onStop,
   onRegenerate,
   onEdit
 }: MessageBubbleProps): React.JSX.Element {
@@ -171,7 +137,16 @@ function MessageBubble({
   return (
     <div className="group/message animate-enter flex justify-start">
       <div className="w-full min-w-0">
-        {tools.length > 0 && <ToolChips tools={tools} />}
+        {(tools.length > 0 || pending || approval || (outcome && outcome !== 'completed')) && (
+          <ActivitySurface
+            tools={tools}
+            pending={pending}
+            outcome={outcome}
+            approval={approval}
+            onRespond={onRespond}
+            onStop={onStop}
+          />
+        )}
 
         {content ? (
           <div className="prose prose-sm max-w-none prose-invert select-text prose-p:leading-7 prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
@@ -190,9 +165,7 @@ function MessageBubble({
               {content}
             </ReactMarkdown>
           </div>
-        ) : (
-          pending && <TypingDots />
-        )}
+        ) : null}
 
         {content && !pending && (
           <div className="mt-1 flex gap-0.5 opacity-0 transition-opacity group-hover/message:opacity-100 focus-within:opacity-100">

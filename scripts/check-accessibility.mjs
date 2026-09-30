@@ -1,5 +1,5 @@
 import { build } from 'esbuild'
-import { readdir } from 'node:fs/promises'
+import { readdir, writeFile } from 'node:fs/promises'
 import { mkdtempSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
@@ -28,6 +28,7 @@ import Toggle from './src/renderer/src/components/ui/Toggle'
 import Composer from './src/renderer/src/components/chat/Composer'
 import TaskItem from './src/renderer/src/components/tasks/TaskItem'
 import CommandPalette from './src/renderer/src/components/CommandPalette'
+import ActivitySurface from './src/renderer/src/components/chat/ActivitySurface'
 import ChatPage from './src/renderer/src/pages/ChatPage'
 import ToastProvider from './src/renderer/src/components/ui/ToastProvider'
 import ApprovalDock from './src/renderer/src/components/jarvis/ApprovalDock'
@@ -51,7 +52,7 @@ function Fixture() {
     <button id="opener" onClick={() => setOpen(true)}>Aç</button>
     <button id="palette" onClick={() => setPalette(true)}>Palet</button>
     <output id="motion">{String(reduced)}</output>
-    <span id="loading" className="animate-bounce">Yükleniyor</span>
+    <span id="loading" className="animate-spin">Yükleniyor</span>
     <Tabs value={tab} onChange={setTab} items={[{id:'one',label:'Bir'},{id:'two',label:'İki'},{id:'three',label:'Üç'}]} />
     <Toggle label="Deneme" checked={false} onChange={() => {}} />
     <Composer busy={false} disabled={false} attaching={false} attachments={[{path:'demo.txt',name:'demo.txt',partCount:1}]} onSend={() => {}} onStop={() => {}} onAttachFiles={() => {}} onRemoveAttachment={() => {}} />
@@ -179,12 +180,50 @@ window.runChatChecks = async () => {
   approve.click(); await wait()
   assert(approvalResponses.length === 1 && approvalResponses[0][0] === 'test-approval' && approvalResponses[0][1] === true, 'Onay ortak respondToApproval üzerinden yanıtlanmadı')
   assert(!document.body.textContent.includes('Deneme onayı'), 'Yanıtlanan ortak onay kartı kalkmadı')
-  listeners.forEach(listener => listener({type:'stopped',conversationId:1})); await wait()
+  const savedActivity = {id:44,conversationId:1,role:'assistant',content:'İşlem durduruldu.',tools:[{id:'persisted-step',name:'test',label:'Kaydedilmiş işlem',status:'done',input:{örnek:true},result:'Kayıtlı sonuç'}],createdAt:new Date().toISOString()}
+  history.push(savedActivity)
+  listeners.forEach(listener => listener({type:'stopped',conversationId:1,message:savedActivity})); await wait()
+  const savedKey = savedActivity.conversationId + ':' + savedActivity.id + ':' + savedActivity.createdAt
+  assert(JSON.parse(localStorage.getItem('jarvis.activity-outcomes.v1'))[savedKey]==='stopped','F0 sonucu kalıcı mesaj kimliğine bağlanmadı')
+  flushSync(()=>reactRoot.render(null)); await wait(); renderChat(true); await wait(); requestOpenConversation(1); await wait()
+  assert(document.body.textContent.includes('Durduruldu') && document.body.textContent.includes('Kaydedilmiş işlem'), 'Sohbet yeniden açılınca bitmiş Activity kaydı veya sonucu kayboldu')
   window.api.chat.send = async () => {throw new Error('Deneme gönderim hatası')}
-  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(composer,'Hata denemesi')
-  composer.dispatchEvent(new Event('input',{bubbles:true})); await wait(); key(composer,'Enter'); await wait()
+  const freshComposer = document.getElementById('composer-input')
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(freshComposer,'Hata denemesi')
+  freshComposer.dispatchEvent(new Event('input',{bubbles:true})); await wait(); key(freshComposer,'Enter'); await wait()
   assert(document.getElementById('shared-state').textContent === 'idle:1:0', 'Erken gönderim hatasında noteReplyFailed durumu temizlemedi')
-  return 'Gerçek ChatPage: kaydırma/akış, F0 ortak onayı, sayfa değişiminde ApprovalDock ve erken gönderim hatası geçti.'
+  return 'Gerçek ChatPage: kaydırma/akış, F0 ortak onayı, ApprovalDock, kalıcı Activity sonucu ve erken gönderim hatası geçti.'
+}
+window.runActivityChecks = async () => {
+  const tools = Array.from({length:6}, (_,index) => ({id:'step-'+index,name:'arac_'+index,label:'İş adımı '+index,status:index===5?'running':'done',input:{aranan:'örnek belge'},result:index===5?undefined:'Örnek sonuç'}))
+  let stops = 0
+  const renderSurface = props => flushSync(() => reactRoot.render(<ActivitySurface {...props} />))
+  renderSurface({tools,pending:true,onStop:async () => {stops++}}); await wait()
+  const region = document.querySelector('[aria-label="Jarvis etkinliği"]')
+  assert(region, 'Activity Surface bulunamadı')
+  const toggle = region.querySelector('[aria-expanded]')
+  const content = document.getElementById(toggle.getAttribute('aria-controls'))
+  assert(toggle.getAttribute('aria-expanded')==='true','Aktif işlem adımları açık başlamadı')
+  assert(content.querySelector(':scope > ol').children.length===3,'Normal görünüm üç adımla sınırlanmadı')
+  assert(content.querySelector('details summary').textContent==='Önceki 3 adım','Önceki adımlar katlanmadı')
+  assert(!content.querySelector('details').open,'Önceki adımlar açık başladı')
+  assert(!region.textContent.includes('%'),'Bilinmeyen ilerlemeye yüzde üretildi')
+  const technical = [...region.querySelectorAll('button')].find(button=>button.textContent==='Teknik ayrıntılar')
+  technical.click(); await wait()
+  assert(region.textContent.includes('Araç: arac_5') && region.textContent.includes('örnek belge'),'Teknik girdi açılmadı')
+  toggle.click(); await wait()
+  assert(content.hidden,'Kapalı özet seviyesi çalışmadı')
+  renderSurface({tools,pending:true,approval:{id:'activity-approval',toolName:'test',label:'Yüzey onayı',summary:'Bekleyen işlem'},onRespond:()=>{},onStop:async()=>{stops++}}); await wait()
+  assert(region.textContent.includes('Yüzey onayı') && !region.querySelector('button').closest('[hidden]'),'Onay kapalı özette gizlendi')
+  const stop = region.querySelector('[aria-label="Jarvis işlemini durdur"]')
+  stop.click(); await wait(); stop.click(); await wait()
+  assert(stops===1 && stop.disabled && stop.textContent==='Durduruluyor','Durdur tekrarlı çağrıya veya belirsiz duruma yol açtı')
+  reactRoot.render(null); await wait()
+  renderSurface({tools:tools.map(tool=>({...tool,status:'done'})),outcome:'stopped'}); await wait()
+  const finished = document.querySelector('[aria-label="Jarvis etkinliği"]')
+  assert(finished.textContent.includes('Durduruldu'),'F0 sonuç türü gösterilmedi')
+  assert(finished.querySelector('[aria-expanded]').getAttribute('aria-expanded')==='false','Bitmiş işlem kapalı başlamadı')
+  return 'Activity Surface: üç seviye, son üç adım, teknik ayrıntı, görünür onay, tek durdurma ve F0 sonucu geçti.'
 }
 `
 
@@ -227,9 +266,10 @@ async function run() {
     if (!css) throw new Error('Önce electron-vite build çalıştırılmalı.')
     const { readFile } = await import('node:fs/promises')
     const styles = await readFile(join(assets, css), 'utf8')
-    await window.loadURL(
-      'data:text/html;charset=utf-8,' + encodeURIComponent('<div id="root"></div>')
-    )
+    // file: kökeni localStorage kullanabilir; yalnızca geçici profil içindeki mock belge açılır.
+    const fixturePath = join(profile, 'ui-fixture.html')
+    await writeFile(fixturePath, '<div id="root"></div>', 'utf8')
+    await window.loadFile(fixturePath)
     await window.webContents.insertCSS(styles)
     await window.webContents.executeJavaScript(bundle.outputFiles[0].text)
     console.log(await window.webContents.executeJavaScript('window.runChecks()'))
@@ -252,7 +292,13 @@ async function run() {
         throw new Error('CSS yükleme hareketi tercihi izlemedi.')
     }
     console.log('Açık pencerede reduced-motion açma/kapatma geçti.')
-    console.log(await window.webContents.executeJavaScript('window.runChatChecks()'))
+    for (const check of ['runChatChecks', 'runActivityChecks']) {
+      const result = await window.webContents.executeJavaScript(
+        `window.${check}().catch(error => ({ error: error.message, stack: error.stack }))`
+      )
+      if (result.error) throw new Error(result.stack ?? result.error)
+      console.log(result)
+    }
     window.webContents.debugger.detach()
     exitCode = 0
   } catch (error) {
