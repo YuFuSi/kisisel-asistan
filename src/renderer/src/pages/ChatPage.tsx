@@ -10,8 +10,7 @@ import {
   type Reminder,
   type SettingsView,
   type Task,
-  type ToolActivity,
-  type ToolApproval
+  type ToolActivity
 } from '@shared/api'
 import ConversationList from '../components/chat/ConversationList'
 import MessageBubble from '../components/chat/MessageBubble'
@@ -19,7 +18,14 @@ import Composer from '../components/chat/Composer'
 import ApprovalCard from '../components/chat/ApprovalCard'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Orb from '../components/jarvis/Orb'
-import { noteReplyStarted, useAssistantState } from '../lib/assistantState'
+import {
+  noteReplyFailed,
+  noteReplyStarted,
+  respondToApproval,
+  setVisibleConversation,
+  useAssistantState,
+  usePendingApprovals
+} from '../lib/assistantState'
 import { errorMessage } from '../lib/errors'
 import { focusConversationSearch } from '../lib/dom'
 import { greeting } from '../lib/greeting'
@@ -86,11 +92,8 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const [error, setError] = useState<string | null>(null)
   // Silinmek üzere onay bekleyen sohbetin kimliği (null ise onay kutusu kapalı)
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
-  // Asistanın beklediği onay (uygulama/dosya açma gibi riskli işlemler için)
-  const [approval, setApproval] = useState<{
-    conversationId: number
-    approval: ToolApproval
-  } | null>(null)
+  // Asistanın beklediği onaylar ortak depoda; bu sohbete ait olan burada gösterilir
+  const approvals = usePendingApprovals()
   // Olay dinleyicisi içinde her zaman güncel sohbet kimliğini okumak için
   const activeIdRef = useRef<number | null>(null)
   // Olay dinleyicisi içinden güncel ayarları okumak için
@@ -152,14 +155,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         )
         return
       }
-      if (event.type === 'approval') {
-        setApproval({ conversationId: event.conversationId, approval: event.approval })
-        return
-      }
-      if (event.type === 'approval-resolved') {
-        setApproval((current) => (current?.approval.id === event.approvalId ? null : current))
-        return
-      }
+      if (event.type === 'approval' || event.type === 'approval-resolved') return
       if (event.type === 'tool') {
         setStreaming((s) =>
           s && s.conversationId === event.conversationId
@@ -171,7 +167,6 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
       // Cevap bitti, durduruldu veya hata oldu
       setStreaming((s) => (s?.conversationId === event.conversationId ? null : s))
-      setApproval((current) => (current?.conversationId === event.conversationId ? null : current))
       if (event.conversationId === activeIdRef.current) {
         const message = event.message
         if (message) setMessages((list) => [...list, message])
@@ -185,7 +180,11 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   }, [])
 
   const streamingView = streaming && streaming.conversationId === activeId ? streaming : null
-  const approvalView = approval && approval.conversationId === activeId ? approval.approval : null
+  const approvalView = approvals.find((item) => item.conversationId === activeId)?.approval ?? null
+  // Ekrandaki sohbetin onayı burada görünür; diğer onaylar App'teki genel kartta çıkar
+  useEffect(() => {
+    setVisibleConversation(active ? activeId : null)
+  }, [active, activeId])
 
   // Yeni mesaj veya yeni cevap parçası gelince en alta kaydır
   useEffect(() => {
@@ -322,6 +321,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       setMessages((list) => [...list, userMessage])
     } catch (err) {
       setStreaming(null)
+      if (activeIdRef.current !== null) noteReplyFailed(activeIdRef.current)
       // Gönderilemediyse belgeler kaybolmasın
       setAttachments(documents)
       setError(errorMessage(err))
@@ -551,10 +551,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
               {approvalView && (
                 <ApprovalCard
                   approval={approvalView}
-                  onRespond={(approved) => {
-                    setApproval(null)
-                    void window.api.chat.respondToApproval(approvalView.id, approved)
-                  }}
+                  onRespond={(approved) => respondToApproval(approvalView.id, approved)}
                 />
               )}
               <div ref={bottomRef} />

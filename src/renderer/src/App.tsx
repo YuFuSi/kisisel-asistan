@@ -15,6 +15,7 @@ import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
 import { initVoiceClient, toggleVoiceSession } from './lib/voiceClient'
 import VoiceOverlay from './components/jarvis/VoiceOverlay'
+import ApprovalDock from './components/jarvis/ApprovalDock'
 import { noteNotification } from './lib/assistantState'
 
 function App(): React.JSX.Element {
@@ -107,6 +108,7 @@ function App(): React.JSX.Element {
         {!handControlOn && <Sidebar active={page} onSelect={navigate} />}
         <main className="relative min-w-0 flex-1 bg-surface">
           {page !== 'home' && <VoiceOverlay onOpenConversation={openConversation} />}
+          <ApprovalDock onOpenConversation={openConversation} />
           {page === 'home' && (
             <div className="animate-fade h-full">
               <HomePage

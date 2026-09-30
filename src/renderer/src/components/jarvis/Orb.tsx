@@ -53,7 +53,8 @@ const TARGETS: Record<AssistantState, Params> = {
   listening: { listen: 1, arcs: 0, speak: 0 },
   thinking: { listen: 0, arcs: 1, speak: 0 },
   working: { listen: 0, arcs: 2, speak: 0 },
-  speaking: { listen: 0, arcs: 0, speak: 1 }
+  speaking: { listen: 0, arcs: 0, speak: 1 },
+  approval: { listen: 0, arcs: 0, speak: 0 }
 }
 
 interface Shape {
@@ -70,7 +71,8 @@ const SHAPES: Record<AssistantState, Shape> = {
   listening: { sx: 1.05, sy: 1.05, rings: 0 },
   thinking: { sx: 0.88, sy: 0.88, rings: 1 },
   working: { sx: 0.82, sy: 0.82, rings: 2 },
-  speaking: { sx: 1.05, sy: 1.05, rings: 0 }
+  speaking: { sx: 1.05, sy: 1.05, rings: 0 },
+  approval: { sx: 1, sy: 1, rings: 0 }
 }
 const MORPH_PER_SECOND = 3.2
 
