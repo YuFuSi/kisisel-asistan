@@ -10,6 +10,7 @@ import { getPersonalNote } from './ai/personalNote'
 import { getHomeWeather } from './system/homeWeather'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
 import { resizeHud } from './system/hud'
+import { setNotchInteractive } from './system/notch'
 import { getForegroundWindowId, moveWindow } from './lib/windows'
 import { sendCommand, showMainWindow } from './system/window'
 import {
@@ -139,6 +140,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:openLogs', () => openLogDirectory())
 
   // HUD: el ile kontrol açılınca büyür, yörüngeden bir araç seçilince ana pencere o sayfayı açar
+  ipcMain.on('notch:interactive', (_event, interactive: unknown) =>
+    setNotchInteractive(interactive === true)
+  )
   ipcMain.handle('hud:resize', (_event, width: number, height: number) => resizeHud(width, height))
   ipcMain.handle('hud:navigate', (_event, page: string) => {
     // Sadece sayfa kimliği biçimi ("tasks" gibi); komut metnine başka bir şey eklenemesin

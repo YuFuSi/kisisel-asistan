@@ -17,7 +17,14 @@ async function getTarget() {
   for (let i = 0; i < 90; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
-      const page = list.find((t) => t.type === 'page' && !t.url.startsWith('devtools://'))
+      // Varsayılan ana pencere (adreste # yok); HUD/çentik için CDP_HASH=hud veya CDP_HASH=notch
+      const hash = process.env.CDP_HASH ? `#${process.env.CDP_HASH}` : ''
+      const page = list.find(
+        (t) =>
+          t.type === 'page' &&
+          !t.url.startsWith('devtools://') &&
+          (hash ? t.url.endsWith(hash) : !t.url.includes('#'))
+      )
       if (page) return page
     } catch {
       // Electron henüz açılmadı

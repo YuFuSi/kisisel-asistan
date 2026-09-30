@@ -1,3 +1,4 @@
+import { applyNotch } from './notch'
 import { getSecretStatus, getSettings, getUnreadableSecrets, updateSettings } from '../settings'
 import { notifyDataChanged } from '../events'
 import { changeGlobalShortcut, isShortcutActive } from './shortcut'
@@ -39,6 +40,7 @@ export function applySettingsPatch(patch: SettingsPatch): SettingsView {
 
   // "Hey Jarvis" açılıp kapanınca dinleme durumu hemen değişsin
   if (typeof patch.wakeWordEnabled === 'boolean') refreshVoiceSession()
+  if (typeof patch.notchEnabled === 'boolean') applyNotch(next.notchEnabled)
 
   notifyDataChanged('settings')
   return getSettingsView()

@@ -50,7 +50,8 @@ const defaults: AppSettings = {
   // Test edildi (2026-09-14): length_scale 0,75-0,80 arası gerçek hızı ~1,24x yapıyor, doğallık bozulmuyor
   speechRate: 1.3,
   speechVolume: 1,
-  semanticSearchEnabled: false
+  semanticSearchEnabled: false,
+  notchEnabled: true
 }
 
 function readValue(key: string): string | undefined {
@@ -126,6 +127,7 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.briefCity === 'string') next.briefCity = patch.briefCity.trim()
   if (typeof patch.briefSpoken === 'boolean') next.briefSpoken = patch.briefSpoken
   if (typeof patch.noticesSpoken === 'boolean') next.noticesSpoken = patch.noticesSpoken
+  if (typeof patch.notchEnabled === 'boolean') next.notchEnabled = patch.notchEnabled
   for (const key of ['quietStart', 'quietEnd'] as const) {
     const value = patch[key]
     if (typeof value !== 'string') continue
