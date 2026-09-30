@@ -123,7 +123,7 @@ export function getMainWindow(): BrowserWindow | null {
 
 export function showMainWindow(): void {
   const window = mainWindow
-  // Ana pencere bir şekilde kapanmış ama uygulama açık kalmışsa (ör. HUD penceresi açık olduğu
+  // Ana pencere bir şekilde kapanmış ama uygulama açık kalmışsa (ör. çentik penceresi açık olduğu
   // için uygulama kapanmadı) kısayol, bildirim veya yeniden açma hiçbir şey yapmıyordu; kullanıcı
   // Jarvis'i hiç açamıyordu. Pencere yoksa yeniden oluşturulur.
   if (!window || window.isDestroyed()) {
@@ -139,7 +139,7 @@ export function showMainWindow(): void {
 
 // Bir bildirim gösterildi: Ana Sayfa'daki küre kısa süre nabız atsın
 export function notifyPulse(): void {
-  // Ana pencere ve (açıksa) HUD: ikisinin küresi de nabız atar
+  // Ana pencere ve (açıksa) çentik: ikisinin küresi de nabız atar
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.webContents.isDestroyed()) window.webContents.send('app:command', 'notified')
   }

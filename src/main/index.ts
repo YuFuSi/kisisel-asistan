@@ -14,7 +14,6 @@ import { startReminderScheduler } from './scheduler/reminders'
 import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
-import { disposeHud, toggleHud } from './system/hud'
 import { applyNotch, disposeNotch } from './system/notch'
 import { installDownloadedUpdate, startUpdater } from './system/updater'
 import { initLogging } from './system/logger'
@@ -56,8 +55,12 @@ function quitApp(): void {
   app.quit()
 }
 
-// HUD kısayolu şimdilik sabit; ana pencerenin kısayolu gibi Ayarlar'dan değiştirilemez
-const HUD_SHORTCUT = 'CommandOrControl+Shift+J'
+// Jarvis Çentiği kısayolu şimdilik sabit; ana pencerenin kısayolu gibi Ayarlar'dan değiştirilemez
+const NOTCH_SHORTCUT = 'CommandOrControl+Shift+J'
+
+function toggleNotch(): void {
+  applySettingsPatch({ notchEnabled: !getSettings().notchEnabled })
+}
 
 // Veri klasörü sabit: geliştirme (npm run dev / npm start) ve kurulu uygulama aynı veritabanını ve
 // şifreleme anahtarını kullansın. Kurulu uygulamanın adı (productName, şu an "Jarvis") farklı olduğu için
@@ -120,12 +123,12 @@ if (!app.requestSingleInstanceLock()) {
         sendCommand('new-chat')
       },
       onToggleOpenAtLogin: (enabled) => applySettingsPatch({ openAtLogin: enabled }),
-      onToggleHud: toggleHud,
+      onToggleNotch: toggleNotch,
       onQuit: quitApp
     })
     initGlobalShortcut(settings.globalShortcut, toggleFromShortcut)
-    if (!globalShortcut.register(HUD_SHORTCUT, toggleHud)) {
-      console.warn(`HUD kısayolu kaydedilemedi: ${HUD_SHORTCUT}`)
+    if (!globalShortcut.register(NOTCH_SHORTCUT, toggleNotch)) {
+      console.warn(`Çentik kısayolu kaydedilemedi: ${NOTCH_SHORTCUT}`)
     }
     applyOpenAtLogin(settings.openAtLogin)
     applyNotch(settings.notchEnabled)
@@ -180,7 +183,6 @@ if (!app.requestSingleInstanceLock()) {
     }, 30_000).unref()
     ;(async () => {
       disposeGlobalShortcut()
-      disposeHud()
       disposeNotch()
       destroyTray()
       stopReminderScheduler?.()

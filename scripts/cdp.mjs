@@ -17,7 +17,7 @@ async function getTarget() {
   for (let i = 0; i < 90; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json()
-      // Varsayılan ana pencere (adreste # yok); HUD/çentik için CDP_HASH=hud veya CDP_HASH=notch
+      // Varsayılan ana pencere (adreste # yok); çentik için CDP_HASH=notch
       const hash = process.env.CDP_HASH ? `#${process.env.CDP_HASH}` : ''
       const page = list.find(
         (t) =>

@@ -10,7 +10,7 @@ export function notifyDataChanged(scope: DataScope): void {
 }
 
 // Sohbet olayı (cevap parçası, araç, onay, bitiş) isteği yapan pencereye gider; aynı olay
-// yardımcı pencerelere (çentik, HUD) de kopyalanır ki hepsi aynı durumu göstersin. Sohbet listesi
+// yardımcı pencerelere (çentik) de kopyalanır ki hepsi aynı durumu göstersin. Sohbet listesi
 // sadece ana pencerede olduğu için diğerleri olayları yalnızca küre ve kartlar için kullanır.
 export function sendChatEvent(sender: WebContents, event: ChatEvent): void {
   if (!sender.isDestroyed()) sender.send('chat:event', event)

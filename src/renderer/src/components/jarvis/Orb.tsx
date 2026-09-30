@@ -160,12 +160,12 @@ function Orb({
     const radius = size * SPHERE_RATIO
     const cx = size / 2
     const cy = size / 2
-    // Küçük kürede (HUD) noktalar seyrek olsun: yoğunluk yüzey alanıyla orantılı kalır
+    // Küçük kürede (çentik, başlık çubuğu) noktalar seyrek olsun: yoğunluk yüzey alanıyla orantılı kalır
     const dotScale = Math.min(1, (size / 300) ** 2)
     const surface = small
       ? []
       : buildDots(Math.max(120, Math.round(SURFACE_DOTS * dotScale)), false)
-    // Gövde için WebGL (HUD'daki küçük küre ve WebGL'siz ortam 2D gövdeyle çizer)
+    // Gövde için WebGL (küçük küre ve WebGL'siz ortam 2D gövdeyle çizer)
     const sphere = small ? null : createSphereRenderer(size, dpr)
     // Ses çubuklarının yumuşatılmış değerleri (aynalı: BAND_COUNT * 2 çubuk)
     const bars = new Array<number>(BAND_COUNT * 2).fill(0)
@@ -568,7 +568,7 @@ function Orb({
         barMean = barSum / count
       }
 
-      // Küçük boyutta (HUD) tek bir dönen yay yeter
+      // Küçük boyutta tek bir dönen yay yeter
       if (small && params.arcs > 0.01) {
         ctx.lineWidth = 1.5
         ctx.lineCap = 'round'

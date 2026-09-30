@@ -664,7 +664,7 @@ export interface GoogleStatus {
 
 // daily-brief: sabah özeti bildirimine tıklanınca yeni sohbette özet istenir
 // open-automations: bir otomasyon bildirimine tıklanınca Otomasyonlar sayfası açılır
-// open-page:<sayfa>: HUD'daki el ile kontrol yörüngesinden bir araç seçilince o sayfa açılır
+// open-page:<sayfa>: çentikten veya bildirimden bir sayfa açılır
 export type AppCommand =
   | 'focus-chat'
   | 'new-chat'
@@ -871,11 +871,7 @@ export interface Api {
   notch: {
     /** Fare damlanın/kartın üstündeyken true: tıklamalar çentiğe gelsin */
     setInteractive(interactive: boolean): void
-  }
-  hud: {
-    /** HUD penceresini büyütür/küçültür (sağ üst köşe sabit kalır); el ile kontrol açılıp kapanınca */
-    resize(width: number, height: number): Promise<void>
-    /** Ana pencereyi öne getirip verilen sayfayı açar (HUD'daki yörüngeden seçim yapılınca) */
+    /** Ana pencereyi öne getirip verilen sayfayı açar (çentikteki "Sohbette aç") */
     navigate(page: string): Promise<void>
   }
   /**
