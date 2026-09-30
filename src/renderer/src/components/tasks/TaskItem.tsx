@@ -46,13 +46,13 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
         role="checkbox"
         aria-checked={done}
         aria-label={done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'}
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
-          done
-            ? 'border-positive bg-positive text-app'
-            : 'border-line-strong hover:border-line-strong'
-        }`}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control"
       >
-        {done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${done ? 'border-positive bg-positive text-app' : 'border-line-strong'}`}
+        >
+          {done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+        </span>
       </button>
 
       {editing ? (
@@ -64,6 +64,7 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
             if (e.key === 'Escape') {
+              e.stopPropagation()
               cancelled.current = true
               e.currentTarget.blur()
             }

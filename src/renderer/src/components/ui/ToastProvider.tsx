@@ -54,7 +54,7 @@ function ToastProvider({ children }: { children: React.ReactNode }): React.JSX.E
               <button
                 onClick={() => dismiss(item.id)}
                 aria-label="Kapat"
-                className="rounded p-0.5 text-faint transition-colors hover:text-ink"
+                className="inline-flex min-h-8 min-w-8 items-center justify-center rounded p-0.5 text-faint transition-colors hover:text-ink"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

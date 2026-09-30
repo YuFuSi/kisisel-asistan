@@ -27,7 +27,7 @@ const STATUS_TEXT: Record<ToolStatus, string> = {
 }
 
 const actionButtonClass =
-  'rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink'
+  'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink'
 
 function TypingDots(): React.JSX.Element {
   return (

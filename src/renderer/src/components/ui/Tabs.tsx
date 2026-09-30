@@ -22,6 +22,21 @@ function Tabs<T extends string>({ items, value, onChange }: TabsProps<T>): React
           key={item.id}
           role="tab"
           aria-selected={value === item.id}
+          tabIndex={value === item.id ? 0 : -1}
+          onKeyDown={(event) => {
+            const index = items.findIndex((tab) => tab.id === item.id)
+            let next = index
+            if (event.key === 'ArrowRight') next = (index + 1) % items.length
+            else if (event.key === 'ArrowLeft') next = (index - 1 + items.length) % items.length
+            else if (event.key === 'Home') next = 0
+            else if (event.key === 'End') next = items.length - 1
+            else return
+            event.preventDefault()
+            onChange(items[next].id)
+            event.currentTarget.parentElement
+              ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+              [next]?.focus()
+          }}
           onClick={() => onChange(item.id)}
           className={tabClass(value === item.id)}
         >

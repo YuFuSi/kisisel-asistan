@@ -20,6 +20,8 @@ import { requestBlankChat, requestNewChat } from '../lib/chatRequests'
 import { filterCommands, type Command } from '../lib/commandPalette'
 import { focusConversationSearch } from '../lib/dom'
 import { PAGE_LABELS, type PageId } from '../lib/pages'
+import { useDismissLayer } from '../lib/useDismissLayer'
+import { useDialogFocus } from '../lib/useDialogFocus'
 
 const PAGE_ICONS: Record<PageId, LucideIcon> = {
   home: House,
@@ -56,6 +58,9 @@ function CommandPalette({
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDismissLayer(true, 50, onClose)
+  useDialogFocus(true, panelRef)
 
   const commands = useMemo<PaletteCommand[]>(() => {
     const pages = (Object.keys(PAGE_LABELS) as PageId[])
@@ -121,20 +126,15 @@ function CommandPalette({
   )
 
   useEffect(() => {
-    requestAnimationFrame(() => inputRef.current?.focus())
-  }, [])
-
-  useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') {
-        onClose()
-      } else if (e.key === 'ArrowDown') {
+      if (e.defaultPrevented || !panelRef.current?.contains(e.target as Node)) return
+      if (e.key === 'ArrowDown') {
         e.preventDefault()
         setSelected((i) => Math.min(i + 1, filtered.length - 1))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
         setSelected((i) => Math.max(i - 1, 0))
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter' && e.target === inputRef.current) {
         e.preventDefault()
         const command = filtered[activeIndex]
         if (command) {
@@ -154,11 +154,19 @@ function CommandPalette({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="card animate-enter w-full max-w-lg overflow-hidden p-0 shadow-float">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Komut paleti"
+        tabIndex={-1}
+        className="card animate-enter w-full max-w-lg overflow-hidden p-0 shadow-float"
+      >
         <div className="flex items-center gap-3 border-b border-line px-4 py-3">
           <Search className="h-4 w-4 shrink-0 text-faint" />
           <input
             ref={inputRef}
+            aria-label="Komut ara"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
