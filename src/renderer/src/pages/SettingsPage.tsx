@@ -28,12 +28,12 @@ import { useToast } from '../lib/toast'
 type Tab = 'model' | 'asistan' | 'ses' | 'servisler' | 'google' | 'uygulama'
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'uygulama', label: 'Temel tercihler' },
   { id: 'model', label: 'Model' },
   { id: 'asistan', label: 'Asistan' },
   { id: 'ses', label: 'Ses' },
   { id: 'servisler', label: 'Servisler' },
-  { id: 'google', label: 'Google' },
-  { id: 'uygulama', label: 'Uygulama' }
+  { id: 'google', label: 'Google' }
 ]
 
 function Section({
@@ -54,7 +54,8 @@ function Section({
 function SettingsPage(): React.JSX.Element {
   const [settings, setSettings] = useState<SettingsView | null>(null)
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null)
-  const [tab, setTab] = useState<Tab>('model')
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [tab, setTab] = useState<Tab>('uygulama')
   const toast = useToast()
 
   // İlk yükleme; ayar başka yerden değişirse (ör. tepsi menüsü) yeniden yükle
@@ -138,9 +139,14 @@ function SettingsPage(): React.JSX.Element {
               )}
             </Section>
 
-            <Section title="Bağlantı testi">
-              <ConnectionTest key={`${provider}:${settings.models[provider]}`} />
-            </Section>
+            <details className="rounded-control border border-line p-3">
+              <summary className="min-h-8 cursor-pointer text-sm text-muted">
+                İleri · bağlantı testi
+              </summary>
+              <Section title="Bağlantı testi">
+                <ConnectionTest key={`${provider}:${settings.models[provider]}`} />
+              </Section>
+            </details>
           </>
         )}
 
@@ -193,12 +199,24 @@ function SettingsPage(): React.JSX.Element {
             <Section title="Sabah özeti">
               <BriefSettings settings={settings} onUpdate={update} />
             </Section>
-            <Section title="Yedekler ve günlükler">
-              <BackupSettings />
-            </Section>
-            <Section title="Son işlemler">
-              <ActivityList />
-            </Section>
+            <details
+              onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+              className="rounded-control border border-line p-3"
+            >
+              <summary className="min-h-8 cursor-pointer text-sm text-muted">
+                İleri ayarlar · yedekler ve işlem kayıtları
+              </summary>
+              {advancedOpen && (
+                <div className="mt-4 space-y-6">
+                  <Section title="Yedekler ve günlükler">
+                    <BackupSettings />
+                  </Section>
+                  <Section title="Son işlemler">
+                    <ActivityList />
+                  </Section>
+                </div>
+              )}
+            </details>
           </>
         )}
       </div>

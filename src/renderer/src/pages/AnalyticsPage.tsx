@@ -56,8 +56,8 @@ function UsageChart({ days }: { days: UsageStats['last14Days'] }): React.JSX.Ele
         >
           <div
             title={`${shortDay(day.date)}: ${day.count} çağrı`}
-            className={`w-full rounded-t-md transition-all ${day.count > 0 ? 'bg-accent/60' : 'bg-line'}`}
-            style={{ height: `${Math.max(4, (day.count / max) * 100)}%` }}
+            className={`w-full rounded-t-md transition-all ${day.count > 0 ? 'bg-accent/60' : 'bg-transparent'}`}
+            style={{ height: `${(day.count / max) * 100}%` }}
           />
           <span className="text-[10px] text-faint">{shortDay(day.date).split(' ')[0]}</span>
         </div>
@@ -137,13 +137,30 @@ function AnalyticsPage(): React.JSX.Element {
             />
             <StatTile
               icon={AlertTriangle}
-              label="Hatalı / engellenen"
-              value={String(stats.errorCalls + stats.blockedCalls)}
+              label="Teknik hata"
+              value={String(stats.errorCalls)}
               tone="negative"
             />
             <StatTile icon={Flame} label="Kullanım serisi" value={`${stats.activeDayStreak} gün`} />
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatTile
+              icon={AlertTriangle}
+              label="Kullanıcı reddi"
+              value={String(stats.deniedCalls)}
+            />
+            <StatTile
+              icon={AlertTriangle}
+              label="Onay süresi doldu"
+              value={String(stats.timeoutCalls)}
+            />
+            <StatTile
+              icon={AlertTriangle}
+              label="İzin nedeniyle atlanan"
+              value={String(stats.skippedCalls)}
+            />
+          </div>
           <Card>
             <h2 className="mb-3 text-sm font-medium text-ink">Son 14 gün</h2>
             <UsageChart days={stats.last14Days} />

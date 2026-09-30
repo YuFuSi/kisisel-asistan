@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { CheckCircle2, ListTodo } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import type { Automation, Reminder, Task } from '@shared/api'
 import NewTaskForm from '../components/tasks/NewTaskForm'
 import TaskItem from '../components/tasks/TaskItem'
@@ -14,6 +13,8 @@ import { celebrate } from '../lib/assistantState'
 import { errorMessage } from '../lib/errors'
 import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
+import { useClock } from '../lib/deviceStatus'
+import { toIsoDate } from '../lib/dates'
 
 // Planlama: "belli bir zamanda olacak şeyler" tek sayfada. Eskiden Görevler (görev + hatırlatma)
 // ve Otomasyonlar ayrı sayfalardı; tasarım turunda sekmelere toplandı.
@@ -30,13 +31,11 @@ interface PlanningPageProps {
   onTabChange: (tab: PlanningTab) => void
 }
 
-type TaskFilter = 'pending' | 'done'
-
 function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Element {
   const tasks = useLiveData(loadTasks, 'tasks')
   const reminders = useLiveData(loadReminders, 'reminders')
   const automations = useLiveData(loadAutomations, 'automations')
-  const [filter, setFilter] = useState<TaskFilter>('pending')
+  const today = toIsoDate(useClock(60_000))
   const toast = useToast()
 
   // Değişiklikten sonra listeler, ana süreçten gelen "veri değişti" haberiyle kendiliğinden yenilenir
@@ -53,7 +52,34 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
   const all = tasks.data ?? []
   const pending = all.filter((task) => task.doneAt === null)
   const done = all.filter((task) => task.doneAt !== null)
-  const visible = filter === 'pending' ? pending : done
+  const groups = [
+    {
+      label: 'Gecikmiş',
+      tasks: pending.filter((task) => task.dueDate !== null && task.dueDate < today)
+    },
+    { label: 'Bugün', tasks: pending.filter((task) => task.dueDate === today) },
+    {
+      label: 'Yaklaşan',
+      tasks: pending.filter((task) => task.dueDate !== null && task.dueDate > today)
+    },
+    { label: 'Tarihsiz', tasks: pending.filter((task) => task.dueDate === null) }
+  ]
+  function taskRow(task: Task): React.JSX.Element {
+    return (
+      <TaskItem
+        key={task.id}
+        task={task}
+        onToggle={() => {
+          const completing = task.doneAt === null
+          void run(() => window.api.tasks.update(task.id, { done: completing })).then((ok) => {
+            if (ok && completing) celebrate()
+          })
+        }}
+        onRename={(title) => void run(() => window.api.tasks.update(task.id, { title }))}
+        onDelete={() => void run(() => window.api.tasks.remove(task.id))}
+      />
+    )
+  }
 
   const tabs: TabItem<PlanningTab>[] = [
     { id: 'tasks', label: 'Görevler', count: tasks.data ? pending.length : null },
@@ -73,28 +99,12 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
         <section className="space-y-3">
           <NewTaskForm onCreate={(input) => run(() => window.api.tasks.create(input))} />
 
-          <div className="flex gap-4 text-sm">
-            {(['pending', 'done'] as const).map((id) => (
-              <button
-                key={id}
-                onClick={() => setFilter(id)}
-                className={filter === id ? 'text-ink' : 'text-faint hover:text-muted'}
-              >
-                {id === 'pending' ? `Bekleyen (${pending.length})` : `Tamamlanan (${done.length})`}
-              </button>
-            ))}
-          </div>
-
-          {tasks.data && visible.length === 0 && (
+          {tasks.data && pending.length === 0 && (
             <EmptyState
               compact
-              icon={filter === 'pending' ? CheckCircle2 : ListTodo}
-              title={filter === 'pending' ? 'Bekleyen görevin yok' : 'Tamamlanan görev yok'}
-              description={
-                filter === 'pending'
-                  ? 'Yukarıdaki kutudan ekleyebilir ya da Jarvis’e "listeme ekle" diyebilirsin.'
-                  : 'Bitirdiğin görevler burada birikir.'
-              }
+              icon={CheckCircle2}
+              title="Bekleyen görevin yok"
+              description="Hızlı ekleme kutusunu kullanabilir veya Jarvis’e söyleyebilirsin."
             />
           )}
           {!tasks.data && (
@@ -104,24 +114,26 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
               <Skeleton className="h-9 w-2/3" />
             </div>
           )}
-          <ul className="space-y-1">
-            {visible.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                onToggle={() => {
-                  const completing = task.doneAt === null
-                  void run(() => window.api.tasks.update(task.id, { done: completing })).then(
-                    (ok) => {
-                      if (ok && completing) celebrate()
-                    }
-                  )
-                }}
-                onRename={(title) => void run(() => window.api.tasks.update(task.id, { title }))}
-                onDelete={() => void run(() => window.api.tasks.remove(task.id))}
-              />
+          {groups
+            .filter((group) => group.tasks.length > 0)
+            .map((group) => (
+              <section key={group.label} aria-label={group.label} className="space-y-2 pt-3">
+                <h2 className="text-sm font-medium text-muted">
+                  {group.label} · {group.tasks.length}
+                </h2>
+                <ul className="space-y-1">{group.tasks.map(taskRow)}</ul>
+              </section>
             ))}
-          </ul>
+          <details className="rounded-control border border-line">
+            <summary className="min-h-10 cursor-pointer px-3 py-2 text-sm text-muted">
+              Tamamlanan · {done.length}
+            </summary>
+            {done.length ? (
+              <ul className="space-y-1 px-2 pb-2">{done.map(taskRow)}</ul>
+            ) : (
+              <p className="px-3 pb-3 text-sm text-faint">Henüz tamamlanan görev yok.</p>
+            )}
+          </details>
           <InlineError message={tasks.error} />
         </section>
       )}

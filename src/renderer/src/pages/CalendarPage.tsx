@@ -18,6 +18,7 @@ import {
   type AgendaEntry,
   type AgendaKind
 } from '../lib/calendar'
+import { useNarrowWindow } from '../lib/useNarrowWindow'
 import PageLayout from '../components/ui/PageLayout'
 import { toIsoDate } from '../lib/dates'
 import { useClock } from '../lib/deviceStatus'
@@ -63,6 +64,7 @@ interface CalendarPageProps {
 // Ay görünümü: Google Takvim etkinlikleri, hatırlatmalar ve son tarihli görevler bir arada
 function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element {
   const toast = useToast()
+  const narrow = useNarrowWindow()
   const now = useClock(60_000)
   const [cursor, setCursor] = useState(() => {
     const today = new Date()
@@ -130,6 +132,12 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
     { day: 'numeric', month: 'long', weekday: 'long' }
   )
 
+  function shiftDay(delta: number): void {
+    const date = new Date(`${selected}T12:00:00`)
+    date.setDate(date.getDate() + delta)
+    setSelected(toIsoDate(date))
+    setCursor({ year: date.getFullYear(), month: date.getMonth() })
+  }
   function shiftMonth(delta: number): void {
     setCursor(({ year, month }) => {
       const date = new Date(year, month + delta, 1)
@@ -174,18 +182,18 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
             Bugün
           </button>
           <button
-            onClick={() => shiftMonth(-1)}
-            aria-label="Önceki ay"
+            onClick={() => (narrow ? shiftDay(-1) : shiftMonth(-1))}
+            aria-label={narrow ? 'Önceki gün' : 'Önceki ay'}
             className="rounded-lg p-2 text-muted transition-colors hover:bg-elevated hover:text-ink"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="min-w-32 text-center text-sm font-medium text-ink capitalize">
-            {monthTitle}
+            {narrow ? selectedTitle : monthTitle}
           </span>
           <button
-            onClick={() => shiftMonth(1)}
-            aria-label="Sonraki ay"
+            onClick={() => (narrow ? shiftDay(1) : shiftMonth(1))}
+            aria-label={narrow ? 'Sonraki gün' : 'Sonraki ay'}
             className="rounded-lg p-2 text-muted transition-colors hover:bg-elevated hover:text-ink"
           >
             <ChevronRight className="h-4 w-4" />
@@ -193,7 +201,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
         </>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_360px]">
         <section className="min-w-0">
           {google && !google.connected && (
             <p className="mt-4 text-xs text-faint">
@@ -209,62 +217,66 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
             </p>
           )}
 
-          <div className="card mt-4 p-3">
-            <div className="grid grid-cols-7 gap-1 pb-2">
-              {WEEKDAY_LABELS.map((label) => (
-                <div key={label} className="text-center text-xs text-faint">
-                  {label}
-                </div>
+          {!narrow && (
+            <div className="card mt-4 p-3">
+              <div className="grid grid-cols-7 gap-1 pb-2">
+                {WEEKDAY_LABELS.map((label) => (
+                  <div key={label} className="text-center text-xs text-faint">
+                    {label}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {cells.map((cell) => {
+                  const entries = agendaByDay.get(cell.iso) ?? []
+                  const kinds = [...new Set(entries.map((entry) => entry.kind))]
+                  const isSelected = cell.iso === selected
+                  return (
+                    <button
+                      key={cell.iso}
+                      onClick={() => setSelected(cell.iso)}
+                      aria-label={`${cell.iso} · ${entries.length} kayıt`}
+                      aria-pressed={isSelected}
+                      className={`flex min-h-20 min-w-0 flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors ${
+                        isSelected
+                          ? 'border-accent/60 bg-accent/10'
+                          : 'border-transparent hover:border-line-strong hover:bg-elevated/50'
+                      } ${cell.inMonth ? 'text-ink' : 'text-faint'}`}
+                    >
+                      <span
+                        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                          cell.today ? 'bg-accent font-semibold text-app' : ''
+                        }`}
+                      >
+                        {cell.day}
+                      </span>
+                      {entries[0] && (
+                        <span className="truncate text-[11px] text-muted">{entries[0].title}</span>
+                      )}
+                      <span className="mt-auto flex gap-1">
+                        {kinds.map((kind) => (
+                          <span
+                            key={kind}
+                            className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {!narrow && (
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-faint">
+              {(Object.keys(KIND_LABELS) as AgendaKind[]).map((kind) => (
+                <span key={kind} className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`} />
+                  {KIND_LABELS[kind]}
+                </span>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
-              {cells.map((cell) => {
-                const entries = agendaByDay.get(cell.iso) ?? []
-                const kinds = [...new Set(entries.map((entry) => entry.kind))]
-                const isSelected = cell.iso === selected
-                return (
-                  <button
-                    key={cell.iso}
-                    onClick={() => setSelected(cell.iso)}
-                    aria-pressed={isSelected}
-                    className={`flex min-h-20 min-w-0 flex-col gap-1 rounded-lg border p-1.5 text-left transition-colors ${
-                      isSelected
-                        ? 'border-accent/60 bg-accent/10'
-                        : 'border-transparent hover:border-line-strong hover:bg-elevated/50'
-                    } ${cell.inMonth ? 'text-ink' : 'text-faint'}`}
-                  >
-                    <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                        cell.today ? 'bg-accent font-semibold text-app' : ''
-                      }`}
-                    >
-                      {cell.day}
-                    </span>
-                    {entries[0] && (
-                      <span className="truncate text-[11px] text-muted">{entries[0].title}</span>
-                    )}
-                    <span className="mt-auto flex gap-1">
-                      {kinds.map((kind) => (
-                        <span
-                          key={kind}
-                          className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`}
-                        />
-                      ))}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-4 text-xs text-faint">
-            {(Object.keys(KIND_LABELS) as AgendaKind[]).map((kind) => (
-              <span key={kind} className="flex items-center gap-1.5">
-                <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[kind]}`} />
-                {KIND_LABELS[kind]}
-              </span>
-            ))}
-          </div>
+          )}
         </section>
 
         <aside className="card flex min-w-0 flex-col self-start p-4">
@@ -283,7 +295,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
                     <button
                       onClick={() => void toggleTask(entry)}
                       aria-label={entry.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamla'}
-                      className="mt-0.5 text-positive"
+                      className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded-control text-positive hover:bg-surface"
                     >
                       {entry.done ? (
                         <CheckCircle2 className="h-4 w-4" />
@@ -302,7 +314,7 @@ function CalendarPage({ onOpenSettings }: CalendarPageProps): React.JSX.Element 
                     >
                       {entry.title}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                    <div className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
                       <span>{entryTime(entry)}</span>
                       {entry.detail && (
                         <span className="flex min-w-0 items-center gap-1 truncate">

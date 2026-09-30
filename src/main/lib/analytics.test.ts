@@ -37,14 +37,29 @@ describe('computeUsageStats', () => {
         entry({ status: 'done' }),
         entry({ status: 'error' }),
         entry({ status: 'denied' }),
+        entry({ status: 'timeout' }),
         entry({ status: 'skipped' })
       ],
       now
     )
-    expect(stats.totalCalls).toBe(4)
+    expect(stats.totalCalls).toBe(5)
     expect(stats.doneCalls).toBe(1)
     expect(stats.errorCalls).toBe(1)
-    expect(stats.blockedCalls).toBe(2)
+    expect(stats.blockedCalls).toBe(3)
+    expect(stats.deniedCalls).toBe(1)
+    expect(stats.timeoutCalls).toBe(1)
+    expect(stats.skippedCalls).toBe(1)
+  })
+
+  it('hata metninden ret veya zaman aşımı uydurmaz', () => {
+    const stats = computeUsageStats(
+      [entry({ status: 'error', detail: 'Onay reddedildi, süre doldu' })],
+      now
+    )
+    expect(stats.errorCalls).toBe(1)
+    expect(stats.deniedCalls).toBe(0)
+    expect(stats.timeoutCalls).toBe(0)
+    expect(stats.skippedCalls).toBe(0)
   })
 
   it('kaynağa göre ses ve otomasyon çağrılarını sayar', () => {
