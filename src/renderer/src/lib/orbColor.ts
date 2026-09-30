@@ -8,7 +8,8 @@ export const STATE_HUE_SHIFT: Record<AssistantState, number> = {
   listening: -34,
   thinking: 26,
   working: 44,
-  speaking: -58
+  speaking: -58,
+  approval: 0
 }
 
 /** Verilen ton kaymasıyla küre rengi (hsla); geçiş animasyonlarında ara değerler için kullanılır */

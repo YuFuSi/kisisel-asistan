@@ -1,17 +1,36 @@
 import { useSyncExternalStore } from 'react'
-import type { VoicePhase } from '@shared/api'
+import type { ChatEvent, ToolApproval, VoicePhase } from '@shared/api'
+import { finishedOutcome, shouldCelebrate, type OutcomeKind } from './outcome'
 import { playSfx } from './soundEffects'
 import { upsertStep, type WorkStep } from './workSteps'
 
 /** Jarvis küresinin ve menüdeki durum göstergesinin gösterdiği durum */
-export type AssistantState = 'idle' | 'listening' | 'thinking' | 'working' | 'speaking'
+export type AssistantState = 'idle' | 'listening' | 'thinking' | 'working' | 'speaking' | 'approval'
 
 export const STATE_LABELS: Record<AssistantState, string> = {
   idle: 'Hazır',
   listening: 'Dinliyor',
   thinking: 'Düşünüyor',
   working: 'Çalışıyor',
-  speaking: 'Konuşuyor'
+  speaking: 'Konuşuyor',
+  approval: 'Onay bekliyor'
+}
+
+export type { OutcomeKind }
+
+/** Biten bir cevabın sonucu (bkz. lib/outcome.ts) */
+export interface Outcome {
+  conversationId: number
+  kind: OutcomeKind
+  /** Bu cevapta kullanılan araç sayısı */
+  toolCount: number
+  /** Her yeni sonuçta artar */
+  seq: number
+}
+
+export interface PendingApproval {
+  conversationId: number
+  approval: ToolApproval
 }
 
 /** Kürenin kısa süreli duygu hâlleri: iş bitti (success), hata (error), onay bekliyor (unsure) */
@@ -83,8 +102,71 @@ let voicePhase: VoicePhase = 'off'
 let current: AssistantState = 'idle'
 let chatSubscribed = false
 
+// Bekleyen onaylar: hangi sayfada olunursa olsun görünür kalsın diye burada tutulur
+const approvalListeners = new Set<() => void>()
+let approvals: PendingApproval[] = []
+
+function setApprovals(next: PendingApproval[]): void {
+  approvals = next
+  approvalListeners.forEach((listener) => listener())
+}
+
+// Cevap başına araçlar (id → hata verdi mi) ve reddedilen onay; bitişte sonuca çevrilir
+const replyTools = new Map<number, Map<string, boolean>>()
+const replyRejected = new Set<number>()
+const outcomeListeners = new Set<() => void>()
+let outcome: Outcome | null = null
+let outcomeSeq = 0
+
+function publishOutcome(conversationId: number, kind: OutcomeKind): void {
+  const toolCount = replyTools.get(conversationId)?.size ?? 0
+  outcome = { conversationId, kind, toolCount, seq: ++outcomeSeq }
+  replyTools.delete(conversationId)
+  replyRejected.delete(conversationId)
+  outcomeListeners.forEach((listener) => listener())
+  // Küre sadece gerçekten yapılmış bir işi kutlar; düz metin cevabı veya kısmi iş kutlanmaz
+  if (shouldCelebrate(kind, toolCount)) setEmotion('success')
+}
+
+function trackOutcome(event: ChatEvent): void {
+  const id = event.conversationId
+  switch (event.type) {
+    case 'tool': {
+      const tools = replyTools.get(id) ?? new Map<string, boolean>()
+      tools.set(event.activity.id, event.activity.status === 'error')
+      replyTools.set(id, tools)
+      break
+    }
+    case 'approval':
+      setApprovals([
+        ...approvals.filter((item) => item.approval.id !== event.approval.id),
+        { conversationId: id, approval: event.approval }
+      ])
+      break
+    case 'approval-resolved':
+      if (!event.approved) replyRejected.add(id)
+      setApprovals(approvals.filter((item) => item.approval.id !== event.approvalId))
+      break
+    case 'done': {
+      publishOutcome(
+        id,
+        finishedOutcome([...(replyTools.get(id)?.values() ?? [])], replyRejected.has(id))
+      )
+      setApprovals(approvals.filter((item) => item.conversationId !== id))
+      break
+    }
+    case 'stopped':
+    case 'error':
+      publishOutcome(id, event.type)
+      setApprovals(approvals.filter((item) => item.conversationId !== id))
+      break
+  }
+}
+
 function compute(): AssistantState {
   if (listening || voicePhase === 'capturing') return 'listening'
+  // Onay beklerken iş durur; araç "çalışıyor" görünse de asıl durum kullanıcıyı beklemek
+  if (approvals.length > 0) return 'approval'
   if (speaking) return 'speaking'
   if (voicePhase === 'transcribing') return 'thinking'
   for (const runningTools of replies.values()) {
@@ -109,8 +191,8 @@ function subscribeChat(): void {
     trackSteps(event)
     if (event.type === 'delta') replyChunks += 1
     // Duygu: onay beklerken kararsız, cevap bitince başarı, hata olunca hata; durdurma/onay sonrası sakin
+    trackOutcome(event)
     if (event.type === 'approval') setEmotion('unsure')
-    else if (event.type === 'done') setEmotion('success')
     else if (event.type === 'error') setEmotion('error')
     else if (event.type === 'approval-resolved' || event.type === 'stopped') setEmotion(null)
     switch (event.type) {
@@ -136,6 +218,23 @@ function subscribeChat(): void {
 export function noteReplyStarted(conversationId: number): void {
   if (!replies.has(conversationId)) replies.set(conversationId, new Set())
   update()
+}
+
+/**
+ * Mesaj gönderilemediyse (ör. model seçili değil) çağrılır; aksi halde küre sonsuza kadar
+ * "düşünüyor" kalırdı çünkü ana süreçten hiç bitiş olayı gelmez
+ */
+export function noteReplyFailed(conversationId: number): void {
+  replyTools.delete(conversationId)
+  replyRejected.delete(conversationId)
+  if (replies.delete(conversationId)) update()
+}
+
+/** Onayı yanıtlar; kart her yerden aynı anda kalkar */
+export function respondToApproval(approvalId: string, approved: boolean): void {
+  setApprovals(approvals.filter((item) => item.approval.id !== approvalId))
+  update()
+  void window.api.chat.respondToApproval(approvalId, approved)
 }
 
 export function setListening(value: boolean): void {
@@ -209,6 +308,53 @@ function subscribeNotice(listener: () => void): () => void {
 /** Her bildirimde artan sayaç; 0 = hiç bildirim yok */
 export function useNoticeSeq(): number {
   return useSyncExternalStore(subscribeNotice, () => noticeSeq)
+}
+
+function subscribeApprovals(listener: () => void): () => void {
+  subscribeChat()
+  approvalListeners.add(listener)
+  return () => {
+    approvalListeners.delete(listener)
+  }
+}
+
+/** Yanıt bekleyen onaylar (en eskisi başta) */
+export function usePendingApprovals(): PendingApproval[] {
+  return useSyncExternalStore(subscribeApprovals, () => approvals)
+}
+
+function subscribeOutcome(listener: () => void): () => void {
+  subscribeChat()
+  outcomeListeners.add(listener)
+  return () => {
+    outcomeListeners.delete(listener)
+  }
+}
+
+/** Son biten cevabın sonucu; henüz yoksa null */
+export function useLastOutcome(): Outcome | null {
+  return useSyncExternalStore(subscribeOutcome, () => outcome)
+}
+
+// Sohbet sayfasında o an ekranda olan sohbet; onun onayı zaten sohbetin içinde görünür
+const visibleListeners = new Set<() => void>()
+let visibleConversation: number | null = null
+
+export function setVisibleConversation(id: number | null): void {
+  if (visibleConversation === id) return
+  visibleConversation = id
+  visibleListeners.forEach((listener) => listener())
+}
+
+function subscribeVisible(listener: () => void): () => void {
+  visibleListeners.add(listener)
+  return () => {
+    visibleListeners.delete(listener)
+  }
+}
+
+export function useVisibleConversation(): number | null {
+  return useSyncExternalStore(subscribeVisible, () => visibleConversation)
 }
 
 /** Kürenin o anki duygu sinyali; yoksa null */
