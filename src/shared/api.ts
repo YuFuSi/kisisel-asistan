@@ -907,10 +907,14 @@ export interface Api {
     onDataChanged(listener: (scope: DataScope) => void): () => void
     /** Tepsi menüsü veya global kısayoldan gelen komutlar */
     onCommand(listener: (command: AppCommand) => void): () => void
+    /** Çentiğe bırakılan belgelerin yolları: ana pencere bunları yeni sohbete ekler */
+    onAttachPaths(listener: (paths: string[]) => void): () => void
   }
   notch: {
-    /** Fare damlanın/kartın üstündeyken true: tıklamalar çentiğe gelsin */
-    setInteractive(interactive: boolean): void
+    /** Çentik penceresini içeriğinin boyuna getirir (ekranın üst ortasında kalır) */
+    resize(width: number, height: number): void
+    /** Çentiğe bırakılan belgeleri ana pencereye gönderir (yeni sohbete eklenir) */
+    dropFiles(paths: string[]): void
     /** Ana pencereyi öne getirip verilen sayfayı açar (çentikteki "Sohbette aç") */
     navigate(page: string): Promise<void>
   }

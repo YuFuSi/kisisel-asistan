@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Check, MessageSquare, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, FileText, MessageSquare, X } from 'lucide-react'
 import Orb from './components/jarvis/Orb'
 import ResultCard from './components/jarvis/ResultCard'
 import {
@@ -44,6 +44,9 @@ function NotchApp(): React.JSX.Element {
   const outcome = useLastOutcome()
   const cards = useResultCards()
   const [hover, setHover] = useState(false)
+  // Üstüne belge sürükleniyor: çentik açılır ve "bırak" der
+  const [dragging, setDragging] = useState(false)
+  const pillRef = useRef<HTMLDivElement>(null)
   // Son sonuç kartı: yeni sonuç gelince görünür, birkaç saniye sonra kapanır
   const [shownOutcome, setShownOutcome] = useState<Outcome | null>(null)
 
@@ -64,22 +67,48 @@ function NotchApp(): React.JSX.Element {
   const status =
     running && state !== 'approval' ? `${running.label} çalışıyor` : STATE_LABELS[state]
 
-  // Fare çentiğin üstündeyken tıklamaları al, çıkınca alttaki pencereye bırak
-  function setInteractive(on: boolean): void {
-    setHover(on)
-    window.api.notch.setInteractive(on)
-  }
+  const expanded = Boolean(approval) || Boolean(shownOutcome) || hover || dragging
+  const targetWidth = expanded ? 420 : busy ? 220 : 96
 
-  const expanded = Boolean(approval) || Boolean(shownOutcome) || hover
+  // Pencere her zaman içerik kadar: genişlerken hedef genişlik hemen istenir (içerik kesilmesin),
+  // daralırken animasyon boyunca ölçülen boy izlenir
+  useEffect(() => {
+    const pill = pillRef.current
+    if (!pill) return
+    const report = (): void =>
+      window.api.notch.resize(Math.max(pill.offsetWidth, targetWidth), pill.offsetHeight)
+    report()
+    const observer = new ResizeObserver(report)
+    observer.observe(pill)
+    return () => observer.disconnect()
+  }, [targetWidth])
+
+  function handleDrop(event: React.DragEvent<HTMLDivElement>): void {
+    event.preventDefault()
+    setDragging(false)
+    const paths = Array.from(event.dataTransfer.files)
+      .map((file) => window.api.documents.pathForFile(file))
+      .filter(Boolean)
+    if (paths.length > 0) window.api.notch.dropFiles(paths)
+  }
 
   return (
     <div className="flex h-full w-full justify-center">
       <div
-        onMouseEnter={() => setInteractive(true)}
-        onMouseLeave={() => setInteractive(false)}
-        className={`flex h-fit flex-col overflow-hidden rounded-b-[22px] border border-t-0 border-line bg-app/95 transition-[width] duration-200 ease-out ${
-          expanded ? 'w-[420px]' : busy ? 'w-[220px]' : 'w-[96px]'
-        }`}
+        ref={pillRef}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes('Files')) return
+          event.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+        }}
+        onDrop={handleDrop}
+        style={{ width: targetWidth }}
+        className="flex h-fit flex-col overflow-hidden rounded-b-[22px] border border-t-0 border-line bg-app/95 transition-[width] duration-200 ease-out"
       >
         <div className="flex h-11 items-center gap-2 px-3">
           <button
@@ -101,6 +130,13 @@ function NotchApp(): React.JSX.Element {
             </span>
           )}
         </div>
+
+        {dragging && (
+          <div className="flex items-center gap-2 border-t border-line px-4 py-3 text-sm text-ink">
+            <FileText className="h-4 w-4 text-accent" aria-hidden />
+            Bırak: Jarvis belgeyi yeni sohbete eklesin
+          </div>
+        )}
 
         {approval && (
           <div className="animate-fade space-y-2 border-t border-line px-4 py-3">

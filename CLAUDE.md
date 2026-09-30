@@ -231,6 +231,7 @@ vitest.config.ts            Test ayarları
    node scripts/cdp.mjs key Enter                # "Escape", "Ctrl+N" gibi birleşimler de olur
    node scripts/cdp.mjs shot cikti.png        # ekran görüntüsü
    node scripts/cdp.mjs upload "input[type=file]" C:/yol/belge.pdf   # dosya seçme kutusuna gerçek dosya ver
+   CDP_HASH=notch node scripts/cdp.mjs drop 48 22 C:/yol/belge.txt   # çentiğe gerçek sürükle-bırak
    ```
    - Browser pane'de `window.api` yok (preload yüklenmez), bu yüzden gerçek test CDP ile yapılır.
    - `window.confirm` gerekiyorsa önce `window.confirm = () => true` yapılır.

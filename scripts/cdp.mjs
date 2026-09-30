@@ -125,6 +125,17 @@ try {
       console.log('dosya verildi')
       break
     }
+    case 'drop': {
+      // Gerçek sürükle-bırak: drop x y dosya... (sayfa koordinatları; Chromium'un kendi olaylarıyla)
+      const [x, y] = [Number(args[0]), Number(args[1])]
+      const data = { items: [], files: args.slice(2), dragOperationsMask: 1 }
+      for (const type of ['dragEnter', 'dragOver', 'drop']) {
+        await send('Input.dispatchDragEvent', { type, x, y, data })
+        await sleep(150)
+      }
+      console.log('bırakıldı')
+      break
+    }
     case 'shot': {
       const r = await send('Page.captureScreenshot', { format: 'png' })
       writeFileSync(args[0], Buffer.from(r.data, 'base64'))

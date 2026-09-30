@@ -9,9 +9,9 @@ import { getSystemStatus } from './system/status'
 import { getPersonalNote } from './ai/personalNote'
 import { getHomeWeather } from './system/homeWeather'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
-import { setNotchInteractive } from './system/notch'
+import { resizeNotch } from './system/notch'
 import { getForegroundWindowId, moveWindow } from './lib/windows'
-import { sendCommand, showMainWindow } from './system/window'
+import { sendAttachPaths, sendCommand, showMainWindow } from './system/window'
 import {
   getVoiceState,
   pushVoiceAudio,
@@ -22,7 +22,7 @@ import {
   voicePlaybackEnded
 } from './voice/session'
 import { fetchCalendarEvents, toCalendarItem } from './google/calendar'
-import { promises as fs } from 'node:fs'
+import { promises as fs, statSync } from 'node:fs'
 import { editAndResend, regenerateReply, sendMessage, stopChat } from './ai/chat'
 import { respondToApproval } from './tools/approval'
 import { connectGoogle, disconnectGoogle, getGoogleStatus } from './google/auth'
@@ -139,9 +139,26 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:openLogs', () => openLogDirectory())
 
   // Çentik: fare üstündeyken tıklamaları alır; "Sohbette aç" ana pencerede sayfa açar
-  ipcMain.on('notch:interactive', (_event, interactive: unknown) =>
-    setNotchInteractive(interactive === true)
+  ipcMain.on('notch:resize', (_event, width: unknown, height: unknown) =>
+    resizeNotch(Number(width), Number(height))
   )
+  // Çentiğe bırakılan belgeler: sadece var olan dosyaların yolları kabul edilir, en fazla 10 tane
+  ipcMain.on('notch:drop-files', (_event, paths: unknown) => {
+    if (!Array.isArray(paths)) return
+    const files = paths
+      .filter((path): path is string => typeof path === 'string' && path.length < 1024)
+      .filter((path) => {
+        try {
+          return statSync(path).isFile()
+        } catch {
+          return false
+        }
+      })
+      .slice(0, 10)
+    if (files.length === 0) return
+    showMainWindow()
+    sendAttachPaths(files)
+  })
   ipcMain.handle('notch:navigate', (_event, page: string) => {
     // Sadece sayfa kimliği biçimi ("tasks" gibi); komut metnine başka bir şey eklenemesin
     if (typeof page !== 'string' || !/^[a-z]{1,20}$/.test(page)) return

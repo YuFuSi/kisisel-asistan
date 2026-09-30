@@ -5,13 +5,17 @@ import { daemonForegroundIsFullscreen } from '../lib/windowDaemon'
 
 // Jarvis Çentiği: ana ekranın üst ortasında duran, saydam, her zaman üstte küçük pencere.
 // İçinde gözlü damla durur; onay beklenince, iş bitince veya araç çalışırken aşağı doğru açılır.
-// Pencere, kartın açılabileceği kadar büyüktür ama boş kısımlar tıklamayı alttaki pencereye
-// geçirir (setIgnoreMouseEvents); fare damlanın/kartın üstüne gelince arayüz bunu kapatır.
+// Pencere her zaman içeriği kadardır (arayüz boyunu bildirir); böylece boş alan ekranı kaplamaz ve
+// belgeler çentiğe sürüklenip bırakılabilir (tıklamayı alta geçiren pencereye bırakma çalışmıyor).
 // Ana pencereyle aynı renderer bundle'ı #notch işaretiyle açılır.
 
-const WIDTH = 460
-const HEIGHT = 340
+// Başlangıç boyu (küçük damla); arayüz yüklenince gerçek boyunu bildirir
+const START_WIDTH = 100
+const START_HEIGHT = 48
+const MAX_WIDTH = 480
+const MAX_HEIGHT = 420
 const FULLSCREEN_POLL_MS = 2000
+let size = { width: START_WIDTH, height: START_HEIGHT }
 
 let notchWindow: BrowserWindow | null = null
 let pollTimer: ReturnType<typeof setInterval> | undefined
@@ -20,10 +24,10 @@ let hiddenForFullscreen = false
 function notchBounds(): Electron.Rectangle {
   const { bounds } = screen.getPrimaryDisplay()
   return {
-    x: Math.round(bounds.x + (bounds.width - WIDTH) / 2),
+    x: Math.round(bounds.x + (bounds.width - size.width) / 2),
     y: bounds.y,
-    width: WIDTH,
-    height: HEIGHT
+    width: size.width,
+    height: size.height
   }
 }
 
@@ -49,7 +53,6 @@ function createNotchWindow(): BrowserWindow {
     }
   })
   window.setAlwaysOnTop(true, 'screen-saver')
-  window.setIgnoreMouseEvents(true, { forward: true })
   window.on('ready-to-show', () => {
     if (!hiddenForFullscreen) window.showInactive()
   })
@@ -95,11 +98,15 @@ export function applyNotch(enabled: boolean): void {
   }
 }
 
-/** Fare damlanın veya kartın üstündeyken tıklamaları çentik alır, değilse alttaki pencere */
-export function setNotchInteractive(interactive: boolean): void {
+/** Arayüzün bildirdiği içerik boyuna göre pencereyi ekranın üst ortasında yeniden boyutlandırır */
+export function resizeNotch(width: number, height: number): void {
   if (!notchWindow || notchWindow.isDestroyed()) return
-  if (interactive) notchWindow.setIgnoreMouseEvents(false)
-  else notchWindow.setIgnoreMouseEvents(true, { forward: true })
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return
+  size = {
+    width: Math.min(MAX_WIDTH, Math.max(40, Math.ceil(width))),
+    height: Math.min(MAX_HEIGHT, Math.max(24, Math.ceil(height)))
+  }
+  notchWindow.setBounds(notchBounds())
 }
 
 export function disposeNotch(): void {
