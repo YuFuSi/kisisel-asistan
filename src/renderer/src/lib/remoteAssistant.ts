@@ -9,7 +9,7 @@ export interface RemoteAssistant {
   notice: number
 }
 
-// Yardımcı pencereler (çentik, HUD) ana pencereyle aynı durumu gösterir: sohbet olayları ana
+// Yardımcı pencere (çentik) ana pencereyle aynı durumu gösterir: sohbet olayları ana
 // süreçten tüm pencerelere yayınlanır (assistantState bunları dinler), sesli sohbetin aşaması da
 // voice olaylarıyla gelir. Ses çalma ana pencerede olduğu için "konuşuyor", sesli sohbet cevap
 // verirken başka iş yoksa buradan çıkarılır.

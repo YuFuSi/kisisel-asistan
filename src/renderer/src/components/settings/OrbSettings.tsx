@@ -49,7 +49,7 @@ function OrbSettings(): React.JSX.Element {
             <button onClick={() => setOrbPrefs({ face: false })} className={chip(!prefs.face)}>
               Gizle
             </button>
-            <span className="ml-2" title="Küçük hâli: başlık çubuğu ve HUD">
+            <span className="ml-2" title="Küçük hâli: başlık çubuğu ve çentik">
               <Orb state="idle" size={56} />
             </span>
           </div>

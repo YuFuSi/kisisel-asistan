@@ -6,7 +6,7 @@ import { speakWithVoice } from '../voice/session'
 import { notifyPulse, showMainWindow } from './window'
 
 // Tek ses: hatırlatma, proaktif uyarı, pil ve rutin bildirimleri aynı yoldan geçer. Windows
-// bildirimi gösterilir, küre (ana pencere ve HUD) nabız atar; ayar açıksa ve sessiz saat değilse
+// bildirimi gösterilir, küre (ana pencere ve çentik) nabız atar; ayar açıksa ve sessiz saat değilse
 // Jarvis uyarıyı sesli de söyler.
 
 export interface JarvisNotice {

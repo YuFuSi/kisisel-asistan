@@ -14,7 +14,7 @@ function NoticeSettings({ settings, onUpdate }: NoticeSettingsProps): React.JSX.
     <div className="space-y-6">
       <Toggle
         label="Uyarıları sesli söylesin"
-        description="Hatırlatmalar, pil uyarısı, bitmiş rutinler ve Jarvis'in fark ettiği şeyler bildirimin yanında Jarvis'in sesiyle de gelir. Küre ve HUD her uyarıda nabız atar."
+        description="Hatırlatmalar, pil uyarısı, bitmiş rutinler ve Jarvis'in fark ettiği şeyler bildirimin yanında Jarvis'in sesiyle de gelir. Küre ve çentik her uyarıda nabız atar."
         checked={settings.noticesSpoken}
         onChange={(checked) => void onUpdate({ noticesSpoken: checked })}
       />

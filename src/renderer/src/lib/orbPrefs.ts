@@ -65,7 +65,7 @@ function emit(): void {
   listeners.forEach((listener) => listener())
 }
 
-// HUD penceresi ayrı bir sayfa: orada yapılan değişiklik buraya da gelsin
+// Çentik penceresi ayrı bir sayfa: orada yapılan değişiklik buraya da gelsin
 window.addEventListener('storage', (event) => {
   if (event.key !== KEY) return
   prefs = load()

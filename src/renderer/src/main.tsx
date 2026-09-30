@@ -4,15 +4,13 @@ import './assets/main.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import HudApp from './HudApp'
 import NotchApp from './NotchApp'
 import ToastProvider from './components/ui/ToastProvider'
 
-// Ayrı bir electron-vite giriş noktası açmadan, aynı bundle #hud ile HUD penceresini render eder
-const isHud = window.location.hash === '#hud'
+// Ayrı bir electron-vite giriş noktası açmadan, aynı bundle #notch ile çentik penceresini render eder
 const isNotch = window.location.hash === '#notch'
-// Çentik de HUD gibi saydam zeminli yardımcı pencere
-if (isHud || isNotch) document.body.classList.add('hud-mode')
+// Çentik saydam zeminli yardımcı pencere
+if (isNotch) document.body.classList.add('hud-mode')
 
 // Arayüzde yakalanmayan hatalar günlük dosyasına yazılsın (sorun ayıklarken gerekli)
 window.addEventListener('error', (event) => {
@@ -29,9 +27,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isHud ? (
-      <HudApp />
-    ) : isNotch ? (
+    {isNotch ? (
       <NotchApp />
     ) : (
       <ToastProvider>

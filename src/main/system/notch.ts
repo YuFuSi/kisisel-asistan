@@ -7,7 +7,7 @@ import { daemonForegroundIsFullscreen } from '../lib/windowDaemon'
 // İçinde gözlü damla durur; onay beklenince, iş bitince veya araç çalışırken aşağı doğru açılır.
 // Pencere, kartın açılabileceği kadar büyüktür ama boş kısımlar tıklamayı alttaki pencereye
 // geçirir (setIgnoreMouseEvents); fare damlanın/kartın üstüne gelince arayüz bunu kapatır.
-// HUD gibi aynı renderer bundle'ı #notch işaretiyle açılır.
+// Ana pencereyle aynı renderer bundle'ı #notch işaretiyle açılır.
 
 const WIDTH = 460
 const HEIGHT = 220

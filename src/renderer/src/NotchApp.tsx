@@ -147,7 +147,7 @@ function NotchApp(): React.JSX.Element {
                 ` · ${shownOutcome.toolCount} adım`}
             </span>
             <button
-              onClick={() => void window.api.hud.navigate('chat')}
+              onClick={() => void window.api.notch.navigate('chat')}
               className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs text-accent hover:text-accent-hover"
             >
               <MessageSquare className="h-3.5 w-3.5" />
