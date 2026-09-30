@@ -6,6 +6,7 @@ export const OUTCOME_LABELS: Record<OutcomeKind, string> = {
   partial: 'Kısmen tamamlandı',
   stopped: 'Durduruldu',
   rejected: 'Onay verilmedi',
+  timeout: 'Onay süresi doldu',
   error: 'İşlem tamamlanamadı'
 }
 

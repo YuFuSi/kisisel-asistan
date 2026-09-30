@@ -24,7 +24,8 @@ const message: ChatMessage = {
   role: 'assistant',
   content: '',
   tools,
-  createdAt: '2026-09-30T12:00:00'
+  createdAt: '2026-09-30T12:00:00',
+  outcome: null
 }
 
 describe('Activity Surface', () => {
@@ -89,7 +90,7 @@ describe('Activity Surface', () => {
     vi.unstubAllGlobals()
   })
   it('eski/uydurma durumları yüklemez; yalnızca sonuç türünü kalıcı tutar', () => {
-    let stored = JSON.stringify({ old: 'timeout', bad: 'constructor', valid: 'partial' })
+    let stored = JSON.stringify({ old: 'eski-durum', bad: 'constructor', valid: 'partial' })
     vi.stubGlobal('localStorage', {
       getItem: () => stored,
       setItem: (_key: string, value: string): void => {

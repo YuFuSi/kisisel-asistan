@@ -4,6 +4,7 @@ import type {
   ChatRole,
   Conversation,
   ConversationSearchResult,
+  OutcomeKind,
   ToolActivity
 } from '../../shared/api'
 
@@ -21,6 +22,7 @@ interface MessageRow {
   content: string
   tools: string
   created_at: string
+  outcome: string | null
 }
 
 const CONVERSATION_FIELDS = 'id, title, updated_at, pinned'
@@ -41,8 +43,11 @@ const toMessage = (row: MessageRow): ChatMessage => ({
   role: row.role,
   content: row.content,
   tools: JSON.parse(row.tools) as ToolActivity[],
-  createdAt: row.created_at
+  createdAt: row.created_at,
+  outcome: OUTCOMES.includes(row.outcome as OutcomeKind) ? (row.outcome as OutcomeKind) : null
 })
+
+const OUTCOMES: OutcomeKind[] = ['completed', 'partial', 'rejected', 'timeout', 'stopped', 'error']
 
 // Aramada Türkçe I/İ/ı/i ayrımı kullanıcıyı yanıltıyor ("Ikinci" yazan başlık "ikinci" ile bulunmalı),
 // bu yüzden hepsi "i" sayılır. Karakter sayısı değişmez, böylece alıntı konumları kaymaz.
@@ -130,13 +135,16 @@ export function addMessage(
   conversationId: number,
   role: ChatRole,
   content: string,
-  tools: ToolActivity[] = []
+  tools: ToolActivity[] = [],
+  outcome: OutcomeKind | null = null
 ): ChatMessage {
   const db = getDb()
   return db.transaction(() => {
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO messages (conversation_id, role, content, tools) VALUES (?, ?, ?, ?)')
-      .run(conversationId, role, content, JSON.stringify(tools))
+      .prepare(
+        'INSERT INTO messages (conversation_id, role, content, tools, outcome) VALUES (?, ?, ?, ?, ?)'
+      )
+      .run(conversationId, role, content, JSON.stringify(tools), outcome)
     db.prepare("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?").run(
       conversationId
     )

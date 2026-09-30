@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { ChatEvent, ToolApproval, ToolCard, VoicePhase } from '@shared/api'
+import type { ApprovalResult } from '@shared/api'
 import { finishedOutcome, shouldCelebrate, type OutcomeKind } from './outcome'
 import { playSfx } from './soundEffects'
 import { upsertStep, type WorkStep } from './workSteps'
@@ -126,7 +127,7 @@ function setApprovals(next: PendingApproval[]): void {
 
 // Cevap başına araçlar (id → hata verdi mi) ve reddedilen onay; bitişte sonuca çevrilir
 const replyTools = new Map<number, Map<string, boolean>>()
-const replyRejected = new Set<number>()
+const replyApprovals = new Map<number, ApprovalResult[]>()
 const outcomeListeners = new Set<() => void>()
 let outcome: Outcome | null = null
 let outcomeSeq = 0
@@ -135,7 +136,7 @@ function publishOutcome(conversationId: number, kind: OutcomeKind): void {
   const toolCount = replyTools.get(conversationId)?.size ?? 0
   outcome = { conversationId, kind, toolCount, seq: ++outcomeSeq }
   replyTools.delete(conversationId)
-  replyRejected.delete(conversationId)
+  replyApprovals.delete(conversationId)
   outcomeListeners.forEach((listener) => listener())
   // Küre sadece gerçekten yapılmış bir işi kutlar; düz metin cevabı veya kısmi iş kutlanmaz
   if (shouldCelebrate(kind, toolCount)) setEmotion('success')
@@ -157,13 +158,15 @@ function trackOutcome(event: ChatEvent): void {
       ])
       break
     case 'approval-resolved':
-      if (!event.approved) replyRejected.add(id)
+      replyApprovals.set(id, [...(replyApprovals.get(id) ?? []), event.result])
       setApprovals(approvals.filter((item) => item.approval.id !== event.approvalId))
       break
     case 'done': {
+      // Ana sürecin mesajla birlikte kaydettiği sonuç esastır; yoksa buradan hesaplanır
       publishOutcome(
         id,
-        finishedOutcome([...(replyTools.get(id)?.values() ?? [])], replyRejected.has(id))
+        event.message.outcome ??
+          finishedOutcome([...(replyTools.get(id)?.values() ?? [])], replyApprovals.get(id) ?? [])
       )
       setApprovals(approvals.filter((item) => item.conversationId !== id))
       break
@@ -243,7 +246,7 @@ export function noteReplyStarted(conversationId: number): void {
  */
 export function noteReplyFailed(conversationId: number): void {
   replyTools.delete(conversationId)
-  replyRejected.delete(conversationId)
+  replyApprovals.delete(conversationId)
   if (replies.delete(conversationId)) update()
 }
 

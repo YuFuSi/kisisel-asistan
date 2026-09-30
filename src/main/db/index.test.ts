@@ -12,7 +12,7 @@ describe('migrations', () => {
   it('en son sürüme kadar sorunsuz uygulanır', () => {
     initDatabase(':memory:')
     const version = getDb().pragma('user_version', { simple: true }) as number
-    expect(version).toBe(11)
+    expect(version).toBe(12)
   })
 
   it('memories ve notes tablolarına embedding sütunları ekler (migration 9)', () => {

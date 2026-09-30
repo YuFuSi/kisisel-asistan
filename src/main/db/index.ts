@@ -167,6 +167,11 @@ const migrations: string[] = [
     embedding            BLOB,
     updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  `,
+  // 12: Asistan cevabının sonucu (tamamlandı, kısmen, reddedildi, süre doldu, durduruldu, hata);
+  // arayüz geçmişteki işlemlerin nasıl bittiğini buradan okur
+  `
+  ALTER TABLE messages ADD COLUMN outcome TEXT;
   `
 ]
 

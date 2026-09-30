@@ -19,7 +19,8 @@ const message = (
   role,
   content,
   tools,
-  createdAt: '2026-09-12 10:00:00'
+  createdAt: '2026-09-12 10:00:00',
+  outcome: null
 })
 
 describe('conversationToMarkdown', () => {

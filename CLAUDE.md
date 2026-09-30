@@ -181,7 +181,7 @@ vitest.config.ts            Test ayarları
 - **Veri değişim olayı:** IPC'deki değiştirici işlemler `changing(scope, ...)` ile sarılır. Sayfalar veriyi `useLiveData(load, scope)` ile alır ve kendiliğinden yenilenir.
 - **`data/` klasörü** `electron` import etmez. Electron'a bağlı işler `events.ts`, `scheduler/`, `settings.ts`, `ai/` içinde durur.
 - **Renderer**, Node/Electron'a doğrudan erişmez, sadece `window.api` kullanır. Ham `ipcRenderer` açılmaz.
-- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 11.
+- **Veritabanı migration:** `src/main/db/index.ts` içindeki `migrations` dizisinin **sonuna** yeni eleman eklenir. Mevcut elemanlar asla değiştirilmez (`PRAGMA user_version` ile takip edilir). Şu an sürüm 12.
 - **Veri güvenliği:** veritabanı dosyasına doğrudan dokunan kod (`db/backup.ts`) sadece veritabanı kapalıyken dosya değiştirir. Yeni zamanlayıcı veya uzun iş, çıkışta `will-quit` içinde durdurulur; `closeDb` en sonda çağrılır.
 - **Hata ayıklama:** `console.*` günlük dosyasına da gider; kullanıcıya gösterilmeyen ama sonradan lazım olacak hatalar `console.error` ile yazılır.
 - **Zaman:** Hatırlatma zamanı epoch ms (INTEGER), görev son tarihi yerel `YYYY-MM-DD`. Modele ve modelden gelen zamanlar yerel `YYYY-MM-DDTHH:mm` biçimindedir (`lib/datetime.ts`).
