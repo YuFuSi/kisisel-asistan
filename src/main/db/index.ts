@@ -222,8 +222,16 @@ export function isDbOpen(): boolean {
  * Uygulama düzgün kapanamasa bile (süreç öldürülürse, elektrik giderse) veri ana dosyada kalsın diye
  * düzenli aralıklarla çağrılır.
  */
-export function checkpointDb(): void {
-  db?.pragma('wal_checkpoint(TRUNCATE)')
+export function checkpointDb(): boolean {
+  if (!db) return true
+  const [row] = db.pragma('wal_checkpoint(TRUNCATE)') as {
+    busy: number
+    log: number
+    checkpointed: number
+  }[]
+  // busy = 1: başka bir okuyucu/yazıcı yüzünden aktarma tamamlanamadı; değişiklikler hâlâ sadece
+  // WAL'de (elektrik kesilirse kaybolma riski en çok bu durumda)
+  return !row || (row.busy === 0 && row.log === row.checkpointed)
 }
 
 /** Veritabanı sağlamsa 'ok', değilse bulunan sorunlar */

@@ -8,6 +8,7 @@ import {
   statSync
 } from 'node:fs'
 import { join } from 'node:path'
+import Database from 'better-sqlite3'
 import { getDb, isDbOpen } from './index'
 import type { BackupInfo } from '../../shared/api'
 
@@ -93,6 +94,12 @@ export async function createBackup(dir: string, name: string): Promise<BackupInf
   const partial = `${target}.part`
   rmSync(partial, { force: true })
   await getDb().backup(partial)
+  // Yedek alınır alınmaz doğrulanır: bozuk bir yedek, ihtiyaç anında "sağlam yedek" sanılmasın
+  const problem = backupProblem(partial)
+  if (problem) {
+    rmSync(partial, { force: true })
+    throw new Error(`Alınan yedek doğrulanamadı: ${problem}`)
+  }
   renameSync(partial, target)
   const stats = statSync(target)
   return { name, createdAt: stats.mtimeMs, size: stats.size }
@@ -124,4 +131,53 @@ export function replaceDatabaseFile(
     else rmSync(file, { force: true })
   }
   copyFileSync(backupPath, dbPath)
+}
+
+export interface BackupSummary {
+  conversations: number
+  messages: number
+  memories: number
+  /** Son mesajın zamanı (veritabanındaki UTC metni); hiç mesaj yoksa null */
+  lastMessageAt: string | null
+}
+
+/** Yedek dosyasını salt okunur açıp bütünlüğünü denetler; sağlamsa null, değilse sorun metni */
+export function backupProblem(path: string): string | null {
+  let db: Database.Database | null = null
+  try {
+    db = new Database(path, { readonly: true, fileMustExist: true })
+    const rows = db.pragma('integrity_check') as { integrity_check: string }[]
+    const result = rows.map((row) => row.integrity_check).join('\n')
+    return result === 'ok' ? null : result
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err)
+  } finally {
+    db?.close()
+  }
+}
+
+/**
+ * Yedeğin içinde ne olduğu (geri yükleme penceresinde gösterilir). 2026-09-30'da sağlam ama başka bir
+ * geçmişe ait yedek neredeyse geri yükleniyordu; sayılar kullanıcının doğru yedeği tanımasını sağlar.
+ */
+export function summarizeBackup(path: string): BackupSummary | null {
+  let db: Database.Database | null = null
+  try {
+    db = new Database(path, { readonly: true, fileMustExist: true })
+    const count = (table: string): number =>
+      (db!.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n
+    const last = db.prepare('SELECT max(created_at) AS at FROM messages').get() as {
+      at: string | null
+    }
+    return {
+      conversations: count('conversations'),
+      messages: count('messages'),
+      memories: count('memories'),
+      lastMessageAt: last.at
+    }
+  } catch {
+    return null
+  } finally {
+    db?.close()
+  }
 }
