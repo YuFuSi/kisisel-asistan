@@ -34,10 +34,12 @@ export const ORB_INTENSITIES: OrbIntensity[] = [
 export interface OrbPrefs {
   theme: string
   intensity: string
+  /** Kürede ışıktan gözler (yüz) gösterilsin mi */
+  face: boolean
 }
 
 const KEY = 'orbPrefs'
-const DEFAULTS: OrbPrefs = { theme: 'indigo', intensity: 'balanced' }
+const DEFAULTS: OrbPrefs = { theme: 'indigo', intensity: 'balanced', face: true }
 
 function load(): OrbPrefs {
   try {
@@ -48,7 +50,8 @@ function load(): OrbPrefs {
       theme: ORB_THEMES.some((t) => t.id === parsed.theme) ? String(parsed.theme) : DEFAULTS.theme,
       intensity: ORB_INTENSITIES.some((i) => i.id === parsed.intensity)
         ? String(parsed.intensity)
-        : DEFAULTS.intensity
+        : DEFAULTS.intensity,
+      face: typeof parsed.face === 'boolean' ? parsed.face : DEFAULTS.face
     }
   } catch {
     return DEFAULTS

@@ -10,7 +10,16 @@ import { capUnfocused, startFrameLoop } from '../../lib/frameLoop'
 import { createSphereRenderer } from '../../lib/orbGl'
 import { playSfx } from '../../lib/soundEffects'
 import { orbHslaShift, orbRgb, STATE_HUE_SHIFT } from '../../lib/orbColor'
-import { orbLook } from '../../lib/orbPrefs'
+import { getOrbPrefs, orbLook } from '../../lib/orbPrefs'
+import {
+  blinkAmount,
+  drawFace,
+  faceTarget,
+  mixFace,
+  NEUTRAL_FACE,
+  nextBlinkDelay,
+  type FaceParams
+} from '../../lib/orbFace'
 import type { WorkStep } from '../../lib/workSteps'
 
 interface OrbProps {
@@ -34,9 +43,7 @@ const BREATH_AMOUNT = 0.02
 const EASE_PER_SECOND = 3
 const SMALL_SIZE = 120
 const HUE_DRIFT = 10
-const PULSE_SECONDS = 5
 const SURFACE_DOTS = 620
-const HALO_DOTS = 70
 const TAU = Math.PI * 2
 
 interface Params {
@@ -107,7 +114,6 @@ function buildDots(count: number, halo: boolean): Dot[] {
   })
 }
 
-const fract = (value: number): number => value - Math.floor(value)
 const NO_STEPS: WorkStep[] = []
 // Adım noktaları arasındaki açı ve kürenin çevresindeki yarıçap çarpanı
 const STEP_SPACING = TAU / 14
@@ -159,7 +165,6 @@ function Orb({
     const surface = small
       ? []
       : buildDots(Math.max(120, Math.round(SURFACE_DOTS * dotScale)), false)
-    const halo = small ? [] : buildDots(HALO_DOTS, true)
     // Gövde için WebGL (HUD'daki küçük küre ve WebGL'siz ortam 2D gövdeyle çizer)
     const sphere = small ? null : createSphereRenderer(size, dpr)
     // Ses çubuklarının yumuşatılmış değerleri (aynalı: BAND_COUNT * 2 çubuk)
@@ -179,8 +184,6 @@ function Orb({
     // Duygu: yeni bir sinyal geldiğinde başlangıç zamanı tutulur; açılışta eski sinyal sayılmaz
     let emotionSeen = emotionRef.current?.seq ?? -1
     let emotionStart = 0
-    // Kararsızlık (onay bekleme) yumuşakça girer ve çıkar
-    let unsureAmount = 0
     // Adım noktalarının görünürlüğü yumuşakça artar ve azalır
     let stepsAmount = 0
     let prevState = stateRef.current
@@ -212,6 +215,10 @@ function Orb({
       window.addEventListener('pointermove', onPointerMove)
       document.addEventListener('pointerleave', onPointerLeave)
     }
+    // Yüz: hedefe yumuşakça yaklaşan göz parametreleri ve rastgele aralıklı göz kırpma
+    let face: FaceParams = { ...NEUTRAL_FACE }
+    let blinkStart = -1e9
+    let nextBlink = performance.now() + nextBlinkDelay(Math.random())
     let chunksSeen = getReplyChunks()
     let kick = 0
     let last = performance.now()
@@ -300,27 +307,35 @@ function Orb({
         emotionSeen = signal.seq
         emotionStart = now
       }
-      unsureAmount +=
-        ((signal?.kind === 'unsure' ? 1 : 0) - unsureAmount) * (reduced ? 1 : Math.min(dt * 3, 1))
-      let burst = 0
       let burstKind: 'success' | 'error' | null = null
       if (signal && signal.kind !== 'unsure') {
-        const progress = (now - emotionStart) / (signal.kind === 'success' ? 1500 : 1100)
-        if (progress >= 0 && progress < 1) {
-          burst = progress
-          burstKind = signal.kind
+        const progress = (now - emotionStart) / (signal.kind === 'success' ? 1800 : 2200)
+        if (progress >= 0 && progress < 1) burstKind = signal.kind
+      }
+      // Küre hep lila kalır; durum ve duyguyu gözler anlatır (sarsıntı, renk boyama yok).
+      // Yüz kapalıysa (Ayarlar) eski davranışın sakin hâli kalır: sadece biçim ve ritim.
+      const faceOn = getOrbPrefs().face
+      if (faceOn) {
+        const goal = { ...faceTarget(current, burstKind) }
+        // Çalışırken bakış, kürenin çevresinde çalışan adıma döner
+        const running = stepsRef.current.findIndex((step) => step.status === 'running')
+        if (current === 'working' && running >= 0) {
+          const angle = -Math.PI / 2 + running * STEP_SPACING
+          goal.lookX = Math.cos(angle) * 0.7
+          goal.lookY = Math.sin(angle) * 0.7
+        } else if (current === 'idle' || current === 'listening' || current === 'approval') {
+          // Boştayken ve dinlerken imlece bakar
+          goal.lookX += gazeX * 0.7
+          goal.lookY += gazeY * 0.6
+        }
+        face = reduced ? goal : mixFace(face, goal, Math.min(dt * 7, 1))
+        if (!reduced && now > nextBlink) {
+          blinkStart = now
+          nextBlink = now + nextBlinkDelay(Math.random())
         }
       }
-      const pulse = burstKind ? Math.pow(Math.sin(Math.PI * burst), 0.7) : 0
-      const motionOk = !reduced
-      const shakeX = motionOk && burstKind === 'error' ? Math.sin(burst * 42) * (1 - burst) * 7 : 0
-      const swayX = motionOk ? Math.sin(t * 1.7) * 6 * unsureAmount : 0
-      const swayY = motionOk ? Math.cos(t * 1.2) * 3 * unsureAmount : 0
-      const swayTilt = motionOk ? Math.sin(t * 1.4) * 0.05 * unsureAmount : 0
-      // Renk dili: başarı yeşil, hata kırmızı, onay bekleme ve uyarı (bildirim) kehribar.
-      // Bildirim tonu gövdeye de yansır ki köşedeki küçük kürede de görünsün.
-      const tintHue = burstKind === 'success' ? 150 : burstKind === 'error' ? 355 : 40
-      const tintAlpha = burstKind ? 0.32 * pulse : Math.max(0.14 * unsureAmount, 0.3 * noticeBeat)
+      const blink =
+        reduced || face.smile > 0.3 || face.cross > 0.3 ? 0 : blinkAmount(now - blinkStart)
 
       // Gövde çevresi: konuşurken yüzey sesle birlikte yumuşakça titrer, aksi halde düz daire
       const wobble = params.speak * (0.005 + barMean * 0.02)
@@ -349,9 +364,6 @@ function Orb({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, size, size)
       ctx.save()
-      ctx.translate(cx + shakeX + swayX, cy + swayY)
-      ctx.rotate(swayTilt)
-      ctx.translate(-cx, -cy)
 
       if (!small) {
         // Yere düşen yumuşak ışıma: küre havada asılı gibi dursun
@@ -384,7 +396,13 @@ function Orb({
       ctx.scale(shape.sx, shape.sy)
       ctx.translate(-cx, -cy)
 
-      if (sphere) {
+      if (small && faceOn) {
+        // Damla: küçük boyutta küre yerine yumuşak, hafif basık bir gövde; yüz asıl kimlik
+        ctx.fillStyle = tone(22, 0.96)
+        ctx.beginPath()
+        ctx.ellipse(cx, cy + r * 0.05, r * 1.1, r, 0, 0, TAU)
+        ctx.fill()
+      } else if (sphere) {
         // Gövde: WebGL gölgelendiriciyle gerçek 3B ışıklı cam küre (normal, Fresnel, hacimli sis)
         const hue = hueShift + drift + look.hue
         sphere.render({
@@ -485,81 +503,30 @@ function Orb({
       }
 
       // Kenar ışığı: kürenin cam gibi görünmesini sağlayan ince parlak çizgi
-      ctx.lineWidth = small ? 1 : 1.6
-      ctx.strokeStyle = tone(82, 0.55)
-      outline(r - 0.8)
-      ctx.stroke()
-      // Duygu tonu: gövdenin üstüne yarı saydam renk ve kenarda ince ışık
-      if (tintAlpha > 0.005) {
-        ctx.fillStyle = `hsla(${tintHue}, 85%, 60%, ${tintAlpha})`
-        outline(r)
-        ctx.fill()
-        ctx.lineWidth = 2
-        ctx.strokeStyle = `hsla(${tintHue}, 90%, 72%, ${Math.min(1, tintAlpha * 2.2)})`
+      ctx.lineWidth = small ? 1.2 : 1.6
+      ctx.strokeStyle = tone(82, small && faceOn ? 0.85 : 0.55)
+      if (small && faceOn) {
+        ctx.beginPath()
+        ctx.ellipse(cx, cy + r * 0.05, r * 1.1 - 0.6, r - 0.6, 0, 0, TAU)
+      } else {
         outline(r - 0.8)
-        ctx.stroke()
+      }
+      ctx.stroke()
+      if (faceOn) {
+        drawFace(
+          ctx,
+          { ...face, open: face.open * (1 - blink) },
+          {
+            cx,
+            cy: small ? cy + r * 0.05 : cy,
+            r,
+            tone: (lightness, alpha = 1) => tone(lightness, alpha),
+            small,
+            energy: params.speak * level
+          }
+        )
       }
       ctx.restore()
-
-      // Başarı: dışa yayılan yeşil halka ve kısa süreli kıvılcımlar
-      if (burstKind === 'success' && !small) {
-        ctx.lineWidth = 2
-        ctx.strokeStyle = `hsla(150, 80%, 70%, ${(1 - burst) * 0.6})`
-        ctx.beginPath()
-        ctx.arc(cx, cy, r * (1.05 + burst * 0.9), 0, TAU)
-        ctx.stroke()
-        for (let k = 0; k < 12; k++) {
-          const angle = (k / 12) * TAU + 0.3
-          const dist = r * (1.05 + burst * 0.75)
-          ctx.fillStyle = `hsla(150, 90%, 78%, ${(1 - burst) * 0.9})`
-          ctx.beginPath()
-          ctx.arc(
-            cx + Math.cos(angle) * dist,
-            cy + Math.sin(angle) * dist,
-            2.2 * (1 - burst) + 0.6,
-            0,
-            TAU
-          )
-          ctx.fill()
-        }
-      }
-
-      // Kararsızlık (onay bekleme): kürenin çevresinde yavaşça dönen kesikli amber halka
-      if (unsureAmount > 0.01 && !small) {
-        ctx.lineWidth = 2
-        ctx.setLineDash([4, 9])
-        ctx.lineDashOffset = -t * 10
-        ctx.strokeStyle = `hsla(40, 85%, 68%, ${0.5 * unsureAmount})`
-        ctx.beginPath()
-        ctx.arc(cx, cy, r * 1.32, 0, TAU)
-        ctx.stroke()
-        ctx.setLineDash([])
-      }
-
-      if (!small) {
-        // Halo: kürenin çevresinde yavaşça yükselip sönen toz parçacıkları
-        for (const dot of halo) {
-          const life = fract(dot.seed * 7 + t * 0.035)
-          const dist = r * (1.12 + life * 0.55)
-          const alpha = Math.sin(life * Math.PI) * (0.3 + energy * 0.1)
-          ctx.fillStyle = tone(82, alpha, dot.seed * 14)
-          ctx.beginPath()
-          ctx.arc(cx + dot.x * dist, cy + dot.y * dist * 0.92, 0.7 + life * 0.6, 0, TAU)
-          ctx.fill()
-        }
-      }
-
-      // Beklemede: kürenin içinden dışa yumuşakça yayılan dalgalar
-      if (!small && !reduced && params.listen + params.arcs + params.speak < 0.5) {
-        for (let i = 0; i < 2; i++) {
-          const phase = fract(t / PULSE_SECONDS + i * 0.5)
-          ctx.lineWidth = 1.5
-          ctx.strokeStyle = tone(80, Math.pow(1 - phase, 2) * 0.3, i * 10)
-          ctx.beginPath()
-          ctx.arc(cx, cy, r * (1.02 + phase * 0.55), 0, TAU)
-          ctx.stroke()
-        }
-      }
 
       // Dinlerken ve konuşurken: kürenin çevresinde ses çubuğu halkası.
       // Dinlerken gerçek mikrofon bantları, konuşurken cevabın ses bantları (yoksa yapay dalga) çizilir.
@@ -696,8 +663,8 @@ function Orb({
           ctx.stroke()
         }
         if (noticeBeat > 0.01) {
-          ctx.lineWidth = 3
-          ctx.strokeStyle = `hsla(40, 90%, 62%, ${noticeBeat * 0.6})`
+          ctx.lineWidth = 2
+          ctx.strokeStyle = tone(84, noticeBeat * 0.55)
           ctx.beginPath()
           ctx.arc(cx, cy, r * (1.04 + noticeBeat * 0.12), 0, TAU)
           ctx.stroke()
@@ -721,7 +688,8 @@ function Orb({
         stateRef.current !== 'idle' || exciteRef.current > 0 || energy > 0.02 || kick > 0.01
       return capUnfocused(busy ? 60 : 24, 12)
     }
-    const stopLoop = startFrameLoop(draw, fps)
+    // Gizli sayfadaki (ör. arkada duran Asistan sayfası) küre hiç çizilmez
+    const stopLoop = startFrameLoop(draw, fps, () => canvas.offsetParent !== null)
     return () => {
       window.removeEventListener('pointermove', onPointerMove)
       document.removeEventListener('pointerleave', onPointerLeave)

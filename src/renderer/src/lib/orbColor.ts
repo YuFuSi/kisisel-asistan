@@ -4,11 +4,12 @@ import type { AssistantState } from './assistantState'
 const BASE_HUE = 231
 
 export const STATE_HUE_SHIFT: Record<AssistantState, number> = {
+  // Tasarım turu F2: küre her durumda aynı lila; durumu yüz ve hareket anlatır
   idle: 0,
-  listening: -34,
-  thinking: 26,
-  working: 44,
-  speaking: -58,
+  listening: 0,
+  thinking: 0,
+  working: 0,
+  speaking: 0,
   approval: 0
 }
 

@@ -39,6 +39,22 @@ function OrbSettings(): React.JSX.Element {
           </div>
         </Field>
         <Field
+          label="Kürenin yüzü"
+          hint="Işıktan gözler Jarvis'in ne yaptığını gösterir: dinlerken büyür, düşünürken yana bakar, iş bitince gülümser."
+        >
+          <div className="flex items-center gap-2">
+            <button onClick={() => setOrbPrefs({ face: true })} className={chip(prefs.face)}>
+              Göster
+            </button>
+            <button onClick={() => setOrbPrefs({ face: false })} className={chip(!prefs.face)}>
+              Gizle
+            </button>
+            <span className="ml-2" title="Küçük hâli: başlık çubuğu ve HUD">
+              <Orb state="idle" size={56} />
+            </span>
+          </div>
+        </Field>
+        <Field
           label="Ses efektleri"
           hint="Cevap bitince, hata olunca, onay beklerken ve bildirimde kısa sesler."
         >
