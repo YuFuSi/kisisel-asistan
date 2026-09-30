@@ -1,9 +1,14 @@
 /**
  * requestAnimationFrame üzerinde kare hızı sınırlı çizim döngüsü.
  * Pencere gizliyken çizmez; `fps()` her karede sorulur, böylece hız duruma göre değişebilir.
+ * `visible` verilirse ve false dönerse de çizmez (ör. gizli sayfadaki küre).
  * Dönen fonksiyon döngüyü durdurur.
  */
-export function startFrameLoop(draw: (now: number) => void, fps: () => number): () => void {
+export function startFrameLoop(
+  draw: (now: number) => void,
+  fps: () => number,
+  visible?: () => boolean
+): () => void {
   let frame = 0
   let last = 0
   let stopped = false
@@ -11,7 +16,7 @@ export function startFrameLoop(draw: (now: number) => void, fps: () => number): 
   const tick = (now: number): void => {
     if (stopped) return
     frame = requestAnimationFrame(tick)
-    if (document.hidden) return
+    if (document.hidden || (visible && !visible())) return
     const interval = 1000 / Math.max(1, fps())
     // Tarayıcı karesi biraz erken gelirse bir sonrakine atlamamak için 1 ms pay
     if (now - last < interval - 1) return
