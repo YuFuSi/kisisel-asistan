@@ -30,12 +30,13 @@ function NewTaskForm({ onCreate }: NewTaskFormProps): React.JSX.Element {
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="flex gap-2">
+    <form onSubmit={(e) => void submit(e)} className="flex flex-wrap gap-2">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        aria-label="Yeni görev"
         placeholder="Yeni görev ekle..."
-        className={inputClass}
+        className={`${inputClass} min-w-40 flex-1`}
       />
       <input
         type="date"

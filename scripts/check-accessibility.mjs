@@ -1,5 +1,5 @@
 import { build } from 'esbuild'
-import { readdir, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { mkdtempSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
@@ -31,6 +31,11 @@ import CommandPalette from './src/renderer/src/components/CommandPalette'
 import ActivitySurface from './src/renderer/src/components/chat/ActivitySurface'
 import ChatPage from './src/renderer/src/pages/ChatPage'
 import Sidebar from './src/renderer/src/components/Sidebar'
+import PlanningPage from './src/renderer/src/pages/PlanningPage'
+import CalendarPage from './src/renderer/src/pages/CalendarPage'
+import MemoriesView from './src/renderer/src/components/notes/MemoriesView'
+import AnalyticsPage from './src/renderer/src/pages/AnalyticsPage'
+import SettingsPage from './src/renderer/src/pages/SettingsPage'
 import HomePage from './src/renderer/src/pages/HomePage'
 import ToastProvider from './src/renderer/src/components/ui/ToastProvider'
 import ApprovalDock from './src/renderer/src/components/jarvis/ApprovalDock'
@@ -244,6 +249,55 @@ window.runHomeChecks = async () => {
   assert(starters && !starters.open,'Öneriler sürekli görünür kaldı')
   return 'Ana Sayfa: sakin başlangıç, isteğe bağlı gün bağlamı, erişilebilir komut ve katlanmış öneriler geçti.'
 }
+window.runPageChecks = async () => {
+  const today=new Date().toLocaleDateString('sv-SE')
+  const tasks=[{id:1,title:'Eski görev',dueDate:'2000-01-01',dueTime:null,doneAt:null},{id:2,title:'Bugünkü görev',dueDate:today,dueTime:'10:00',doneAt:null},{id:3,title:'Gelecek görev',dueDate:'2099-01-01',dueTime:null,doneAt:null},{id:4,title:'Biten görev',dueDate:null,dueTime:null,doneAt:Date.now()}]
+  const created=[]
+  window.api.tasks={list:async()=>tasks,create:async value=>{created.push(value);return tasks[0]}}
+  window.api.automations={list:async()=>[]}
+  window.api.google={status:async()=>({connected:false})}
+  window.api.analytics={usage:async()=>({totalCalls:4,doneCalls:0,errorCalls:1,deniedCalls:1,timeoutCalls:1,skippedCalls:1,blockedCalls:3,activeDayStreak:0,topTools:[],last14Days:[{date:today,count:0}]}),achievements:async()=>[]}
+  const render=element=>flushSync(()=>reactRoot.render(<ToastProvider>{element}</ToastProvider>))
+  render(<PlanningPage tab="tasks" onTabChange={()=>{}} />);await wait()
+  for(const label of ['Gecikmiş','Bugün','Yaklaşan']) assert(document.querySelector('section[aria-label="'+label+'"]'),'Görev grubu eksik: '+label)
+  assert(!document.querySelector('details').open,'Tamamlanan görevler açık başladı')
+  const taskInput=document.querySelector('[aria-label="Yeni görev"]')
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(taskInput,'Hızlı görev')
+  taskInput.dispatchEvent(new Event('input',{bubbles:true}));await wait();taskInput.closest('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await wait()
+  assert(created[0].title==='Hızlı görev','Hızlı görev eklenemedi')
+  render(<PlanningPage tab="routines" onTabChange={()=>{}} />);await wait()
+  const newRoutine=[...document.querySelectorAll('button')].find(button=>button.textContent==='Yeni rutin')
+  assert(newRoutine && !document.querySelector('form'),'Rutin formu sürekli görünür')
+  newRoutine.click();await wait();assert(document.querySelector('form'),'Yeni rutin formu açılmadı')
+  render(<CalendarPage onOpenSettings={()=>{}} />);await wait()
+  assert(document.querySelector('[aria-label="Sonraki gün"]') && !document.querySelector('[aria-label="Sonraki ay"]'),'Dar takvim gün akışına geçmedi')
+  assert(document.body.textContent.includes('Bugünkü görev'),'Gün akışındaki görev kayboldu')
+  window.api.memories={list:async()=>[{id:1,content:'Profil bilgisi',kind:'profil',source:'kullanici',reviewed:true,sourceConversationId:null},{id:2,content:'Tercih bilgisi',kind:'tercih',source:'otomatik',reviewed:false,sourceConversationId:3}],update:async()=>{throw new Error('Test kaydetme hatası')}}
+  render(<div style={{height:650}}><MemoriesView onOpenConversation={()=>{}} /></div>);await wait()
+  assert(document.body.textContent.includes('Profil · 1') && document.body.textContent.includes('Tercih · 1') && document.body.textContent.includes('Sohbet #3'),'Hafıza grupları veya kaynak eksik')
+  const edit=document.querySelector('[aria-label="Bilgiyi düzenle"]');edit.click();await wait()
+  const memoryInput=document.querySelector('[aria-label="Hafıza kaydını düzenle"]')
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(memoryInput,'Düzeltilen bilgi');memoryInput.dispatchEvent(new Event('input',{bubbles:true}));await wait()
+  ;[...document.querySelectorAll('button')].find(button=>button.textContent==='Kaydet').click();await wait()
+  assert(document.querySelector('[aria-label="Hafıza kaydını düzenle"]').value==='Düzeltilen bilgi','Kaydetme hatası düzeltme metnini kaybettirdi')
+  render(<AnalyticsPage />);await wait()
+  for(const label of ['Teknik hata','Kullanıcı reddi','Onay süresi doldu','İzin nedeniyle atlanan']) assert(document.body.textContent.includes(label),'Analiz ayrımı eksik: '+label)
+  const zero=document.querySelector('[title$=": 0 çağrı"]');assert(zero && zero.style.height==='0%','Sıfır gün sahte yükseklikle gösterildi')
+  let backupLoads=0
+  window.api.settings.get=async()=>({provider:'ollama',hasSecret:{},models:{ollama:'test'},briefCity:'',briefTime:'08:00',globalShortcut:'Control+Shift+J',quietStart:'22:00',quietEnd:'08:00'})
+  window.api.backups={list:async()=>{backupLoads++;return []}}
+  render(<SettingsPage />);await wait()
+  assert(document.querySelector('[role="tab"][aria-selected="true"]').textContent==='Temel tercihler','Ayarlar temel tercihlerle açılmadı')
+  const advanced=[...document.querySelectorAll('details')].find(item=>item.querySelector('summary').textContent.includes('İleri ayarlar'))
+  assert(advanced && !advanced.open && backupLoads===0,'İleri ayarlar kapalı başlamadı veya gereksiz yedek sorgusu yaptı')
+  return 'F8: görev grupları/hızlı ekleme, kapalı rutin formu, dar takvim, hafıza kaynakları/düzeltme, ayrık analiz/sıfır gün ve temel ayarlar geçti.'
+}
+window.runWideCalendarChecks = async () => {
+  flushSync(()=>reactRoot.render(<ToastProvider><CalendarPage onOpenSettings={()=>{}} /></ToastProvider>));await wait()
+  assert(document.querySelector('[aria-label="Sonraki ay"]') && !document.querySelector('[aria-label="Sonraki gün"]'),'Geniş takvim aya dönmedi')
+  assert(document.querySelectorAll('button[aria-pressed]').length>=28,'Geniş ay ızgarası kayboldu')
+  return 'Takvim: geniş pencerede ay + gün akışı geçti.'
+}
 window.runActivityChecks = async () => {
   const tools = Array.from({length:6}, (_,index) => ({id:'step-'+index,name:'arac_'+index,label:'İş adımı '+index,status:index===5?'running':'done',input:{aranan:'örnek belge'},result:index===5?undefined:'Örnek sonuç'}))
   let stops = 0
@@ -345,11 +399,11 @@ async function run() {
       height: 860,
       webPreferences: { backgroundThrottling: false, offscreen: true }
     })
-    const assets = join(root, 'out', 'renderer', 'assets')
-    const css = (await readdir(assets)).find((name) => name.endsWith('.css'))
+    const rendererPath = join(process.env.JARVIS_UI_ASSETS_ROOT ?? root, 'out', 'renderer')
+    const html = await readFile(join(rendererPath, 'index.html'), 'utf8')
+    const css = html.match(/href="([^"?#]+\.css)"/)?.[1]
     if (!css) throw new Error('Önce electron-vite build çalıştırılmalı.')
-    const { readFile } = await import('node:fs/promises')
-    const styles = await readFile(join(assets, css), 'utf8')
+    const styles = await readFile(resolve(rendererPath, css), 'utf8')
     // file: kökeni localStorage kullanabilir; yalnızca geçici profil içindeki mock belge açılır.
     const fixturePath = join(profile, 'ui-fixture.html')
     await writeFile(fixturePath, '<div id="root"></div>', 'utf8')
@@ -390,6 +444,18 @@ async function run() {
     )
     if (navigation.error) throw new Error(navigation.stack ?? navigation.error)
     console.log(navigation)
+    const pages = await window.webContents.executeJavaScript(
+      'window.runPageChecks().catch(error => ({error:error.message,stack:error.stack}))'
+    )
+    if (pages.error) throw new Error(pages.stack ?? pages.error)
+    console.log(pages)
+    window.setSize(1360, 860)
+    await window.webContents.executeJavaScript('new Promise(resolve => setTimeout(resolve, 150))')
+    const wide = await window.webContents.executeJavaScript(
+      'window.runWideCalendarChecks().catch(error => ({error:error.message,stack:error.stack}))'
+    )
+    if (wide.error) throw new Error(wide.stack ?? wide.error)
+    console.log(wide)
     await window.webContents.executeJavaScript('window.cleanupChecks()')
     window.webContents.debugger.detach()
     exitCode = 0

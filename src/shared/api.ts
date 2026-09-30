@@ -629,6 +629,9 @@ export interface UsageStats {
   errorCalls: number
   /** Onay reddedilen veya izin yetersizliğinden atlanan çağrılar */
   blockedCalls: number
+  deniedCalls: number
+  timeoutCalls: number
+  skippedCalls: number
   /** En çok kullanılan 5 araç, çoktan aza */
   topTools: ToolUsage[]
   /** Son 14 günün günlük çağrı sayısı, en eskiden en yeniye */

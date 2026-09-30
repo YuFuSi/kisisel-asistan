@@ -71,6 +71,17 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
 
   const isSearching = searchQuery.trim().length > 0
   const displayedMemories = isSearching ? (searchResults ?? []) : (memories.data ?? [])
+  const groups = ['profil', 'tercih', 'plan', 'kisi', 'olay', 'bilgi']
+    .map((kind) => ({
+      kind: kind as MemoryKind,
+      items: displayedMemories.filter((memory) => memory.kind === kind)
+    }))
+    .filter((group) => group.items.length)
+  const sourceLabels = {
+    otomatik: 'Konuşmadan öğrenildi',
+    kullanici: 'Sen ekledin',
+    arac: 'Jarvis kaydetti'
+  }
 
   // Otomatik öğrenilip henüz bakılmamış kayıtlar ("yeni öğrendiklerim")
   const unreviewed = (memories.data ?? []).filter((memory) => !memory.reviewed)
@@ -116,9 +127,12 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
     if (!editing) return
     const current = memories.data?.find((m) => m.id === editing.id)
     const text = editing.text.trim()
-    setEditing(null)
-    if (!text || text === current?.content) return
-    await run(() => window.api.memories.update(editing.id, text))
+    if (!text) return
+    if (
+      text === current?.content ||
+      (await run(() => window.api.memories.update(editing.id, text)))
+    )
+      setEditing(null)
   }
 
   return (
@@ -172,10 +186,16 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
                 <li key={memory.id} className="flex items-center gap-2 text-sm text-ink">
                   <span className="min-w-0 flex-1">{memory.content}</span>
                   <button
+                    onClick={() => setEditing({ id: memory.id, text: memory.content })}
+                    className="min-h-8 rounded-control px-2 text-xs text-muted hover:bg-elevated"
+                  >
+                    Düzelt
+                  </button>
+                  <button
                     onClick={() => void run(() => window.api.memories.markReviewed([memory.id]))}
                     aria-label="Doğru, onayla"
                     title="Doğru"
-                    className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-positive"
+                    className="min-h-8 min-w-8 rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-positive"
                   >
                     <Check className="h-4 w-4" />
                   </button>
@@ -188,6 +208,7 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
           <input
+            aria-label="Hafızada ara"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={
@@ -201,6 +222,7 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
 
         <form onSubmit={(e) => void add(e)} className="flex gap-2">
           <input
+            aria-label="Yeni bilgi"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Ör. Kahvemi şekersiz içerim"
@@ -219,82 +241,105 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
           </p>
         )}
         <ul className="space-y-1">
-          {displayedMemories.map((memory) =>
-            editing?.id === memory.id ? (
-              <li key={memory.id} className="px-1 py-1">
-                <input
-                  autoFocus
-                  value={editing.text}
-                  maxLength={300}
-                  onChange={(e) => setEditing({ id: memory.id, text: e.target.value })}
-                  onBlur={() => void saveEdit()}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') e.currentTarget.blur()
-                    if (e.key === 'Escape') setEditing(null)
-                  }}
-                  aria-label="Hafıza kaydını düzenle"
-                  className={inputClass}
-                />
-              </li>
-            ) : (
-              <li
-                key={memory.id}
-                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface"
-              >
-                <Brain className="h-4 w-4 shrink-0 text-accent" />
-                <select
-                  value={memory.kind}
-                  onChange={(e) =>
-                    void run(() =>
-                      window.api.memories.setKind(memory.id, e.target.value as MemoryKind)
-                    )
-                  }
-                  aria-label="Bilginin türü"
-                  title="Tür"
-                  className="shrink-0 rounded-md border border-line bg-transparent px-1.5 py-0.5 text-xs text-muted outline-none hover:border-line-strong focus:border-accent/70"
-                >
-                  {MEMORY_KINDS.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {MEMORY_KIND_LABELS[kind]}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => setEditing({ id: memory.id, text: memory.content })}
-                  title="Düzenlemek için tıkla"
-                  className="min-w-0 flex-1 text-left text-sm text-ink"
-                >
-                  {memory.content}
-                </button>
-                {memory.sourceConversationId !== null && onOpenConversation && (
-                  <button
-                    onClick={() => onOpenConversation(memory.sourceConversationId!)}
-                    aria-label="Öğrenildiği sohbeti aç"
-                    title="Bu bilgiyi öğrendiğim sohbeti aç"
-                    className={iconButtonClass}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </button>
+          {groups.map((group) => (
+            <li key={group.kind} className="pt-3">
+              <h2 className="mb-2 text-sm font-medium text-muted">
+                {MEMORY_KIND_LABELS[group.kind]} · {group.items.length}
+              </h2>
+              <ul className="space-y-1">
+                {group.items.map((memory) =>
+                  editing?.id === memory.id ? (
+                    <li key={memory.id} className="px-1 py-1">
+                      <input
+                        autoFocus
+                        value={editing.text}
+                        maxLength={300}
+                        onChange={(e) => setEditing({ id: memory.id, text: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void saveEdit()
+                          if (e.key === 'Escape') setEditing(null)
+                        }}
+                        aria-label="Hafıza kaydını düzenle"
+                        className={inputClass}
+                      />
+                      <div className="mt-2 flex gap-2">
+                        <Button size="sm" onClick={() => void saveEdit()}>
+                          Kaydet
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                          Vazgeç
+                        </Button>
+                      </div>
+                    </li>
+                  ) : (
+                    <li
+                      key={memory.id}
+                      className="group flex flex-wrap items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface"
+                    >
+                      <Brain className="h-4 w-4 shrink-0 text-accent" />
+                      <select
+                        value={memory.kind}
+                        onChange={(e) =>
+                          void run(() =>
+                            window.api.memories.setKind(memory.id, e.target.value as MemoryKind)
+                          )
+                        }
+                        aria-label="Bilginin türü"
+                        title="Tür"
+                        className="shrink-0 rounded-md border border-line bg-transparent px-1.5 py-0.5 text-xs text-muted outline-none hover:border-line-strong focus:border-accent/70"
+                      >
+                        {MEMORY_KINDS.map((kind) => (
+                          <option key={kind} value={kind}>
+                            {MEMORY_KIND_LABELS[kind]}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setEditing({ id: memory.id, text: memory.content })}
+                        title="Düzenlemek için tıkla"
+                        className="min-w-0 flex-1 text-left text-sm text-ink"
+                      >
+                        <span className="block break-words">{memory.content}</span>
+                        <span className="mt-1 block text-xs text-faint">
+                          {sourceLabels[memory.source]}
+                          {memory.sourceConversationId !== null
+                            ? ` · Sohbet #${memory.sourceConversationId}`
+                            : ''}
+                          {!memory.reviewed ? ' · Yeni' : ''}
+                        </span>
+                      </button>
+                      {memory.sourceConversationId !== null && onOpenConversation && (
+                        <button
+                          onClick={() => onOpenConversation(memory.sourceConversationId!)}
+                          aria-label="Öğrenildiği sohbeti aç"
+                          title="Bu bilgiyi öğrendiğim sohbeti aç"
+                          className={iconButtonClass}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setEditing({ id: memory.id, text: memory.content })}
+                        aria-label="Bilgiyi düzenle"
+                        title="Düzenle"
+                        className={iconButtonClass}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => void run(() => window.api.memories.remove(memory.id))}
+                        aria-label="Bilgiyi sil"
+                        title="Sil"
+                        className={`${iconButtonClass} hover:text-negative`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </li>
+                  )
                 )}
-                <button
-                  onClick={() => setEditing({ id: memory.id, text: memory.content })}
-                  aria-label="Bilgiyi düzenle"
-                  title="Düzenle"
-                  className={iconButtonClass}
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => void run(() => window.api.memories.remove(memory.id))}
-                  aria-label="Bilgiyi sil"
-                  title="Sil"
-                  className={`${iconButtonClass} hover:text-negative`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </li>
-            )
-          )}
+              </ul>
+            </li>
+          ))}
         </ul>
 
         {error && <p className="text-sm text-negative select-text">{error}</p>}

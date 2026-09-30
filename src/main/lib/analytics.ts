@@ -19,6 +19,9 @@ export interface UsageStats {
   errorCalls: number
   /** Onay reddedilen veya izin yetersizliğinden atlanan çağrılar */
   blockedCalls: number
+  deniedCalls: number
+  timeoutCalls: number
+  skippedCalls: number
   /** En çok kullanılan 5 araç, çoktan aza */
   topTools: ToolUsage[]
   /** Son 14 günün günlük çağrı sayısı, en eskiden en yeniye */
@@ -42,6 +45,9 @@ export function computeUsageStats(entries: ActivityEntry[], now: Date): UsageSta
   let doneCalls = 0
   let errorCalls = 0
   let blockedCalls = 0
+  let deniedCalls = 0
+  let timeoutCalls = 0
+  let skippedCalls = 0
   let voiceCalls = 0
   let automationCalls = 0
 
@@ -64,6 +70,9 @@ export function computeUsageStats(entries: ActivityEntry[], now: Date): UsageSta
       entry.status === 'skipped'
     ) {
       blockedCalls++
+      if (entry.status === 'denied') deniedCalls++
+      else if (entry.status === 'timeout') timeoutCalls++
+      else skippedCalls++
     }
     if (entry.source === 'voice') voiceCalls++
     if (entry.source === 'automation') automationCalls++
@@ -89,6 +98,9 @@ export function computeUsageStats(entries: ActivityEntry[], now: Date): UsageSta
     doneCalls,
     errorCalls,
     blockedCalls,
+    deniedCalls,
+    timeoutCalls,
+    skippedCalls,
     topTools,
     last14Days,
     activeDayStreak,

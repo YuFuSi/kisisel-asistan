@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import Button from '../components/ui/Button'
 import { Workflow } from 'lucide-react'
 import type { Automation, AutomationInput } from '@shared/api'
 import AutomationItem from '../components/automations/AutomationItem'
@@ -16,6 +18,7 @@ const loadAutomations = (): Promise<Automation[]> => window.api.automations.list
 function AutomationsPage(): React.JSX.Element {
   const { data, error } = useLiveData(loadAutomations, 'automations')
   const toast = useToast()
+  const [creating, setCreating] = useState(false)
 
   async function run(action: () => Promise<unknown>): Promise<boolean> {
     try {
@@ -29,9 +32,18 @@ function AutomationsPage(): React.JSX.Element {
 
   return (
     <div className="space-y-6">
-      <NewAutomationForm
-        onCreate={(input: AutomationInput) => run(() => window.api.automations.create(input))}
-      />
+      <Button variant="secondary" onClick={() => setCreating(!creating)} aria-expanded={creating}>
+        {creating ? 'Vazgeç' : 'Yeni rutin'}
+      </Button>
+      {creating && (
+        <NewAutomationForm
+          onCreate={async (input: AutomationInput) => {
+            const ok = await run(() => window.api.automations.create(input))
+            if (ok) setCreating(false)
+            return ok
+          }}
+        />
+      )}
 
       {!data && (
         <div className="space-y-2">

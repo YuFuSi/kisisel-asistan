@@ -47,7 +47,14 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         />
       </Field>
       <Field label="Jarvis küresi">
-        <OrbSettings />
+        <details className="rounded-control border border-line p-3">
+          <summary className="min-h-8 cursor-pointer text-sm text-muted">
+            Görünüm ve ses efektleri
+          </summary>
+          <div className="mt-4">
+            <OrbSettings />
+          </div>
+        </details>
       </Field>
     </div>
   )
