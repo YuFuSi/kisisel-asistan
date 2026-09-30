@@ -16,6 +16,7 @@ import { CONVERSATION_SEARCH_ID } from '../../lib/dom'
 import { useDismissLayer } from '../../lib/useDismissLayer'
 
 interface ConversationListProps {
+  drawer?: boolean
   results: ConversationSearchResult[]
   activeId: number | null
   query: string
@@ -106,6 +107,7 @@ function RowMenu({ pinned, onRename, onPin, onExport, onDelete }: RowMenuProps):
 }
 
 function ConversationList({
+  drawer = false,
   results,
   activeId,
   query,
@@ -195,7 +197,9 @@ function ConversationList({
   const groups = query ? null : groupConversations(results, new Date())
 
   return (
-    <div className="flex w-60 shrink-0 flex-col border-r border-line">
+    <div
+      className={`flex min-h-0 shrink-0 flex-col ${drawer ? 'w-full flex-1' : 'w-60 border-r border-line'}`}
+    >
       <div className="space-y-2 p-3">
         <button
           onClick={onNew}

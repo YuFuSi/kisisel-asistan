@@ -16,12 +16,15 @@ import {
   Workflow,
   type LucideIcon
 } from 'lucide-react'
-import { requestBlankChat, requestNewChat } from '../lib/chatRequests'
+import { requestOpenConversation, requestBlankChat, requestNewChat } from '../lib/chatRequests'
 import { filterCommands, type Command } from '../lib/commandPalette'
 import { focusConversationSearch } from '../lib/dom'
 import { PAGE_LABELS, type PageId } from '../lib/pages'
 import { useDismissLayer } from '../lib/useDismissLayer'
 import { useDialogFocus } from '../lib/useDialogFocus'
+import { useLiveData } from '../lib/useLiveData'
+import type { Conversation } from '@shared/api'
+const loadConversations = (): Promise<Conversation[]> => window.api.conversations.list()
 
 const PAGE_ICONS: Record<PageId, LucideIcon> = {
   home: House,
@@ -55,6 +58,7 @@ function CommandPalette({
   currentPage,
   onNavigate
 }: CommandPaletteProps): React.JSX.Element {
+  const conversations = useLiveData(loadConversations, 'conversations').data
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -64,11 +68,13 @@ function CommandPalette({
 
   const commands = useMemo<PaletteCommand[]>(() => {
     const pages = (Object.keys(PAGE_LABELS) as PageId[])
-      .filter((id) => id !== currentPage)
+      .filter(
+        (id) => id !== currentPage && !['automations', 'achievements', 'gestures'].includes(id)
+      )
       .map((id) => ({
         id: `page-${id}`,
         label: PAGE_LABELS[id],
-        group: 'Sayfalar',
+        group: 'Alanlar',
         keywords: 'git sayfa',
         icon: PAGE_ICONS[id],
         run: () => onNavigate(id)
@@ -78,7 +84,7 @@ function CommandPalette({
       {
         id: 'new-chat',
         label: 'Yeni sohbet',
-        group: 'Hızlı işlemler',
+        group: 'Eylemler',
         icon: MessageSquarePlus,
         run: () => {
           onNavigate('chat')
@@ -88,7 +94,7 @@ function CommandPalette({
       {
         id: 'daily-brief',
         label: 'Günümü özetle',
-        group: 'Hızlı işlemler',
+        group: 'Eylemler',
         keywords: 'günlük özet',
         icon: Sun,
         run: () => {
@@ -99,7 +105,7 @@ function CommandPalette({
       {
         id: 'search-chat',
         label: 'Sohbetlerde ara',
-        group: 'Hızlı işlemler',
+        group: 'Eylemler',
         keywords: 'arama bul',
         icon: Search,
         run: () => {
@@ -109,10 +115,35 @@ function CommandPalette({
       }
     ]
 
-    return [...pages, ...actions]
-  }, [currentPage, onNavigate])
+    const history: PaletteCommand[] = (conversations ?? []).slice(0, 8).map((conversation) => ({
+      id: `conversation-${conversation.id}`,
+      label: conversation.title || 'Adsız sohbet',
+      group: 'Geçmiş',
+      icon: MessageSquare,
+      run: () => {
+        onNavigate('chat')
+        requestOpenConversation(conversation.id)
+      }
+    }))
+    return [...actions, ...pages, ...history]
+  }, [currentPage, onNavigate, conversations])
 
-  const filtered = useMemo(() => filterCommands(commands, query), [commands, query])
+  const filtered = useMemo(() => {
+    const matches = filterCommands(commands, query)
+    if (matches.length || !query.trim()) return matches
+    return [
+      {
+        id: 'ask-jarvis',
+        label: `Bunu Jarvis'e sor: ${query.trim()}`,
+        group: 'Eylemler',
+        icon: MessageSquare,
+        run: () => {
+          onNavigate('chat')
+          requestNewChat(query.trim())
+        }
+      }
+    ]
+  }, [commands, query, onNavigate])
   // Filtre değişince seçim sınırın dışında kalmasın (sıfırlamak için ayrı bir effect gerekmez)
   const activeIndex = Math.min(selected, Math.max(filtered.length - 1, 0))
   const rows = useMemo(
@@ -124,6 +155,12 @@ function CommandPalette({
       }, []),
     [filtered]
   )
+
+  useEffect(() => {
+    panelRef.current
+      ?.querySelector('[data-palette-active="true"]')
+      ?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex, filtered])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -191,6 +228,7 @@ function CommandPalette({
                   </div>
                 )}
                 <button
+                  data-palette-active={i === activeIndex}
                   onMouseEnter={() => setSelected(i)}
                   onClick={() => {
                     onClose()

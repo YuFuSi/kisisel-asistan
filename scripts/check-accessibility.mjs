@@ -30,6 +30,7 @@ import TaskItem from './src/renderer/src/components/tasks/TaskItem'
 import CommandPalette from './src/renderer/src/components/CommandPalette'
 import ActivitySurface from './src/renderer/src/components/chat/ActivitySurface'
 import ChatPage from './src/renderer/src/pages/ChatPage'
+import Sidebar from './src/renderer/src/components/Sidebar'
 import HomePage from './src/renderer/src/pages/HomePage'
 import ToastProvider from './src/renderer/src/components/ui/ToastProvider'
 import ApprovalDock from './src/renderer/src/components/jarvis/ApprovalDock'
@@ -39,6 +40,7 @@ import { requestOpenConversation } from './src/renderer/src/lib/chatRequests'
 import { useDismissLayer } from './src/renderer/src/lib/useDismissLayer'
 import { useReducedMotion } from './src/renderer/src/lib/useReducedMotion'
 
+window.api = {conversations:{list:async()=>[]},events:{onDataChanged:()=>()=>{}}}
 window.legacyEscapes = 0
 window.voiceEscapes = 0
 window.addEventListener('keydown', e => { if (e.key === 'Escape') window.legacyEscapes++ })
@@ -181,13 +183,13 @@ window.runChatChecks = async () => {
   approve.click(); await wait()
   assert(approvalResponses.length === 1 && approvalResponses[0][0] === 'test-approval' && approvalResponses[0][1] === true, 'Onay ortak respondToApproval üzerinden yanıtlanmadı')
   assert(!document.body.textContent.includes('Deneme onayı'), 'Yanıtlanan ortak onay kartı kalkmadı')
-  const savedActivity = {id:44,conversationId:1,role:'assistant',content:'İşlem durduruldu.',tools:[{id:'persisted-step',name:'test',label:'Kaydedilmiş işlem',status:'done',input:{örnek:true},result:'Kayıtlı sonuç'}],createdAt:new Date().toISOString()}
+  const savedActivity = {id:44,conversationId:1,role:'assistant',content:'İşlem durduruldu.',outcome:'timeout',tools:[{id:'persisted-step',name:'test',label:'Kaydedilmiş işlem',status:'done',input:{örnek:true},result:'Kayıtlı sonuç'}],createdAt:new Date().toISOString()}
   history.push(savedActivity)
   listeners.forEach(listener => listener({type:'stopped',conversationId:1,message:savedActivity})); await wait()
   const savedKey = savedActivity.conversationId + ':' + savedActivity.id + ':' + savedActivity.createdAt
   assert(JSON.parse(localStorage.getItem('jarvis.activity-outcomes.v1'))[savedKey]==='stopped','F0 sonucu kalıcı mesaj kimliğine bağlanmadı')
   flushSync(()=>reactRoot.render(null)); await wait(); renderChat(true); await wait(); requestOpenConversation(1); await wait()
-  assert(document.body.textContent.includes('Durduruldu') && document.body.textContent.includes('Kaydedilmiş işlem'), 'Sohbet yeniden açılınca bitmiş Activity kaydı veya sonucu kayboldu')
+  assert(document.body.textContent.includes('Onay süresi doldu') && document.body.textContent.includes('Kaydedilmiş işlem'), 'Sohbet yeniden açılınca bitmiş Activity kaydı veya sonucu kayboldu')
   window.api.chat.send = async () => {throw new Error('Deneme gönderim hatası')}
   const freshComposer = document.getElementById('composer-input')
   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(freshComposer,'Hata denemesi')
@@ -196,6 +198,30 @@ window.runChatChecks = async () => {
   return 'Gerçek ChatPage: kaydırma/akış, F0 ortak onayı, ApprovalDock, kalıcı Activity sonucu ve erken gönderim hatası geçti.'
 }
 window.cleanupChecks = () => reactRoot.unmount()
+window.runNavigationChecks = async () => {
+  window.api.app = {version:async()=> 'test'}
+  flushSync(()=>reactRoot.render(<ToastProvider><div style={{height:650,display:'flex'}}><Sidebar active="chat" onSelect={()=>{}} /><div style={{flex:1,minWidth:0}}><ChatPage active onOpenSettings={()=>{}} /></div></div></ToastProvider>))
+  await wait()
+  assert(document.querySelector('aside').getBoundingClientRect().width===64,'Dar sidebar 64px olmadı')
+  const opener=document.querySelector('[aria-label="Sohbet geçmişini aç"]')
+  assert(opener && !document.getElementById('conversation-search'),'Geçmiş dar pencerede kapalı çekmeceye dönüşmedi')
+  opener.focus();opener.click();await wait()
+  const drawer=document.querySelector('[aria-label="Sohbet geçmişi"]')
+  assert(drawer && drawer.getAttribute('aria-modal')==='true','Geçmiş çekmecesi açılmadı')
+  key(document.activeElement,'Escape');await wait()
+  assert(!document.querySelector('[aria-label="Sohbet geçmişi"]') && document.activeElement===opener,'Çekmece Escape/odak dönüşü bozuldu')
+  window.dispatchEvent(new Event('jarvis:open-history'));await wait()
+  assert(document.getElementById('conversation-search'),'Palet araması kapalı çekmeceyi açmadı')
+  flushSync(()=>reactRoot.render(<CommandPalette currentPage="home" onClose={()=>{}} onNavigate={()=>{}} />));await wait()
+  const body=document.body.textContent
+  assert(body.includes('Eylemler') && body.includes('Alanlar') && body.includes('Geçmiş'),'Palet grupları eksik')
+  assert(!body.includes('Kamera (deneme)') && !body.includes('Başarımlar'),'Eski sayfa kimlikleri kaldı')
+  const input=document.querySelector('[aria-label="Komut ara"]')
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'bilinmeyen bir isteğim var')
+  input.dispatchEvent(new Event('input',{bubbles:true}));await wait()
+  assert(document.body.textContent.includes("Bunu Jarvis'e sor"),'Palet eşleşmeyen isteği Jarvis’e yönlendirmedi')
+  return 'F5: 64px sidebar, geçmiş çekmecesi/Escape/odak, arama erişimi ve palet grupları/yönlendirme geçti.'
+}
 window.runHomeChecks = async () => {
   let notes = 0
   const asks = []
@@ -357,6 +383,13 @@ async function run() {
       if (result.error) throw new Error(result.stack ?? result.error)
       console.log(result)
     }
+    window.setSize(1000, 860)
+    await window.webContents.executeJavaScript('new Promise(resolve => setTimeout(resolve, 150))')
+    const navigation = await window.webContents.executeJavaScript(
+      'window.runNavigationChecks().catch(error => ({error:error.message,stack:error.stack}))'
+    )
+    if (navigation.error) throw new Error(navigation.stack ?? navigation.error)
+    console.log(navigation)
     await window.webContents.executeJavaScript('window.cleanupChecks()')
     window.webContents.debugger.detach()
     exitCode = 0
