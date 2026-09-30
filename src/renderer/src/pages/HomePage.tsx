@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { MessageSquare, Square } from 'lucide-react'
 import type { CalendarItem, HomeWeather, Memory, Reminder, Task } from '@shared/api'
-import AuroraBackground from '../components/home/AuroraBackground'
 import CommandBox from '../components/home/CommandBox'
-import FloatingTile from '../components/home/FloatingTile'
 import Orb from '../components/jarvis/Orb'
 import OrbitTools from '../components/jarvis/OrbitTools'
 import TaskOrbit from '../components/jarvis/TaskOrbit'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
-import Skeleton from '../components/ui/Skeleton'
 import {
   STATE_LABELS,
   celebrate,
@@ -22,6 +19,7 @@ import {
 import { requestAttachFiles } from '../lib/chatRequests'
 import { useClock } from '../lib/deviceStatus'
 import { greeting } from '../lib/greeting'
+import { toIsoDate } from '../lib/dates'
 import { buildHomeSummary, summarizeToday } from '../lib/homeSummary'
 import type { PageId } from '../lib/pages'
 import { useLiveData } from '../lib/useLiveData'
@@ -54,9 +52,6 @@ function hhmm(ms: number): string {
 
 // Yazı yazılırken küre bu kadar süre heyecanlı kalır
 const EXCITE_MS = 700
-// Fare paralaksı: küre ve parçalar zıt yönde en fazla bu kadar piksel kayar
-const PARALLAX_ORB = 10
-const PARALLAX_TILES = 16
 // El ile kontrol açıkken yörünge yarıçapları büyük küreye (440px) göre ayarlandı
 const HAND_ORBIT_RADIUS_X = 260
 const HAND_ORBIT_RADIUS_Y = 80
@@ -106,8 +101,7 @@ function voiceHint(voice: VoiceSnapshot): string {
     : 'Konuşmak için küreye dokun'
 }
 
-// Jarvis ana ekranı: canlı arka plan, sahnedeki küre, çevresinde süzülen bilgi parçaları,
-// kişiye özel tek cümle, komut kutusu ve ince durum şeridi
+// Ana deneyim küre ve komut; günlük bağlam kullanıcı açtığında görünür.
 function HomePage({
   onNavigate,
   onAsk,
@@ -130,6 +124,7 @@ function HomePage({
     ? findUserName(memories.filter((m) => m.kind === 'profil').map((m) => m.content))
     : null
   // Hava ve bugünün takvimi saatte bir yenilenir (ana süreç havayı zaten önbellekte tutar)
+  const [todayOpen, setTodayOpen] = useState(false)
   const [weather, setWeather] = useState<HomeWeather | null>(null)
   const [events, setEvents] = useState<CalendarItem[]>([])
   // Hafıza + bugünün işleri + takvimden yerel modelle yazılan not; gelene kadar (veya model
@@ -137,6 +132,7 @@ function HomePage({
   const [personalNote, setPersonalNote] = useState<string | null>(null)
   const noteHour = now.getHours()
   useEffect(() => {
+    if (!todayOpen) return
     let active = true
     window.api.system.personalNote().then(
       (text) => {
@@ -147,8 +143,9 @@ function HomePage({
     return () => {
       active = false
     }
-  }, [tasks, reminders, memorySignature, noteHour])
+  }, [tasks, reminders, memorySignature, noteHour, todayOpen])
   useEffect(() => {
+    if (!todayOpen) return
     let active = true
     const dayStart = new Date()
     dayStart.setHours(0, 0, 0, 0)
@@ -164,7 +161,7 @@ function HomePage({
     return () => {
       active = false
     }
-  }, [noteHour])
+  }, [noteHour, todayOpen])
   const [excite, setExcite] = useState(0)
   const [dragging, setDragging] = useState(false)
   const {
@@ -224,8 +221,8 @@ function HomePage({
     void window.api.tasks.update(id, { done: true }).then(celebrate, () => {})
   }
   const exciteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const orbLayer = useRef<HTMLDivElement>(null)
-  const tileLayer = useRef<HTMLDivElement>(null)
+
+  useEffect(() => () => clearTimeout(exciteTimer.current), [])
 
   const voiceError = voice.micError ?? voice.error
   const conversationId = voice.conversationId
@@ -278,20 +275,6 @@ function HomePage({
     exciteTimer.current = setTimeout(() => setExcite(0), EXCITE_MS)
   }
 
-  // Fare hareketiyle küre ve parçalar zıt yönlerde çok hafif kayar (derinlik hissi)
-  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>): void {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const nx = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    const ny = ((event.clientY - rect.top) / rect.height) * 2 - 1
-    if (orbLayer.current) {
-      orbLayer.current.style.transform = `translate(${nx * PARALLAX_ORB}px, ${ny * PARALLAX_ORB}px)`
-    }
-    if (tileLayer.current) {
-      tileLayer.current.style.transform = `translate(${-nx * PARALLAX_TILES}px, ${-ny * PARALLAX_TILES}px)`
-    }
-  }
-
   return (
     <div
       className="relative h-full"
@@ -305,74 +288,22 @@ function HomePage({
       }}
       onDrop={handleDrop}
     >
-      <AuroraBackground state={state} />
-      <div className="relative h-full overflow-y-auto" onPointerMove={handlePointerMove}>
-        <div className="mx-auto flex min-h-full max-w-4xl flex-col items-center justify-center px-8 py-6">
-          <div className="@container relative h-[440px] w-full">
-            {!handControlOn && (
-              <div
-                ref={tileLayer}
-                className="absolute inset-0 transition-transform duration-500 ease-out"
-              >
-                <FloatingTile
-                  label="Sıradaki"
-                  value={next ? `${next.time} · ${countdown(next.time, now)}` : 'Boş'}
-                  detail={next ? next.label : 'Bugün saatli iş yok'}
-                  onClick={() =>
-                    onNavigate(nextEvent && next?.label === nextEvent.title ? 'calendar' : 'tasks')
-                  }
-                  className="top-[10%] left-0"
-                  delayMs={200}
-                />
-                <FloatingTile
-                  label="Hava"
-                  value={weather ? `${weather.temperature}°` : '—'}
-                  detail={
-                    weather
-                      ? [
-                          weather.condition,
-                          weather.min !== null && weather.max !== null
-                            ? `${weather.min}°/${weather.max}°`
-                            : null,
-                          weather.rainChance ? `yağış %${weather.rainChance}` : null
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')
-                      : 'Şehir: Ayarlar > Sabah özeti'
-                  }
-                  className="top-[10%] right-0"
-                  delayMs={320}
-                />
-                <FloatingTile
-                  label="Bugün"
-                  value={today ? `${today.dueTasks} görev` : '...'}
-                  detail={
-                    today
-                      ? today.overdue > 0
-                        ? `${today.overdue} tanesi gecikti`
-                        : `${today.reminders} hatırlatma · ${events.length} etkinlik`
-                      : undefined
-                  }
-                  onClick={() => onNavigate('tasks')}
-                  className="bottom-[14%] left-8"
-                  delayMs={440}
-                />
-              </div>
-            )}
-            <div
-              ref={orbLayer}
-              className="absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-out"
-            >
+      <div className="relative h-full overflow-y-auto">
+        <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-5 py-6 sm:px-8">
+          <div
+            className={`relative w-full shrink-0 ${handControlOn ? 'h-[440px]' : 'h-[280px] sm:h-[340px]'}`}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
               <button
                 onClick={toggleVoiceSession}
                 aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-                className="animate-orb-in max-w-full cursor-pointer rounded-full transition-transform duration-150 ease-out focus-visible:outline-offset-[-24px]"
+                className="max-w-full cursor-pointer rounded-full transition-transform duration-[var(--motion-control)] focus-visible:outline-offset-[-24px]"
                 style={{ transform: `scale(${orbScale})` }}
               >
                 <Orb
                   state={state}
-                  size={440}
+                  size={handControlOn ? 440 : 300}
                   excite={dragging ? 1 : excite}
                   emotion={emotion}
                   steps={steps}
@@ -407,22 +338,20 @@ function HomePage({
 
           <video ref={handVideoRef} className="hidden" muted playsInline />
 
-          <h1 className="-mt-10 text-[40px] leading-tight font-medium tracking-tight text-ink">
+          <h1 className="text-center text-3xl leading-tight font-medium tracking-tight text-ink sm:text-4xl">
             {greeting(now.getHours())}
             {userName ? `, ${userName}` : ''}
           </h1>
           <div className="mt-2 flex min-h-6 max-w-2xl items-center justify-center text-center">
-            {personalNote ? (
-              <p key={personalNote} className="animate-fade text-base text-muted">
-                {personalNote}
-              </p>
-            ) : summary ? (
-              <p className="animate-fade text-base text-muted">{summary}</p>
-            ) : (
-              <Skeleton className="h-4 w-72" />
-            )}
+            <p className="text-base text-muted">
+              {next
+                ? `Bir sonraki işin ${countdown(next.time, now)}: ${next.label}`
+                : (summary ?? 'Buradayım. Ne yapalım?')}
+            </p>
           </div>
-          <p className="mt-1 h-5 text-xs text-faint">{caption}</p>
+          <p role="status" className="mt-2 min-h-5 max-w-xl text-center text-xs text-muted">
+            {caption}
+          </p>
 
           {(voice.userCaption || voice.assistantCaption) && (
             <Card
@@ -476,6 +405,54 @@ function HomePage({
           <div className="mt-5 flex w-full justify-center">
             <CommandBox onSubmit={onAsk} onTyping={noteTyping} />
           </div>
+          {!handControlOn && (
+            <details
+              onToggle={(event) => setTodayOpen(event.currentTarget.open)}
+              className="mt-6 w-full max-w-2xl rounded-control border border-line bg-surface text-left"
+            >
+              <summary className="min-h-10 cursor-pointer rounded-control px-4 py-3 text-sm text-muted">
+                Gününü gör
+              </summary>
+              <div className="space-y-3 border-t border-line px-4 py-4 text-sm">
+                <p className="text-muted">
+                  {personalNote ?? summary ?? 'Günün bilgileri hazırlanıyor.'}
+                </p>
+                {next && (
+                  <p className="text-ink">
+                    Sıradaki: {next.label} · {countdown(next.time, now)}
+                  </p>
+                )}
+                <ul className="space-y-1 text-muted">
+                  {(tasks ?? [])
+                    .filter(
+                      (task) =>
+                        task.doneAt === null &&
+                        task.dueDate !== null &&
+                        task.dueDate <= toIsoDate(now)
+                    )
+                    .slice(0, 5)
+                    .map((task) => (
+                      <li key={task.id} className="break-words">
+                        {task.title}
+                      </li>
+                    ))}
+                </ul>
+                {weather && (
+                  <p className="text-muted">
+                    {weather.temperature}° · {weather.condition}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => onNavigate('tasks')}>
+                    Görevler{today ? ` · ${today.dueTasks}` : ''}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => onNavigate('calendar')}>
+                    Takvim · {events.length} etkinlik
+                  </Button>
+                </div>
+              </div>
+            </details>
+          )}
         </div>
       </div>
     </div>

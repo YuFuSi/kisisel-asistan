@@ -5,7 +5,6 @@ import {
   ListPlus,
   Mic,
   SendHorizontal,
-  Sparkles,
   Sun,
   type LucideIcon
 } from 'lucide-react'
@@ -68,9 +67,9 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="flex h-14 items-center gap-3 rounded-full border border-line-strong bg-surface pr-2 pl-5 transition-colors focus-within:border-accent/70">
-        <Sparkles className="h-4 w-4 shrink-0 text-accent" />
+      <div className="flex h-14 items-center gap-3 rounded-xl border border-line bg-surface pr-2 pl-5 transition-colors focus-within:border-accent/70 focus-within:ring-2 focus-within:ring-accent/15">
         <input
+          aria-label="Jarvis’e komut ver"
           id={HOME_COMMAND_ID}
           ref={inputRef}
           value={text}
@@ -99,7 +98,7 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
           />
         )}
         <Button
-          variant={dictation.recording ? 'danger' : 'primary'}
+          variant={dictation.recording ? 'danger' : 'ghost'}
           icon={Mic}
           loading={dictation.transcribing}
           onClick={() => void dictation.toggle()}
@@ -120,18 +119,23 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap justify-center gap-x-1 gap-y-1">
-        {STARTERS.map(({ label, icon: Icon, ...starter }) => (
-          <button
-            key={label}
-            onClick={() => applyStarter({ label, icon: Icon, ...starter })}
-            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
-      </div>
+      <details className="mt-3 text-center">
+        <summary className="inline-flex min-h-8 cursor-pointer items-center rounded-control px-3 text-xs text-muted">
+          Başlangıç önerileri
+        </summary>
+        <div className="mt-2 flex flex-wrap justify-center gap-1">
+          {STARTERS.map(({ label, icon: Icon, ...starter }) => (
+            <button
+              key={label}
+              onClick={() => applyStarter({ label, icon: Icon, ...starter })}
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </details>
     </div>
   )
 }
