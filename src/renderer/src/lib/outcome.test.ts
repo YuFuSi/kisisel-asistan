@@ -3,16 +3,17 @@ import { finishedOutcome, shouldCelebrate } from './outcome'
 
 describe('finishedOutcome', () => {
   it('araç yoksa veya hepsi çalıştıysa tamamlandı', () => {
-    expect(finishedOutcome([], false)).toBe('completed')
-    expect(finishedOutcome([false, false], false)).toBe('completed')
+    expect(finishedOutcome([], [])).toBe('completed')
+    expect(finishedOutcome([false, false], ['approved'])).toBe('completed')
   })
 
   it('bir araç hata verdiyse kısmi', () => {
-    expect(finishedOutcome([false, true], false)).toBe('partial')
+    expect(finishedOutcome([false, true], [])).toBe('partial')
   })
 
-  it('reddedilen onay her şeyin önüne geçer', () => {
-    expect(finishedOutcome([false], true)).toBe('rejected')
+  it('reddedilen onay araç hatasının, süresi dolan onay reddin önüne geçer', () => {
+    expect(finishedOutcome([true], ['denied'])).toBe('rejected')
+    expect(finishedOutcome([true], ['denied', 'timeout'])).toBe('timeout')
   })
 })
 

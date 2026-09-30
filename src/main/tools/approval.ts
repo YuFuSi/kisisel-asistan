@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { getToolContext } from './context'
 import { needsApproval } from './permissions'
-import type { ChatEvent, ToolApproval } from '../../shared/api'
+import type { ApprovalResult, ChatEvent, ToolApproval } from '../../shared/api'
 import { sendChatEvent } from '../events'
 
 // Kullanıcı bu süre içinde cevap vermezse işlem yapılmaz
@@ -35,6 +35,17 @@ export function onApprovalRequested(listener: ApprovalListener): () => void {
   approvalListeners.add(listener)
   return () => {
     approvalListeners.delete(listener)
+  }
+}
+
+type ResolvedListener = (conversationId: number, result: ApprovalResult) => void
+// Onay sonuçlandığında haber alanlar (cevabın sonucu "reddedildi" / "süre doldu" diye kaydedilir)
+const resolvedListeners = new Set<ResolvedListener>()
+
+export function onApprovalResolved(listener: ResolvedListener): () => void {
+  resolvedListeners.add(listener)
+  return () => {
+    resolvedListeners.delete(listener)
   }
 }
 
@@ -95,8 +106,10 @@ export async function requireApproval(request: Omit<ToolApproval, 'id'>): Promis
     conversationId: context.conversationId,
     type: 'approval-resolved',
     approvalId: approval.id,
-    approved: outcome === 'approved'
+    approved: outcome === 'approved',
+    result: outcome
   })
+  resolvedListeners.forEach((listener) => listener(context.conversationId, outcome))
 
   if (outcome === 'timeout') throw new Error('Onay beklenirken süre doldu, işlem yapılmadı.')
   if (outcome === 'denied') throw new Error('Kullanıcı bu işlemi onaylamadı.')

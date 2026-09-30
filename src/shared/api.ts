@@ -329,6 +329,19 @@ export interface ToolActivity {
   card?: ToolCard
 }
 
+/**
+ * Bir cevabın nasıl bittiği. "Cevap bitti" ile "iş başarıyla yapıldı" aynı şey değil:
+ * - completed: araçların hepsi çalıştı (veya araç yoktu)
+ * - partial: cevap bitti ama en az bir araç hata verdi
+ * - rejected: kullanıcı bir onayı reddetti
+ * - timeout: onay beklenirken süre doldu
+ * - stopped: kullanıcı durdurdu
+ * - error: cevap hatayla kesildi
+ */
+export type OutcomeKind = 'completed' | 'partial' | 'rejected' | 'timeout' | 'stopped' | 'error'
+
+export type ApprovalResult = 'approved' | 'denied' | 'timeout'
+
 export interface ChatMessage {
   id: number
   conversationId: number
@@ -336,6 +349,8 @@ export interface ChatMessage {
   content: string
   tools: ToolActivity[]
   createdAt: string
+  /** Asistan cevabının sonucu; eski mesajlarda ve kullanıcı mesajlarında null */
+  outcome: OutcomeKind | null
 }
 
 // Riskli bir araç çalışmadan önce kullanıcıdan onay ister
@@ -354,7 +369,13 @@ export type ChatEvent =
   | { conversationId: number; type: 'delta'; text: string }
   | { conversationId: number; type: 'tool'; activity: ToolActivity }
   | { conversationId: number; type: 'approval'; approval: ToolApproval }
-  | { conversationId: number; type: 'approval-resolved'; approvalId: string; approved: boolean }
+  | {
+      conversationId: number
+      type: 'approval-resolved'
+      approvalId: string
+      approved: boolean
+      result: ApprovalResult
+    }
   | { conversationId: number; type: 'done'; message: ChatMessage }
   | { conversationId: number; type: 'stopped'; message: ChatMessage | null }
   | { conversationId: number; type: 'error'; error: string; message: ChatMessage | null }

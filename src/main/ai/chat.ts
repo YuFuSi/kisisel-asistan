@@ -20,16 +20,19 @@ import { getSecret, getSettings } from '../settings'
 import { splitAttachments } from '../../shared/attachments'
 import { getGoogleStatus } from '../google/auth'
 import { getAssistantTools, toolLabel } from '../tools'
-import { cancelApprovals } from '../tools/approval'
+import { cancelApprovals, onApprovalResolved } from '../tools/approval'
+import { finishedOutcome } from '../../shared/outcome'
 import { runWithToolContext } from '../tools/context'
 import { getModel, getModelOptions } from './providers'
 import { describeError } from './errors'
 import { recallFor } from './recall'
 import { formatRecall } from '../lib/recallFormat'
 import type {
+  ApprovalResult,
   AssistantTone,
   ChatEvent,
   ChatMessage,
+  OutcomeKind,
   ToolActivity,
   ToolSource,
   ToolStatus
@@ -273,6 +276,11 @@ async function streamReply(
   let answer = ''
   let needsSeparator = false
   const tools: ToolActivity[] = []
+  // Bu cevap sırasında sonuçlanan onaylar: cevabın sonucu "reddedildi"/"süre doldu" diye kaydedilir
+  const approvals: ApprovalResult[] = []
+  const stopListening = onApprovalResolved((id, result) => {
+    if (id === conversationId) approvals.push(result)
+  })
 
   const trackTool = (
     id: string,
@@ -355,20 +363,35 @@ async function streamReply(
 
     const finalTools = settleTools(tools)
     if (controller.signal.aborted) {
-      const message = savePartial(conversationId, answer, finalTools)
+      const message = savePartial(conversationId, answer, finalTools, 'stopped')
       emit({ conversationId, type: 'stopped', message })
       finish({ message, error: null, stopped: true })
       return
     }
     if (!answer.trim() && finalTools.length === 0) throw new Error('Model boş bir cevap döndürdü.')
-    const message = addMessage(conversationId, 'assistant', answer.trim() ? answer : '', finalTools)
+    const outcome = finishedOutcome(
+      finalTools.map((tool) => tool.status === 'error'),
+      approvals
+    )
+    const message = addMessage(
+      conversationId,
+      'assistant',
+      answer.trim() ? answer : '',
+      finalTools,
+      outcome
+    )
     emit({ conversationId, type: 'done', message })
     finish({ message, error: null, stopped: false })
     void nameConversation(conversationId)
     void updateSummary(conversationId)
   } catch (err) {
     // Hata olsa bile o ana kadar yazılanlar ve kullanılan araçlar kaybolmasın
-    const message = savePartial(conversationId, answer, settleTools(tools))
+    const message = savePartial(
+      conversationId,
+      answer,
+      settleTools(tools),
+      controller.signal.aborted ? 'stopped' : 'error'
+    )
     if (controller.signal.aborted) {
       emit({ conversationId, type: 'stopped', message })
       finish({ message, error: null, stopped: true })
@@ -378,6 +401,7 @@ async function streamReply(
       finish({ message, error, stopped: false })
     }
   } finally {
+    stopListening()
     activeChats.delete(conversationId)
     // Sohbetin sırası (son güncelleme) değişti; liste kendini yenilesin
     notifyDataChanged('conversations')
@@ -457,11 +481,12 @@ async function updateSummary(conversationId: number): Promise<void> {
 function savePartial(
   conversationId: number,
   answer: string,
-  tools: ToolActivity[]
+  tools: ToolActivity[],
+  outcome: OutcomeKind
 ): ChatMessage | null {
   if (!answer.trim() && tools.length === 0) return null
   try {
-    return addMessage(conversationId, 'assistant', answer, tools)
+    return addMessage(conversationId, 'assistant', answer, tools, outcome)
   } catch {
     // Sohbet bu arada silinmiş olabilir
     return null

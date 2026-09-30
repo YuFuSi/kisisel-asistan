@@ -23,6 +23,7 @@ const OUTCOME_TEXT: Record<OutcomeKind, string> = {
   completed: 'Tamamlandı',
   partial: 'Kısmen tamamlandı: bir adım hata verdi',
   rejected: 'Onaylanmadı, işlem yapılmadı',
+  timeout: 'Onay süresi doldu, işlem yapılmadı',
   stopped: 'Durduruldu',
   error: 'Bir hata oldu'
 }
