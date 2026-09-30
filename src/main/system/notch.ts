@@ -10,7 +10,7 @@ import { daemonForegroundIsFullscreen } from '../lib/windowDaemon'
 // Ana pencereyle aynı renderer bundle'ı #notch işaretiyle açılır.
 
 const WIDTH = 460
-const HEIGHT = 220
+const HEIGHT = 340
 const FULLSCREEN_POLL_MS = 2000
 
 let notchWindow: BrowserWindow | null = null

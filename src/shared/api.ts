@@ -298,6 +298,23 @@ export type ChatRole = 'user' | 'assistant'
 
 export type ToolStatus = 'running' | 'done' | 'error'
 
+/**
+ * Araç sonucunun arayüzde kart olarak gösterilecek, yapılandırılmış hâli (bağlamsal kartlar).
+ * Modele giden kısaltılmış metin sonuçtan ayrıdır; sadece güvenilir alanları taşır.
+ */
+export type ToolCard =
+  | {
+      kind: 'weather'
+      place: string
+      temperature: number
+      condition: string
+      days: { day: string; min: number; max: number; rainChance: number | null }[]
+    }
+  | { kind: 'events'; items: { title: string; time: string; location: string | null }[] }
+  | { kind: 'files'; total: number; items: { name: string; path: string; sizeKb: number }[] }
+  | { kind: 'task'; title: string; due: string | null }
+  | { kind: 'reminder'; message: string; when: string; repeat: string | null }
+
 // Asistanın bir cevap sırasında kullandığı araç (arayüzde küçük etiket olarak görünür)
 export interface ToolActivity {
   id: string
@@ -308,6 +325,8 @@ export interface ToolActivity {
   input?: unknown
   /** Aracın kısaltılmış sonucu veya hata metni */
   result?: string
+  /** Sonucun arayüzdeki kart hâli (hava, takvim, dosya, görev, hatırlatma); yoksa sadece etiket */
+  card?: ToolCard
 }
 
 export interface ChatMessage {

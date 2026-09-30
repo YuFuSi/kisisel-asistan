@@ -1,12 +1,13 @@
-import { useEffect } from 'react'
 import { MessageSquare, Square } from 'lucide-react'
 import Orb from './Orb'
+import ResultCard from './ResultCard'
 import Button from '../ui/Button'
 import {
   STATE_LABELS,
   useAssistantEmotion,
   useAssistantState,
   useNoticeSeq,
+  useResultCards,
   useWorkSteps
 } from '../../lib/assistantState'
 import { toggleVoiceSession, useVoice } from '../../lib/voiceClient'
@@ -26,7 +27,7 @@ interface VoiceOverlayProps {
 }
 
 // "Her yerde Jarvis": Ana Sayfa dışındayken sesli sohbet başlarsa sayfa kararır, ortada büyük
-// küre ve altyazılar belirir. Esc veya "Bitir" sohbeti kapatır; çalışan araçlar kart olarak görünür.
+// küre ve altyazılar belirir. Esc veya "Bitir" sohbeti kapatır; araç adımları ve sonuç kartları altyazının altında görünür.
 function VoiceOverlay({ onOpenConversation }: VoiceOverlayProps): React.JSX.Element | null {
   const voice = useVoice()
   const state = useAssistantState()
@@ -34,14 +35,8 @@ function VoiceOverlay({ onOpenConversation }: VoiceOverlayProps): React.JSX.Elem
   const steps = useWorkSteps()
   const notice = useNoticeSeq()
 
-  useEffect(() => {
-    if (!voice.sessionActive) return
-    function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') toggleVoiceSession()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [voice.sessionActive])
+  const cards = useResultCards()
+  // Escape ile kapatma App'teki VoiceEscapeBoundary'de (katman önceliğiyle) yapılır
 
   if (!voice.sessionActive) return null
   const conversationId = voice.conversationId
@@ -84,6 +79,13 @@ function VoiceOverlay({ onOpenConversation }: VoiceOverlayProps): React.JSX.Elem
           <p className="text-2xl leading-snug font-medium tracking-tight text-ink">
             {tail(voice.assistantCaption)}
           </p>
+        )}
+        {cards.length > 0 && (
+          <div className="mx-auto flex max-w-md flex-col gap-2 pt-2">
+            {cards.map((card, index) => (
+              <ResultCard key={index} card={card} />
+            ))}
+          </div>
         )}
         {(voice.micError ?? voice.error) && (
           <p className="text-xs text-negative">{voice.micError ?? voice.error}</p>
