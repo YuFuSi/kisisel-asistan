@@ -10,7 +10,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: 'gap-1.5 rounded-lg px-3 py-1.5 text-xs',
+  sm: 'min-h-8 gap-1.5 rounded-lg px-3 py-1.5 text-xs',
   md: 'gap-2 rounded-[10px] px-4 py-2 text-sm'
 }
 
@@ -24,5 +24,5 @@ export const ICON_SIZE_CLASS: Record<ButtonSize, string> = {
  * yerler (lib/styles.ts) aynı görünümü buradan alır.
  */
 export function buttonClass(variant: ButtonVariant = 'primary', size: ButtonSize = 'md'): string {
-  return `inline-flex shrink-0 items-center justify-center font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]}`
+  return `inline-flex shrink-0 items-center justify-center font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-control)] ease-calm active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${VARIANT_CLASS[variant]} ${SIZE_CLASS[size]}`
 }

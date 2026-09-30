@@ -13,6 +13,7 @@ import {
 import type { ConversationSearchResult } from '@shared/api'
 import { groupConversations } from '../../lib/conversationGroups'
 import { CONVERSATION_SEARCH_ID } from '../../lib/dom'
+import { useDismissLayer } from '../../lib/useDismissLayer'
 
 interface ConversationListProps {
   results: ConversationSearchResult[]
@@ -42,6 +43,10 @@ const menuItemClass =
 function RowMenu({ pinned, onRename, onPin, onExport, onDelete }: RowMenuProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  useDismissLayer(open, 20, () => {
+    setOpen(false)
+    wrapperRef.current?.querySelector('button')?.focus()
+  })
 
   // Menü dışına tıklanınca veya Esc'e basılınca kapansın
   useEffect(() => {
@@ -49,14 +54,9 @@ function RowMenu({ pinned, onRename, onPin, onExport, onDelete }: RowMenuProps):
     const close = (event: MouseEvent): void => {
       if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false)
     }
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false)
-    }
     document.addEventListener('mousedown', close)
-    document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', close)
-      document.removeEventListener('keydown', onKey)
     }
   }, [open])
 
@@ -71,7 +71,7 @@ function RowMenu({ pinned, onRename, onPin, onExport, onDelete }: RowMenuProps):
         onClick={() => setOpen((value) => !value)}
         aria-label="Sohbet menüsü"
         title="Diğer işlemler"
-        className={`mr-1 rounded-md p-1.5 text-faint transition hover:bg-line/60 hover:text-ink ${
+        className={`mr-1 inline-flex min-h-8 min-w-8 items-center justify-center rounded-md p-1.5 text-faint transition hover:bg-line/60 hover:text-ink ${
           open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'
         }`}
       >
@@ -224,7 +224,7 @@ function ConversationList({
             <button
               onClick={() => onQueryChange('')}
               aria-label="Aramayı temizle"
-              className="shrink-0 rounded text-faint transition-colors hover:text-ink"
+              className="inline-flex min-h-8 min-w-8 shrink-0 items-center justify-center rounded text-faint transition-colors hover:text-ink"
             >
               <X className="h-3.5 w-3.5" />
             </button>

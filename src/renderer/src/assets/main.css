@@ -12,7 +12,9 @@
   --color-line-strong: #2e333f;
   --color-ink: #eceef3;
   --color-muted: #a0a6b4;
-  --color-faint: #6b7180;
+  --color-faint: #8b93a3;
+  /* Yalnızca dekoratif noktalar ve çizimler; okunacak metinlerde kullanılmaz. */
+  --color-decoration: #6b7180;
   --color-accent: #8b9bff;
   --color-accent-hover: #a3b0ff;
   /* Eski "glow" sınıfları yeni vurgu rengine bağlı kalır; ayrı bir ışıma rengi yok */
@@ -27,6 +29,9 @@
   --shadow-float: 0 12px 32px -12px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.35);
 
   --ease-calm: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-press: cubic-bezier(0.2, 0, 0, 1);
+  --ease-continuous: linear;
 
   --font-sans:
     'Inter Variable', 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
@@ -36,6 +41,15 @@
   color-scheme: dark;
   /* Özel başlık çubuğunun yüksekliği; pencere ayarlarıyla aynı olmalı */
   --titlebar-height: 40px;
+  --motion-press: 80ms;
+  --motion-hover: 140ms;
+  --motion-control: 160ms;
+  --motion-page: 180ms;
+  --motion-content: 220ms;
+  --motion-expand: 240ms;
+  --motion-surface: 280ms;
+  --motion-result: 550ms;
+  --motion-ambient: 9000ms;
 }
 
 html,
@@ -130,7 +144,7 @@ textarea {
 }
 
 .animate-enter {
-  animation: enter-up 200ms var(--ease-calm) backwards;
+  animation: enter-up var(--motion-content) var(--ease-calm) backwards;
 }
 
 @keyframes enter-fade {
@@ -143,7 +157,7 @@ textarea {
 }
 
 .animate-fade {
-  animation: enter-fade 160ms var(--ease-calm);
+  animation: enter-fade var(--motion-control) var(--ease-calm);
 }
 
 /* Küre sahneye yumuşakça açılır */
@@ -179,11 +193,13 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-enter,
-  .animate-fade,
-  .animate-orb-in,
-  .animate-tile {
-    animation: none;
+  /* Medya sorgusu tercih değişimini anında izler; yükleme simgeleri de sabit kalır. */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, FileUp, Settings } from 'lucide-react'
+import { ArrowDown, Download, FileUp, Settings } from 'lucide-react'
 import { composeMessage } from '@shared/attachments'
 import {
   PROVIDERS,
@@ -34,6 +34,8 @@ import { quietIconButtonClass } from '../lib/styles'
 import { useToast } from '../lib/toast'
 import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
+import { useReducedMotion } from '../lib/useReducedMotion'
+import { isNearScrollEnd } from '../lib/chatScroll'
 import {
   onAttachFilesRequest,
   onBlankChatRequest,
@@ -98,7 +100,11 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const activeIdRef = useRef<number | null>(null)
   // Olay dinleyicisi içinden güncel ayarları okumak için
   const settingsRef = useRef<SettingsView | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const followReplyRef = useRef(true)
+  const scrollingToLatestRef = useRef(false)
+  const [hasNewReply, setHasNewReply] = useState(false)
+  const reducedMotion = useReducedMotion()
   // Mesaja eklenecek belgeler ve sürükle-bırak durumu
   const [attachments, setAttachments] = useState<AttachedDocument[]>([])
   const [attaching, setAttaching] = useState(false)
@@ -186,15 +192,50 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     setVisibleConversation(active ? activeId : null)
   }, [active, activeId])
 
-  // Yeni mesaj veya yeni cevap parçası gelince en alta kaydır
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages, streamingView, approvalView])
+    const scroll = scrollRef.current
+    const finishScroll = (): void => {
+      scrollingToLatestRef.current = false
+    }
+    scroll?.addEventListener('scrollend', finishScroll)
+    return () => scroll?.removeEventListener('scrollend', finishScroll)
+  }, [])
+
+  // Kullanıcı geçmişi okuyorsa yeni yanıt onun konumunu değiştirmez.
+  useEffect(() => {
+    if (!active) return
+    const scroll = scrollRef.current
+    if (!scroll) return
+    const frame = requestAnimationFrame(() => {
+      if (followReplyRef.current) scroll.scrollTop = scroll.scrollHeight
+      else if (streamingView || messages.at(-1)?.role === 'assistant') setHasNewReply(true)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [active, messages, streamingView, approvalView])
+
+  function followLatestReply(): void {
+    followReplyRef.current = true
+    setHasNewReply(false)
+    const scroll = scrollRef.current
+    // Uzun geçmişte saniyelerce kayan bir geçiş yerine doğrudan yeni yanıta git.
+    scrollingToLatestRef.current =
+      !reducedMotion &&
+      !streamingView &&
+      !!scroll &&
+      scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < scroll.clientHeight
+    scroll?.scrollTo({
+      top: scroll.scrollHeight,
+      behavior: scrollingToLatestRef.current ? 'smooth' : 'instant'
+    })
+  }
 
   const openConversation = useCallback((id: number | null): void => {
     activeIdRef.current = id
     setActiveId(id)
     setMessages([])
+    followReplyRef.current = true
+    scrollingToLatestRef.current = false
+    setHasNewReply(false)
     setError(null)
     // Belge izni sohbete bağlı; sohbet değişince eklenen belgeler bırakılır
     setAttachments([])
@@ -241,6 +282,8 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   useEffect(() => {
     if (!active) return
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented) return
+      if ((event.target as HTMLElement | null)?.closest('[aria-modal="true"]')) return
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
         openConversation(null)
@@ -492,7 +535,22 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col overflow-y-auto">
+        <div
+          ref={scrollRef}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+          onWheel={() => {
+            scrollingToLatestRef.current = false
+          }}
+          onTouchStart={() => {
+            scrollingToLatestRef.current = false
+          }}
+          onScroll={(event) => {
+            if (scrollingToLatestRef.current) return
+            const nearEnd = isNearScrollEnd(event.currentTarget)
+            followReplyRef.current = nearEnd
+            if (nearEnd) setHasNewReply(false)
+          }}
+        >
           {showEmptyState ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
               <Orb state={assistantState} size={120} />
@@ -554,7 +612,6 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   onRespond={(approved) => respondToApproval(approvalView.id, approved)}
                 />
               )}
-              <div ref={bottomRef} />
             </div>
           )}
 
@@ -566,6 +623,18 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
             </div>
           )}
         </div>
+
+        {hasNewReply && (
+          <div className="pointer-events-none relative z-10 h-0">
+            <button
+              onClick={followLatestReply}
+              className="pointer-events-auto absolute bottom-3 left-1/2 flex min-h-8 -translate-x-1/2 items-center gap-2 rounded-control border border-line-strong bg-elevated px-3 py-1.5 text-xs text-ink shadow-float"
+            >
+              <ArrowDown className="h-4 w-4" aria-hidden="true" />
+              Yeni yanıt
+            </button>
+          </div>
+        )}
 
         <Composer
           busy={streaming !== null}

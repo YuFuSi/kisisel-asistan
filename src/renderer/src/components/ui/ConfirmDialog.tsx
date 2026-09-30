@@ -24,7 +24,7 @@ function ConfirmDialog({
   onCancel
 }: ConfirmDialogProps): React.JSX.Element {
   return (
-    <Modal open={open} onClose={onCancel}>
+    <Modal open={open} onClose={onCancel} title={title}>
       <h2 className="text-sm font-semibold text-ink">{title}</h2>
       {description && <p className="mt-2 text-sm text-muted">{description}</p>}
       <div className="mt-5 flex justify-end gap-2">

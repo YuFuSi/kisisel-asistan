@@ -29,8 +29,8 @@ export const tabClass = (active: boolean): string =>
 
 /** Satır üzerinde fareyle görünen küçük simge düğmesi */
 export const iconButtonClass =
-  'rounded-md p-1.5 text-faint opacity-0 transition group-hover:opacity-100 hover:bg-elevated hover:text-ink focus:opacity-100'
+  'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md p-1.5 text-faint opacity-0 transition group-hover:opacity-100 hover:bg-elevated hover:text-ink focus:opacity-100'
 
 /** Her zaman görünen küçük simge düğmesi */
 export const quietIconButtonClass =
-  'rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink'
+  'inline-flex min-h-8 min-w-8 items-center justify-center rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-ink'

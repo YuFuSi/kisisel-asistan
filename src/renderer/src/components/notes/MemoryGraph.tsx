@@ -438,7 +438,7 @@ function MemoryGraphEditModal({
   }
 
   return (
-    <Modal open onClose={onClose}>
+    <Modal open onClose={onClose} title={item.kind === 'note' ? 'Not başlığı' : 'Hafıza kaydı'}>
       <h2 className="mb-3 text-sm font-medium text-muted">
         {item.kind === 'note' ? 'Not başlığı' : 'Hafıza kaydı'}
       </h2>
