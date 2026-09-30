@@ -148,10 +148,16 @@ const api: Api = {
       const handler = (_event: IpcRendererEvent, command: AppCommand): void => listener(command)
       ipcRenderer.on('app:command', handler)
       return () => ipcRenderer.removeListener('app:command', handler)
+    },
+    onAttachPaths: (listener) => {
+      const handler = (_event: IpcRendererEvent, paths: string[]): void => listener(paths)
+      ipcRenderer.on('app:attach-paths', handler)
+      return () => ipcRenderer.removeListener('app:attach-paths', handler)
     }
   },
   notch: {
-    setInteractive: (interactive) => ipcRenderer.send('notch:interactive', interactive === true),
+    resize: (width, height) => ipcRenderer.send('notch:resize', width, height),
+    dropFiles: (paths) => ipcRenderer.send('notch:drop-files', paths),
     navigate: (page) => ipcRenderer.invoke('notch:navigate', page)
   },
   windows: {

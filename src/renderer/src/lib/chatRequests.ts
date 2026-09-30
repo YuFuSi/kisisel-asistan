@@ -35,6 +35,17 @@ export function onBlankChatRequest(listener: () => void): () => void {
   }
 }
 
+const attachPathListeners = new Set<Listener<string[]>>()
+
+/** Çentiğe bırakılan belgeler (dosya yolu olarak gelir): yeni sohbette mesaja eklenir */
+export function requestAttachPaths(paths: string[]): void {
+  attachPathListeners.forEach((listener) => listener(paths))
+}
+
+export function onAttachPathsRequest(listener: Listener<string[]>): () => void {
+  return subscribe(attachPathListeners, listener)
+}
+
 const attachListeners = new Set<Listener<File[]>>()
 
 /** Ana Sayfa'ya bırakılan belgeler: yeni sohbette mesaja eklenmek üzere bekletilir */

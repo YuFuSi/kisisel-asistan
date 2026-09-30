@@ -137,6 +137,16 @@ export function showMainWindow(): void {
   window.focus()
 }
 
+/** Çentiğe bırakılan belgeleri ana pencereye iletir; ana pencere yeni sohbete ekler */
+export function sendAttachPaths(paths: string[]): void {
+  const window = mainWindow
+  if (!window || window.isDestroyed()) return
+  const send = (): void => window.webContents.send('app:attach-paths', paths)
+  // Pencere yeni oluşturulduysa sayfa yüklenince gönderilir
+  if (window.webContents.isLoading()) window.webContents.once('did-finish-load', send)
+  else send()
+}
+
 // Bir bildirim gösterildi: Ana Sayfa'daki küre kısa süre nabız atsın
 export function notifyPulse(): void {
   // Ana pencere ve (açıksa) çentik: ikisinin küresi de nabız atar

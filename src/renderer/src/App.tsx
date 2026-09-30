@@ -11,7 +11,7 @@ import NotesPage from './pages/NotesPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import GesturesPage from './pages/GesturesPage'
 import SettingsPage from './pages/SettingsPage'
-import { requestNewChat, requestOpenConversation } from './lib/chatRequests'
+import { requestAttachPaths, requestNewChat, requestOpenConversation } from './lib/chatRequests'
 import { focusComposer } from './lib/dom'
 import { initVoiceClient, toggleVoiceSession } from './lib/voiceClient'
 import VoiceEscapeBoundary from './components/ui/VoiceEscapeBoundary'
@@ -46,6 +46,16 @@ function App(): React.JSX.Element {
 
   // Jarvis sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
   useEffect(() => initVoiceClient(), [])
+
+  // Çentiğe bırakılan belgeler: Asistan sayfasında yeni sohbete eklenir
+  useEffect(
+    () =>
+      window.api.events.onAttachPaths((paths) => {
+        setPage('chat')
+        requestAttachPaths(paths)
+      }),
+    []
+  )
 
   // Global kısayol, tepsi menüsü veya bir bildirime tıklanınca gelen komutlar
   useEffect(() => {

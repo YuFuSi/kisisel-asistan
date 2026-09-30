@@ -48,6 +48,7 @@ import {
 } from '../lib/activitySurface'
 import {
   onAttachFilesRequest,
+  onAttachPathsRequest,
   onBlankChatRequest,
   onNewChatRequest,
   onOpenConversationRequest
@@ -140,6 +141,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   )
   const selectRef = useRef<(id: number) => Promise<void>>(async () => {})
   const attachFilesRef = useRef<(files: File[]) => Promise<void>>(async () => {})
+  const attachPathsRef = useRef<(paths: string[]) => Promise<void>>(async () => {})
 
   // Sayfa her görünür olduğunda ayarları tazele (Ayarlar'da model değişmiş olabilir)
   useEffect(() => {
@@ -311,6 +313,15 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }),
     [openConversation]
   )
+  // Çentiğe bırakılan belgeler de yeni sohbete eklenir (yol olarak gelir)
+  useEffect(
+    () =>
+      onAttachPathsRequest((paths) => {
+        openConversation(null)
+        void attachPathsRef.current(paths)
+      }),
+    [openConversation]
+  )
 
   // Ana Sayfa'daki komut kutusundan gelen istek yeni sohbette cevaplanır
   useEffect(
@@ -424,11 +435,22 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     sendRef.current = send
     selectRef.current = selectConversation
     attachFilesRef.current = attachFiles
+    attachPathsRef.current = attachPaths
   })
 
   // Sürüklenen veya seçilen belgeleri okuyup mesaja eklenmek üzere bekletir
   async function attachFiles(files: File[]): Promise<void> {
-    if (files.length === 0) return
+    const paths: string[] = []
+    for (const file of files) {
+      const path = window.api.documents.pathForFile(file)
+      if (path) paths.push(path)
+      else toast.error(`${file.name} okunamadı.`)
+    }
+    await attachPaths(paths)
+  }
+
+  async function attachPaths(paths: string[]): Promise<void> {
+    if (paths.length === 0) return
     setAttaching(true)
     try {
       let id = activeIdRef.current
@@ -436,19 +458,15 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
         id = (await window.api.conversations.create()).id
         openConversation(id)
       }
-      for (const file of files) {
-        const path = window.api.documents.pathForFile(file)
-        if (!path) {
-          toast.error(`${file.name} okunamadı.`)
-          continue
-        }
+      for (const path of paths) {
+        const name = path.split(/[\\/]/).pop() ?? path
         try {
           const doc = await window.api.documents.read(id, path)
           // Bu arada başka sohbete geçildiyse belge oraya eklenmez
           if (activeIdRef.current !== id) return
           setAttachments((list) => (list.some((d) => d.path === doc.path) ? list : [...list, doc]))
         } catch (err) {
-          toast.error(`${file.name}: ${errorMessage(err)}`)
+          toast.error(`${name}: ${errorMessage(err)}`)
         }
       }
     } catch (err) {
