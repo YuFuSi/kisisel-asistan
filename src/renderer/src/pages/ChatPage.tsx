@@ -15,7 +15,7 @@ import {
 import ConversationList from '../components/chat/ConversationList'
 import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
-import ApprovalCard from '../components/chat/ApprovalCard'
+import ActivitySurface from '../components/chat/ActivitySurface'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Orb from '../components/jarvis/Orb'
 import {
@@ -24,6 +24,7 @@ import {
   respondToApproval,
   setVisibleConversation,
   useAssistantState,
+  useLastOutcome,
   usePendingApprovals
 } from '../lib/assistantState'
 import { errorMessage } from '../lib/errors'
@@ -36,6 +37,13 @@ import { useLiveData } from '../lib/useLiveData'
 import { speakText, stopSpeaking } from '../lib/voice'
 import { useReducedMotion } from '../lib/useReducedMotion'
 import { isNearScrollEnd } from '../lib/chatScroll'
+import {
+  activityRecordKey,
+  forgetConversationOutcomes,
+  readActivityOutcomes,
+  rememberActivityOutcome,
+  saveActivityOutcomes
+} from '../lib/activitySurface'
 import {
   onAttachFilesRequest,
   onBlankChatRequest,
@@ -96,6 +104,12 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
   // Asistanın beklediği onaylar ortak depoda; bu sohbete ait olan burada gösterilir
   const approvals = usePendingApprovals()
+  const lastOutcome = useLastOutcome()
+  const [activityOutcomes, setActivityOutcomes] = useState(readActivityOutcomes)
+  const [finishedReply, setFinishedReply] = useState<{
+    conversationId: number
+    message: ChatMessage | null
+  } | null>(null)
   // Olay dinleyicisi içinde her zaman güncel sohbet kimliğini okumak için
   const activeIdRef = useRef<number | null>(null)
   // Olay dinleyicisi içinden güncel ayarları okumak için
@@ -172,6 +186,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
 
       // Cevap bitti, durduruldu veya hata oldu
+      setFinishedReply({ conversationId: event.conversationId, message: event.message })
       setStreaming((s) => (s?.conversationId === event.conversationId ? null : s))
       if (event.conversationId === activeIdRef.current) {
         const message = event.message
@@ -187,6 +202,26 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
   const streamingView = streaming && streaming.conversationId === activeId ? streaming : null
   const approvalView = approvals.find((item) => item.conversationId === activeId)?.approval ?? null
+  // F0'ın son sonucu, aynı bitiş olayının kalıcı mesaj kimliğine bağlanır. Yeni bir cevap
+  // başladığında eski sonucun o cevaba aktarılmaması için finishedReply temizlenir.
+  useEffect(() => {
+    if (
+      !lastOutcome ||
+      !finishedReply?.message ||
+      lastOutcome.conversationId !== finishedReply.conversationId
+    )
+      return
+    const message = finishedReply.message
+    const kind = lastOutcome.kind
+    let alive = true
+    queueMicrotask(() => {
+      if (alive) setActivityOutcomes((current) => rememberActivityOutcome(current, message, kind))
+    })
+    return () => {
+      alive = false
+    }
+  }, [lastOutcome, finishedReply])
+  useEffect(() => saveActivityOutcomes(activityOutcomes), [activityOutcomes])
   // Ekrandaki sohbetin onayı burada görünür; diğer onaylar App'teki genel kartta çıkar
   useEffect(() => {
     setVisibleConversation(active ? activeId : null)
@@ -211,7 +246,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       else if (streamingView || messages.at(-1)?.role === 'assistant') setHasNewReply(true)
     })
     return () => cancelAnimationFrame(frame)
-  }, [active, messages, streamingView, approvalView])
+  }, [active, messages, streamingView, approvalView, activityOutcomes])
 
   function followLatestReply(): void {
     followReplyRef.current = true
@@ -233,6 +268,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     activeIdRef.current = id
     setActiveId(id)
     setMessages([])
+    setFinishedReply(null)
     followReplyRef.current = true
     scrollingToLatestRef.current = false
     setHasNewReply(false)
@@ -314,6 +350,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   async function deleteConversation(id: number): Promise<void> {
     try {
       await window.api.conversations.remove(id)
+      setActivityOutcomes((current) => forgetConversationOutcomes(current, id))
       if (activeIdRef.current === id) openConversation(null)
     } catch (err) {
       toast.error(errorMessage(err))
@@ -359,6 +396,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
       }
       setAttachments([])
       setStreaming({ conversationId: id, text: '', tools: [] })
+      setFinishedReply(null)
       noteReplyStarted(id)
       const userMessage = await window.api.chat.send(id, content)
       setMessages((list) => [...list, userMessage])
@@ -418,6 +456,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     const previous = messages
     setMessages((list) => list.slice(0, -1))
     setStreaming({ conversationId: id, text: '', tools: [] })
+    setFinishedReply(null)
     try {
       await window.api.chat.regenerate(id)
     } catch (err) {
@@ -436,6 +475,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     const previous = messages
     setMessages((list) => list.filter((m) => m.id < messageId))
     setStreaming({ conversationId: id, text: '', tools: [] })
+    setFinishedReply(null)
     try {
       const userMessage = await window.api.chat.editAndResend(id, messageId, text)
       setMessages((list) => [...list, userMessage])
@@ -453,7 +493,11 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     (settings.provider === 'ollama' || settings.hasSecret[settings.provider])
   const activeConversation = (conversations ?? []).find((c) => c.id === activeId)
   const activeTitle = activeConversation?.title || 'Yeni sohbet'
-  const showEmptyState = messages.length === 0 && streamingView === null
+  const showEmptyState =
+    messages.length === 0 &&
+    streamingView === null &&
+    !approvalView &&
+    !(finishedReply?.conversationId === activeId && finishedReply.message === null)
   const lastMessage = messages[messages.length - 1]
   const canRegenerate = !streamingView && lastMessage?.role === 'assistant'
   const summary =
@@ -586,6 +630,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   role={message.role}
                   content={message.content}
                   tools={message.tools}
+                  outcome={activityOutcomes[activityRecordKey(message)]}
                   onEdit={
                     message.role === 'user' && !streamingView
                       ? (text) => void editMessage(message.id, text)
@@ -604,14 +649,30 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   content={streamingView.text}
                   tools={streamingView.tools}
                   pending
+                  approval={approvalView}
+                  onRespond={
+                    approvalView
+                      ? (approved) => respondToApproval(approvalView.id, approved)
+                      : undefined
+                  }
+                  onStop={() => window.api.chat.stop(streamingView.conversationId)}
                 />
               )}
-              {approvalView && (
-                <ApprovalCard
+              {!streamingView && approvalView && (
+                <ActivitySurface
+                  tools={[]}
+                  pending
                   approval={approvalView}
                   onRespond={(approved) => respondToApproval(approvalView.id, approved)}
+                  onStop={activeId !== null ? () => window.api.chat.stop(activeId) : undefined}
                 />
               )}
+              {!streamingView &&
+                !approvalView &&
+                finishedReply?.message === null &&
+                lastOutcome?.conversationId === activeId && (
+                  <ActivitySurface tools={[]} outcome={lastOutcome.kind} />
+                )}
             </div>
           )}
 
