@@ -4,13 +4,15 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { checkIntegrity, closeDb, initDatabase, isDbOpen } from './index'
 import {
+  backupProblem,
   createBackup,
   dailyBackupName,
   listBackups,
   pruneBackups,
   replaceDatabaseFile,
   safetyBackupName,
-  selectExpiredBackups
+  selectExpiredBackups,
+  summarizeBackup
 } from './backup'
 import { createTask, listTasks } from '../data/tasks'
 
@@ -82,6 +84,24 @@ describe('yedek dosyaları', () => {
     initDatabase(dbPath)
     expect(checkIntegrity()).toBe('ok')
     expect(listTasks().map((task) => task.title)).toEqual(['Yedekteki görev'])
+  })
+
+  it('yedeğin içeriğini özetler ve bozuk dosyayı yedek saymaz', async () => {
+    initDatabase(dbPath)
+    const info = await createBackup(backupDir, daysBefore(0))
+    const path = join(backupDir, info.name)
+    expect(backupProblem(path)).toBeNull()
+    expect(summarizeBackup(path)).toEqual({
+      conversations: 0,
+      messages: 0,
+      memories: 0,
+      lastMessageAt: null
+    })
+
+    const broken = join(dir, 'bozuk.db')
+    writeFileSync(broken, 'bozuk veri '.repeat(2000))
+    expect(backupProblem(broken)).not.toBeNull()
+    expect(summarizeBackup(broken)).toBeNull()
   })
 
   it('veritabanı açıkken dosyayı değiştirmez', async () => {

@@ -7,7 +7,8 @@ import {
   listBackups,
   pruneBackups,
   replaceDatabaseFile,
-  safetyBackupName
+  safetyBackupName,
+  summarizeBackup
 } from '../db/backup'
 import { logDirectory } from './logger'
 import { markQuitting } from './window'
@@ -28,6 +29,16 @@ const formatTime = (ms: number): string =>
   })
 
 const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+
+// "İçinde 6 sohbet, 19 mesaj, 2 hafıza var; son mesaj 30 Eylül 2026 21:10." Okunamazsa boş metin
+function describeBackup(path: string): string {
+  const summary = summarizeBackup(path)
+  if (!summary) return ''
+  const last = summary.lastMessageAt
+    ? `; son mesaj ${formatTime(Date.parse(`${summary.lastMessageAt.replace(' ', 'T')}Z`))}`
+    : ''
+  return `İçinde ${summary.conversations} sohbet, ${summary.messages} mesaj, ${summary.memories} hafıza var${last}. `
+}
 
 /**
  * Veritabanını açar ve bütünlüğünü kontrol eder. Sorun varsa kullanıcıya son yedeği geri yüklemeyi
@@ -65,7 +76,8 @@ export function openDatabaseSafely(): boolean {
     title: TITLE,
     message: 'Veritabanında sorun bulundu',
     detail:
-      `Son yedek: ${formatTime(latest.createdAt)}. Geri yüklenirse bu tarihten sonraki kayıtlar kaybolur. ` +
+      `Son yedek: ${formatTime(latest.createdAt)}. ${describeBackup(join(backupDirectory(), latest.name))}` +
+      `Geri yüklenirse bu tarihten sonraki kayıtlar kaybolur. ` +
       `Bozuk dosya silinmez, "asistan-bozuk-..." adıyla saklanır.\n\nAyrıntı: ${problem.slice(0, 300)}`,
     buttons: ['Son yedeği geri yükle', opened ? 'Yine de devam et' : 'Çık'],
     defaultId: 0,
@@ -141,6 +153,7 @@ export async function restoreBackup(window: BrowserWindow | null, name: string):
     message: 'Yedek geri yüklensin mi?',
     detail:
       `${formatTime(backup.createdAt)} tarihli yedek yüklenecek ve uygulama yeniden başlayacak. ` +
+      describeBackup(join(dir, backup.name)) +
       'Bu tarihten sonraki sohbetler, görevler ve notlar kaybolur.\n\n' +
       'Mevcut veriler önce "Geri yükleme öncesi" yedeği olarak saklanır; fikrini değiştirirsen ona dönebilirsin.',
     buttons: ['Geri yükle ve yeniden başlat', 'Vazgeç'],
