@@ -8,6 +8,7 @@ export function focusComposer(): void {
 
 // Sohbet arama kutusuna odaklan ve içindeki metni seç (Ctrl+F)
 export function focusConversationSearch(): void {
+  window.dispatchEvent(new Event('jarvis:open-history'))
   requestAnimationFrame(() => {
     const input = document.getElementById(CONVERSATION_SEARCH_ID)
     if (input instanceof HTMLInputElement) {

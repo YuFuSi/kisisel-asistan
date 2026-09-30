@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowDown, Download, FileUp, Settings } from 'lucide-react'
+import { ArrowDown, Download, FileUp, Settings, History } from 'lucide-react'
 import { composeMessage } from '@shared/attachments'
 import {
   PROVIDERS,
@@ -13,6 +13,8 @@ import {
   type ToolActivity
 } from '@shared/api'
 import ConversationList from '../components/chat/ConversationList'
+import HistoryDrawer from '../components/chat/HistoryDrawer'
+import { useNarrowWindow } from '../lib/useNarrowWindow'
 import MessageBubble from '../components/chat/MessageBubble'
 import Composer from '../components/chat/Composer'
 import ActivitySurface from '../components/chat/ActivitySurface'
@@ -101,6 +103,15 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
   const [streaming, setStreaming] = useState<Streaming | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Silinmek üzere onay bekleyen sohbetin kimliği (null ise onay kutusu kapalı)
+  const narrow = useNarrowWindow()
+  const [historyOpen, setHistoryOpen] = useState(false)
+  useEffect(() => {
+    function openHistory(): void {
+      if (active) setHistoryOpen(true)
+    }
+    window.addEventListener('jarvis:open-history', openHistory)
+    return () => window.removeEventListener('jarvis:open-history', openHistory)
+  }, [active])
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
   // Asistanın beklediği onaylar ortak depoda; bu sohbete ait olan burada gösterilir
   const approvals = usePendingApprovals()
@@ -505,18 +516,48 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
   return (
     <div className="flex h-full">
-      <ConversationList
-        results={results}
-        activeId={activeId}
-        query={query}
-        onQueryChange={setQuery}
-        onSelect={(id) => void selectConversation(id)}
-        onNew={() => openConversation(null)}
-        onDelete={(id) => setPendingDeleteId(id)}
-        onRename={(id, title) => void renameConversation(id, title)}
-        onPin={(id, pinned) => void pinConversation(id, pinned)}
-        onExport={(id) => void exportConversation(id)}
-      />
+      {narrow ? (
+        <HistoryDrawer open={active && historyOpen} onClose={() => setHistoryOpen(false)}>
+          <ConversationList
+            drawer
+            results={results}
+            activeId={activeId}
+            query={query}
+            onQueryChange={setQuery}
+            onSelect={(id) => {
+              setHistoryOpen(false)
+              void selectConversation(id)
+            }}
+            onNew={() => {
+              setHistoryOpen(false)
+              openConversation(null)
+            }}
+            onDelete={(id) => setPendingDeleteId(id)}
+            onRename={(id, title) => void renameConversation(id, title)}
+            onPin={(id, pinned) => void pinConversation(id, pinned)}
+            onExport={(id) => void exportConversation(id)}
+          />
+        </HistoryDrawer>
+      ) : (
+        <ConversationList
+          results={results}
+          activeId={activeId}
+          query={query}
+          onQueryChange={setQuery}
+          onSelect={(id) => {
+            setHistoryOpen(false)
+            void selectConversation(id)
+          }}
+          onNew={() => {
+            setHistoryOpen(false)
+            openConversation(null)
+          }}
+          onDelete={(id) => setPendingDeleteId(id)}
+          onRename={(id, title) => void renameConversation(id, title)}
+          onPin={(id, pinned) => void pinConversation(id, pinned)}
+          onExport={(id) => void exportConversation(id)}
+        />
+      )}
 
       <div
         className="relative flex min-w-0 flex-1 flex-col"
@@ -548,6 +589,15 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
 
         <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line px-4">
           <div className="flex min-w-0 items-center gap-2">
+            {narrow && (
+              <button
+                onClick={() => setHistoryOpen(true)}
+                aria-label="Sohbet geçmişini aç"
+                className="min-h-8 min-w-8 rounded-control text-muted hover:bg-surface"
+              >
+                <History className="mx-auto h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
             <Orb state={assistantState} size={28} />
             <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
           </div>
@@ -630,7 +680,7 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
                   role={message.role}
                   content={message.content}
                   tools={message.tools}
-                  outcome={activityOutcomes[activityRecordKey(message)]}
+                  outcome={message.outcome ?? activityOutcomes[activityRecordKey(message)]}
                   onEdit={
                     message.role === 'user' && !streamingView
                       ? (text) => void editMessage(message.id, text)
