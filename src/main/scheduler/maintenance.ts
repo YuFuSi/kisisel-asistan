@@ -10,10 +10,23 @@ const FIRST_BACKUP_DELAY_MS = 60_000
 // Etkinlik kaydı 180 gün saklanır
 const ACTIVITY_RETENTION_MS = 180 * 86_400_000
 
+// Arka arkaya tamamlanamayan aktarma sayısı; sorun sürerse günlükte görünsün
+let incompleteCheckpoints = 0
+
 /** Hata vermeden WAL aktarması (uyku ve Windows kapanışında da çağrılır) */
 export function safeCheckpoint(): void {
   try {
-    checkpointDb()
+    if (checkpointDb()) {
+      incompleteCheckpoints = 0
+      return
+    }
+    incompleteCheckpoints += 1
+    // İlk seferde ve sonra her 12 denemede bir (5 dk aralıkla saatte bir) yazılır
+    if (incompleteCheckpoints % 12 === 1) {
+      console.warn(
+        `Veritabanı WAL aktarması tamamlanamadı (${incompleteCheckpoints}. kez); değişiklikler henüz ana dosyada değil`
+      )
+    }
   } catch (err) {
     console.error('Veritabanı WAL aktarması başarısız:', err)
   }

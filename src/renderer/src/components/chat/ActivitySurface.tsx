@@ -5,6 +5,7 @@ import type { OutcomeKind } from '../../lib/outcome'
 import { activitySummary, formatActivityInput, splitActivitySteps } from '../../lib/activitySurface'
 import { buttonClass } from '../../lib/styles'
 import ApprovalCard from './ApprovalCard'
+import ResultCard from '../jarvis/ResultCard'
 import { errorMessage } from '../../lib/errors'
 
 interface ActivitySurfaceProps {
@@ -46,6 +47,11 @@ function ActivityStep({
         <span className="min-w-0 flex-1 break-words text-ink">{tool.label}</span>
         <span className="shrink-0 text-xs text-faint">{STEP_LABELS[tool.status]}</span>
       </div>
+      {tool.status === 'done' && tool.card && (
+        <div className="mt-2 ml-6">
+          <ResultCard card={tool.card} />
+        </div>
+      )}
       {technical && (
         <div className="mt-2 ml-6 space-y-2 text-xs select-text">
           <p className="break-all font-mono text-muted">Araç: {tool.name}</p>
