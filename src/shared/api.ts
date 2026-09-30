@@ -225,6 +225,8 @@ export interface AppSettings {
   /** Hafıza ve notlarda anahtar kelime yerine anlamsal (embedding) arama kullanılsın mı.
    * Açmadan önce Ollama'da "bge-m3" modelinin indirilmiş olması gerekir. */
   semanticSearchEnabled: boolean
+  /** Ekranın üst ortasındaki Jarvis Çentiği (onay, iş bitti, çalışan adım) */
+  notchEnabled: boolean
 }
 
 export interface SettingsPatch {
@@ -256,6 +258,7 @@ export interface SettingsPatch {
   speechRate?: number
   speechVolume?: number
   semanticSearchEnabled?: boolean
+  notchEnabled?: boolean
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -864,6 +867,10 @@ export interface Api {
     onDataChanged(listener: (scope: DataScope) => void): () => void
     /** Tepsi menüsü veya global kısayoldan gelen komutlar */
     onCommand(listener: (command: AppCommand) => void): () => void
+  }
+  notch: {
+    /** Fare damlanın/kartın üstündeyken true: tıklamalar çentiğe gelsin */
+    setInteractive(interactive: boolean): void
   }
   hud: {
     /** HUD penceresini büyütür/küçültür (sağ üst köşe sabit kalır); el ile kontrol açılıp kapanınca */

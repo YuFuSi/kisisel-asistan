@@ -18,7 +18,11 @@ Add-Type -Namespace JarvisWin -Name Native -MemberDefinition '
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr hAfter, int x, int y, int cx, int cy, uint flags);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr h, System.Text.StringBuilder s, int n);
+  public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
 '
+Add-Type -AssemblyName System.Windows.Forms
 while ($true) {
   $line = [Console]::In.ReadLine()
   if ($null -eq $line) { break }
@@ -38,6 +42,25 @@ while ($true) {
         $procId = 0
         [JarvisWin.Native]::GetWindowThreadProcessId($h, [ref]$procId) | Out-Null
         Write-Output (@{ ok = $true; id = $reqId; pid_ = $procId } | ConvertTo-Json -Compress)
+      }
+      'fullscreen' {
+        # Öndeki pencere bulunduğu ekranı tamamen kaplıyor mu (oyun, video, sunum)?
+        # Masaüstü ve görev çubuğu da ekranı kaplar ama tam ekran sayılmaz.
+        $h = [JarvisWin.Native]::GetForegroundWindow()
+        $full = $false
+        if ($h -ne [IntPtr]::Zero) {
+          $sb = New-Object System.Text.StringBuilder 64
+          [JarvisWin.Native]::GetClassName($h, $sb, 64) | Out-Null
+          $cls = $sb.ToString()
+          if ($cls -ne 'Progman' -and $cls -ne 'WorkerW' -and $cls -ne 'Shell_TrayWnd') {
+            $r = New-Object JarvisWin.Native+RECT
+            if ([JarvisWin.Native]::GetWindowRect($h, [ref]$r)) {
+              $b = [System.Windows.Forms.Screen]::FromHandle($h).Bounds
+              $full = ($r.Left -le $b.Left -and $r.Top -le $b.Top -and $r.Right -ge $b.Right -and $r.Bottom -ge $b.Bottom)
+            }
+          }
+        }
+        Write-Output (@{ ok = $true; id = $reqId; full = $full } | ConvertTo-Json -Compress)
       }
       default {
         Write-Output (@{ ok = $false; id = $reqId; error = 'Bilinmeyen komut.' } | ConvertTo-Json -Compress)
@@ -117,6 +140,12 @@ export async function daemonForegroundWindowId(): Promise<number | null> {
   const result = await sendCommand({ op: 'foreground' })
   const pid = result.pid_
   return typeof pid === 'number' && pid > 0 ? pid : null
+}
+
+/** Öndeki pencere ekranı tamamen kaplıyor mu (tam ekran oyun/video/sunum) */
+export async function daemonForegroundIsFullscreen(): Promise<boolean> {
+  const result = await sendCommand({ op: 'fullscreen' })
+  return result.full === true
 }
 
 /** Uygulama kapanırken çağrılır; kalıcı süreç açık kalmasın */

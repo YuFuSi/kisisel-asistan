@@ -20,6 +20,7 @@
 
 ### Kalıcı dersler (tekrar yaşanmasın)
 
+- **Geliştirme ayrı veri klasörü kullanır (2026-09-30):** `npm run dev` artık `%APPDATA%\kisisel-asistan-dev` kullanıyor; gerçek veri (`kisisel-asistan`) sadece kurulu uygulamada ya da `JARVIS_REAL_DATA=1` ile. O gün gerçek veritabanı bozuldu ve iki farklı geçmiş karıştı (bozuk dosya `asistan-bozuk-2026-09-30-2245.db`). **Kurulu Jarvis'i kendi kabuğundan başlatma veya zorla kapatma**: senin başlattığın kopya açıkken kullanıcının kısayolu sessizce kapanıyor. CDP artık ana pencereye bağlanır; çentik/HUD için `CDP_HASH=notch` / `CDP_HASH=hud`.
 - **Yerel `main`'i güncellemeden iş yapma:** 2026-09-28'de yerel `main` 89 commit gerideydi, ilk analiz eski koda yapıldı. Oturum başında `git fetch && git status` ile kontrol et.
 - **Merge'den önce CI kontrollerinin kaydolmasını bekle:** `gh pr checks <no> --watch` kontroller henüz yokken hemen çıkıyor. Kullan: `until [ -n "$(gh pr checks N)" ]; do sleep 5; done; gh pr checks N --watch --fail-fast && gh pr merge N --merge --delete-branch`.
 - **Stacked PR tuzağı:** taban dalı silinmezse sonraki PR'ın tabanı `main`'e dönmez; "MERGED" görünse de `main`'e ulaşmamış olabilir (`git log origin/main` ile doğrula).

@@ -11,7 +11,7 @@ import {
   setGeneratedTitle,
   setTitleIfEmpty
 } from '../data/conversations'
-import { notifyDataChanged } from '../events'
+import { notifyDataChanged, sendChatEvent } from '../events'
 import { toLocalIso } from '../lib/datetime'
 import { cleanTitle } from '../lib/title'
 import { summarizeToolOutput, toModelMessages } from '../lib/toolHistory'
@@ -259,7 +259,7 @@ async function streamReply(
   options: ReplyOptions
 ): Promise<void> {
   const emit = (event: ChatEvent): void => {
-    if (!sender.isDestroyed()) sender.send('chat:event', event)
+    sendChatEvent(sender, event)
   }
   const source = options.source ?? 'chat'
   const finish = (result: ReplyResult): void => {

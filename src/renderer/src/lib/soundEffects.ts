@@ -77,9 +77,13 @@ export function useSfxEnabled(): boolean {
 
 let context: AudioContext | null = null
 
+// Çentik ve HUD da ana pencerenin olaylarını dinliyor; aynı efekt iki kez çalmasın diye
+// bu yardımcı pencereler sadece kendi dokunma sesini çalar
+const auxiliaryWindow = window.location.hash === '#notch' || window.location.hash === '#hud'
+
 /** Ses efektini çalar; kapalıysa, hareket azaltma açıksa veya ses çalınamıyorsa sessizce çıkar */
 export function playSfx(kind: Sfx): void {
-  if (!enabled) return
+  if (!enabled || (auxiliaryWindow && kind !== 'tap')) return
   try {
     context ??= new AudioContext()
     const ctx = context

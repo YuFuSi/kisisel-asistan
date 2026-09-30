@@ -9,7 +9,15 @@ import { editAndResend, regenerateReply, sendMessage, stopChat } from './chat'
 import type { ChatEvent } from '../../shared/api'
 
 // Gerçek pencere yok; "veri değişti" olayı test için önemli değil
-vi.mock('../events', () => ({ notifyDataChanged: vi.fn() }))
+vi.mock('../events', () => ({
+  notifyDataChanged: vi.fn(),
+  sendChatEvent: (
+    sender: { isDestroyed(): boolean; send(...args: unknown[]): void },
+    event: unknown
+  ) => {
+    if (!sender.isDestroyed()) sender.send('chat:event', event)
+  }
+}))
 
 // streamText/generateText testte gerçek modele gitmez; her test kendi akışını verir
 vi.mock('ai', async (importOriginal) => {

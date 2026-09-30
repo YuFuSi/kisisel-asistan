@@ -15,6 +15,7 @@ import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
 import { disposeHud, toggleHud } from './system/hud'
+import { applyNotch, disposeNotch } from './system/notch'
 import { installDownloadedUpdate, startUpdater } from './system/updater'
 import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
@@ -63,7 +64,14 @@ const HUD_SHORTCUT = 'CommandOrControl+Shift+J'
 // aksi halde %APPDATA%\Jarvis klasörüne yazar ve orada kayıtlı API anahtarları geliştirmede çözülemez.
 // Uygulamanın adı değişse de eski veriler bu sayede kaybolmaz.
 // Tek kopya kilidi de bu klasöre bağlı olduğundan her şeyden önce ayarlanır.
-app.setPath('userData', join(app.getPath('appData'), 'kisisel-asistan'))
+// 2026-09-30: geliştirme sırasında gerçek veritabanı iki kez karıştı/bozuldu. Bu yüzden geliştirme
+// modu (paketlenmemiş uygulama) artık ayrı bir test klasörü kullanır; gerçek veriyle denemek
+// gerekirse JARVIS_REAL_DATA=1 ile başlatılır.
+const dataFolder =
+  app.isPackaged || process.env['JARVIS_REAL_DATA'] === '1'
+    ? 'kisisel-asistan'
+    : 'kisisel-asistan-dev'
+app.setPath('userData', join(app.getPath('appData'), dataFolder))
 
 // Aynı anda tek kopya çalışsın; ikinci kez açılmaya çalışılırsa mevcut pencere öne gelir
 if (!app.requestSingleInstanceLock()) {
@@ -120,6 +128,7 @@ if (!app.requestSingleInstanceLock()) {
       console.warn(`HUD kısayolu kaydedilemedi: ${HUD_SHORTCUT}`)
     }
     applyOpenAtLogin(settings.openAtLogin)
+    applyNotch(settings.notchEnabled)
     stopReminderScheduler = startReminderScheduler()
     stopBriefScheduler = startBriefScheduler()
     stopMaintenance = startMaintenance()
@@ -172,6 +181,7 @@ if (!app.requestSingleInstanceLock()) {
     ;(async () => {
       disposeGlobalShortcut()
       disposeHud()
+      disposeNotch()
       destroyTray()
       stopReminderScheduler?.()
       stopBriefScheduler?.()

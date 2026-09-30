@@ -150,6 +150,9 @@ const api: Api = {
       return () => ipcRenderer.removeListener('app:command', handler)
     }
   },
+  notch: {
+    setInteractive: (interactive) => ipcRenderer.send('notch:interactive', interactive === true)
+  },
   hud: {
     resize: (width, height) => ipcRenderer.invoke('hud:resize', width, height),
     navigate: (page) => ipcRenderer.invoke('hud:navigate', page)

@@ -30,6 +30,12 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         disabled={!settings.loginItemSupported}
         onChange={(checked) => void onUpdate({ openAtLogin: checked })}
       />
+      <Toggle
+        label="Jarvis Çentiği"
+        description="Ekranın üst ortasında küçük gözlü damla: Jarvis çalışırken ne yaptığını yazar, onay gerekince başka programdayken bile oradan onaylarsın. Tam ekran oyun ve videoda gizlenir."
+        checked={settings.notchEnabled}
+        onChange={(checked) => void onUpdate({ notchEnabled: checked })}
+      />
       <Field
         label="Hızlı açma kısayolu"
         hint="Hangi programda olursan ol, bu tuşlara basınca asistan açılır; tekrar basınca gizlenir."

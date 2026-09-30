@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { getToolContext } from './context'
 import { needsApproval } from './permissions'
 import type { ChatEvent, ToolApproval } from '../../shared/api'
+import { sendChatEvent } from '../events'
 
 // Kullanıcı bu süre içinde cevap vermezse işlem yapılmaz
 const APPROVAL_TIMEOUT_MS = 120_000
@@ -74,7 +75,7 @@ export async function requireApproval(request: Omit<ToolApproval, 'id'>): Promis
 
   const approval: ToolApproval = { ...request, id: randomUUID() }
   const send = (event: ChatEvent): void => {
-    if (!sender.isDestroyed()) sender.send('chat:event', event)
+    sendChatEvent(sender, event)
   }
 
   const outcome = await new Promise<Outcome>((resolve) => {
