@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { ChatEvent, ToolApproval, VoicePhase } from '@shared/api'
+import type { ChatEvent, ToolApproval, ToolCard, VoicePhase } from '@shared/api'
 import { finishedOutcome, shouldCelebrate, type OutcomeKind } from './outcome'
 import { playSfx } from './soundEffects'
 import { upsertStep, type WorkStep } from './workSteps'
@@ -58,6 +58,17 @@ function notifySteps(): void {
   stepListeners.forEach((listener) => listener())
 }
 
+// Bağlamsal kartlar: son cevapta araçların ürettiği kartlar; adımlar temizlense de yeni cevaba
+// kadar kalır (sesli sohbette altyazının altında, çentikte, işlem yüzeyinde gösterilir)
+const cardListeners = new Set<() => void>()
+let cards: ToolCard[] = []
+const MAX_CARDS = 3
+
+function setCards(next: ToolCard[]): void {
+  cards = next
+  cardListeners.forEach((listener) => listener())
+}
+
 function trackSteps(event: { type: string; activity?: Parameters<typeof upsertStep>[1] }): void {
   if (event.type === 'tool' && event.activity) {
     // Önceki cevabın bitmiş adımları yeni cevapta karışmasın
@@ -68,6 +79,8 @@ function trackSteps(event: { type: string; activity?: Parameters<typeof upsertSt
     }
     steps = upsertStep(steps, event.activity)
     notifySteps()
+    const card = event.activity.card
+    if (card) setCards([...cards, card].slice(-MAX_CARDS))
   } else if (event.type === 'done' || event.type === 'stopped' || event.type === 'error') {
     if (steps.length === 0) return
     stepsFinishing = true
@@ -188,6 +201,10 @@ function subscribeChat(): void {
   chatSubscribed = true
   window.api.chat.onEvent((event) => {
     const runningTools = replies.get(event.conversationId) ?? new Set<string>()
+    // Yeni bir cevap başlıyor: önceki cevabın kartları kalkar
+    if (!replies.has(event.conversationId) && (event.type === 'delta' || event.type === 'tool')) {
+      if (cards.length > 0) setCards([])
+    }
     trackSteps(event)
     if (event.type === 'delta') replyChunks += 1
     // Duygu: onay beklerken kararsız, cevap bitince başarı, hata olunca hata; durdurma/onay sonrası sakin
@@ -274,6 +291,19 @@ function subscribeSteps(listener: () => void): () => void {
   return () => {
     stepListeners.delete(listener)
   }
+}
+
+function subscribeCards(listener: () => void): () => void {
+  subscribeChat()
+  cardListeners.add(listener)
+  return () => {
+    cardListeners.delete(listener)
+  }
+}
+
+/** Son cevabın bağlamsal kartları (en fazla 3); yoksa boş dizi */
+export function useResultCards(): ToolCard[] {
+  return useSyncExternalStore(subscribeCards, () => cards)
 }
 
 /** Asistanın şu anki cevabında çalışan ve biten araç adımları; iş yoksa boş dizi */

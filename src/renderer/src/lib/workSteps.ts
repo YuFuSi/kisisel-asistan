@@ -1,4 +1,4 @@
-import type { ToolActivity } from '@shared/api'
+import type { ToolActivity, ToolCard } from '@shared/api'
 
 /** Asistanın o anki cevabında çalışan ya da biten bir araç adımı */
 export interface WorkStep {
@@ -6,6 +6,8 @@ export interface WorkStep {
   name: string
   label: string
   status: ToolActivity['status']
+  /** Adım bitince sonucun kart hâli (varsa) */
+  card?: ToolCard
 }
 
 /** Küre çevresinde en fazla bu kadar adım gösterilir; fazlası en eskiden düşer */
@@ -17,7 +19,8 @@ export function upsertStep(steps: WorkStep[], activity: ToolActivity): WorkStep[
     id: activity.id,
     name: activity.name,
     label: activity.label,
-    status: activity.status
+    status: activity.status,
+    card: activity.card
   }
   const index = steps.findIndex((step) => step.id === activity.id)
   if (index >= 0) {

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Check, MessageSquare, X } from 'lucide-react'
 import Orb from './components/jarvis/Orb'
+import ResultCard from './components/jarvis/ResultCard'
 import {
   respondToApproval,
   STATE_LABELS,
   useAssistantEmotion,
   useLastOutcome,
   usePendingApprovals,
+  useResultCards,
   useWorkSteps,
   type Outcome
 } from './lib/assistantState'
@@ -15,7 +17,7 @@ import { toggleRemoteVoice, useRemoteAssistant } from './lib/remoteAssistant'
 import { currentStep } from './lib/workSteps'
 
 // Sonuç kartı bu kadar süre görünür kalır
-const OUTCOME_MS = 5000
+const OUTCOME_MS = 8000
 
 const OUTCOME_TEXT: Record<OutcomeKind, string> = {
   completed: 'Tamamlandı',
@@ -39,6 +41,7 @@ function NotchApp(): React.JSX.Element {
   const steps = useWorkSteps()
   const approvals = usePendingApprovals()
   const outcome = useLastOutcome()
+  const cards = useResultCards()
   const [hover, setHover] = useState(false)
   // Son sonuç kartı: yeni sonuç gelince görünür, birkaç saniye sonra kapanır
   const [shownOutcome, setShownOutcome] = useState<Outcome | null>(null)
@@ -130,6 +133,11 @@ function NotchApp(): React.JSX.Element {
           </div>
         )}
 
+        {!approval && shownOutcome && cards.length > 0 && (
+          <div className="border-t border-line px-3 pt-3">
+            <ResultCard card={cards[cards.length - 1]} />
+          </div>
+        )}
         {!approval && shownOutcome && (
           <div className="animate-fade flex items-center gap-3 border-t border-line px-4 py-3">
             <span

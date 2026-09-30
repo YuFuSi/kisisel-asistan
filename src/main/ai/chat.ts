@@ -12,6 +12,7 @@ import {
   setTitleIfEmpty
 } from '../data/conversations'
 import { notifyDataChanged, sendChatEvent } from '../events'
+import { buildToolCard } from '../lib/toolCards'
 import { toLocalIso } from '../lib/datetime'
 import { cleanTitle } from '../lib/title'
 import { summarizeToolOutput, toModelMessages } from '../lib/toolHistory'
@@ -277,7 +278,7 @@ async function streamReply(
     id: string,
     name: string,
     status: ToolStatus,
-    extra: Pick<ToolActivity, 'input' | 'result'> = {}
+    extra: Pick<ToolActivity, 'input' | 'result' | 'card'> = {}
   ): void => {
     const index = tools.findIndex((t) => t.id === id)
     const activity: ToolActivity = {
@@ -332,7 +333,8 @@ async function streamReply(
             break
           case 'tool-result':
             trackTool(part.toolCallId, part.toolName, 'done', {
-              result: summarizeToolOutput(part.output)
+              result: summarizeToolOutput(part.output),
+              card: buildToolCard(part.toolName, part.output) ?? undefined
             })
             break
           case 'tool-error': {
