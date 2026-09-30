@@ -30,6 +30,7 @@ import TaskItem from './src/renderer/src/components/tasks/TaskItem'
 import CommandPalette from './src/renderer/src/components/CommandPalette'
 import ActivitySurface from './src/renderer/src/components/chat/ActivitySurface'
 import ChatPage from './src/renderer/src/pages/ChatPage'
+import HomePage from './src/renderer/src/pages/HomePage'
 import ToastProvider from './src/renderer/src/components/ui/ToastProvider'
 import ApprovalDock from './src/renderer/src/components/jarvis/ApprovalDock'
 import { useAssistantState, useVisibleConversation, usePendingApprovals } from './src/renderer/src/lib/assistantState'
@@ -194,6 +195,29 @@ window.runChatChecks = async () => {
   assert(document.getElementById('shared-state').textContent === 'idle:1:0', 'Erken gönderim hatasında noteReplyFailed durumu temizlemedi')
   return 'Gerçek ChatPage: kaydırma/akış, F0 ortak onayı, ApprovalDock, kalıcı Activity sonucu ve erken gönderim hatası geçti.'
 }
+window.cleanupChecks = () => reactRoot.unmount()
+window.runHomeChecks = async () => {
+  let notes = 0
+  const asks = []
+  window.api.memories = {list:async()=>[]}
+  window.api.system = {personalNote:async()=>{notes++;return 'Bugün sakin bir gün.'},weather:async()=>null}
+  window.api.calendar = {events:async()=>[]}
+  flushSync(()=>reactRoot.render(<ToastProvider><div style={{height:650}}><HomePage onNavigate={()=>{}} onAsk={text=>asks.push(text)} onOpenConversation={()=>{}} handControlOn={false} onHandControlChange={()=>{}} /></div></ToastProvider>))
+  await wait()
+  const today = [...document.querySelectorAll('details')].find(item=>item.querySelector('summary').textContent==='Gününü gör')
+  assert(today && !today.open && notes===0,'Bugün kapalı başlamadı veya model gereksiz çağrıldı')
+  assert(!document.querySelector('canvas'),'Dekoratif arka plan tuvali kaldı')
+  today.open = true; await wait(); await wait()
+  assert(notes===1 && today.textContent.includes('Bugün sakin bir gün.'),'Gün bağlamı isteğe bağlı açılmadı')
+  const input = document.getElementById('home-command')
+  assert(input.getAttribute('aria-label'),'Komut kutusunun erişilebilir adı yok')
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Bir dosya bul')
+  input.dispatchEvent(new Event('input',{bubbles:true})); await wait(); key(input,'Enter'); await wait()
+  assert(asks[0]==='Bir dosya bul' && input.value==='','Ana komut gönderimi bozuldu')
+  const starters = [...document.querySelectorAll('details')].find(item=>item.querySelector('summary').textContent==='Başlangıç önerileri')
+  assert(starters && !starters.open,'Öneriler sürekli görünür kaldı')
+  return 'Ana Sayfa: sakin başlangıç, isteğe bağlı gün bağlamı, erişilebilir komut ve katlanmış öneriler geçti.'
+}
 window.runActivityChecks = async () => {
   const tools = Array.from({length:6}, (_,index) => ({id:'step-'+index,name:'arac_'+index,label:'İş adımı '+index,status:index===5?'running':'done',input:{aranan:'örnek belge'},result:index===5?undefined:'Örnek sonuç'}))
   let stops = 0
@@ -223,7 +247,12 @@ window.runActivityChecks = async () => {
   const finished = document.querySelector('[aria-label="Jarvis etkinliği"]')
   assert(finished.textContent.includes('Durduruldu'),'F0 sonuç türü gösterilmedi')
   assert(finished.querySelector('[aria-expanded]').getAttribute('aria-expanded')==='false','Bitmiş işlem kapalı başlamadı')
-  return 'Activity Surface: üç seviye, son üç adım, teknik ayrıntı, görünür onay, tek durdurma ve F0 sonucu geçti.'
+  finished.querySelector('[aria-expanded]').click(); await wait()
+  renderSurface({tools:[{...tools[0],status:'done',card:{kind:'task',title:'Kartlı görev',due:null}}],outcome:'completed'}); await wait()
+  assert(document.body.textContent.includes('Kartlı görev'),'F7 ResultCard gösterilmedi')
+  renderSurface({tools:[{...tools[0],status:'running',card:{kind:'task',title:'Henüz bitmedi',due:null}}],pending:true}); await wait()
+  assert(!document.body.textContent.includes('Henüz bitmedi'),'Bitmeyen araç sonuç kartı gösterdi')
+  return 'Activity Surface: F7 sonuç kartı, üç seviye, son üç adım, teknik ayrıntı, görünür onay, tek durdurma ve F0 sonucu geçti.'
 }
 `
 
@@ -241,14 +270,43 @@ async function run() {
         {
           name: 'orb-test-double',
           setup(builder) {
+            builder.onResolve({ filter: /\?.*url$/ }, () => ({
+              path: 'asset-url',
+              namespace: 'test-url'
+            }))
+            builder.onLoad({ filter: /.*/, namespace: 'test-url' }, () => ({
+              contents: "export default ''",
+              loader: 'js'
+            }))
+            builder.onResolve({ filter: /lib\/useHandTracking$/ }, () => ({
+              path: 'hands',
+              namespace: 'test-hands'
+            }))
+            builder.onLoad({ filter: /.*/, namespace: 'test-hands' }, () => ({
+              contents:
+                "import {useRef} from 'react';export function useHandTracking(){return {videoRef:useRef(null),status:'off',pinching:false,handPoint:null,twoHandSpread:null,handNormalized:null}}",
+              loader: 'js',
+              resolveDir: root
+            }))
+            builder.onResolve({ filter: /lib\/useClapActivation$/ }, () => ({
+              path: 'clap',
+              namespace: 'test-clap'
+            }))
+            builder.onLoad({ filter: /.*/, namespace: 'test-clap' }, () => ({
+              contents:
+                'export function useClapActivation(){};export async function hasCamera(){return false}',
+              loader: 'js'
+            }))
             // Küre Claude'un alanı; bu test yalnızca sohbet yerleşimini ve ortak UI'ı ölçer.
             builder.onResolve({ filter: /jarvis\/Orb$/ }, () => ({
               path: 'orb',
               namespace: 'test-orb'
             }))
             builder.onLoad({ filter: /.*/, namespace: 'test-orb' }, () => ({
-              contents: 'export default function Orb(){return null}',
-              loader: 'js'
+              contents:
+                'export default function Orb({size}){return <div style={{width:size,height:size}} aria-hidden="true" />} ',
+              loader: 'jsx',
+              resolveDir: root
             }))
           }
         }
@@ -292,13 +350,14 @@ async function run() {
         throw new Error('CSS yükleme hareketi tercihi izlemedi.')
     }
     console.log('Açık pencerede reduced-motion açma/kapatma geçti.')
-    for (const check of ['runChatChecks', 'runActivityChecks']) {
+    for (const check of ['runChatChecks', 'runActivityChecks', 'runHomeChecks']) {
       const result = await window.webContents.executeJavaScript(
         `window.${check}().catch(error => ({ error: error.message, stack: error.stack }))`
       )
       if (result.error) throw new Error(result.stack ?? result.error)
       console.log(result)
     }
+    await window.webContents.executeJavaScript('window.cleanupChecks()')
     window.webContents.debugger.detach()
     exitCode = 0
   } catch (error) {
