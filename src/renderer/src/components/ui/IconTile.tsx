@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 
 // Renkli, parlak ikon karesi (Jarvis Cam): degrade dolgu, üstte ışık, altta renkli gölge.
 // Renk tonu (hue) anlamı taşır: lila Jarvis, mavi zaman, amber dikkat, yeşil tamamlandı.
-const TONES = {
+export const TONES = {
   lilac: 232,
   blue: 210,
   amber: 36,

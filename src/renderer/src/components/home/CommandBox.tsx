@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import Button from '../ui/Button'
-import IconTile, { type IconTone } from '../ui/IconTile'
+import IconTile, { TONES, type IconTone } from '../ui/IconTile'
 import { useDictation } from '../../lib/useDictation'
 
 export const HOME_COMMAND_ID = 'home-command'
@@ -148,7 +148,12 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
           <motion.button
             key={starter.label}
             onClick={() => applyStarter(starter)}
-            className="glass-soft flex min-h-10 items-center gap-2.5 !rounded-full py-1.5 pr-4 pl-1.5 text-sm text-muted hover:text-ink"
+            className="flex min-h-10 items-center gap-2.5 rounded-full py-1.5 pr-4 pl-1.5 text-sm text-ink/80 hover:text-ink"
+            // Hap, ikonunun renginde çok hafif tonlu cam: ikon ile kutu aynı aileden
+            style={{
+              background: `linear-gradient(180deg, hsl(${TONES[starter.tone]} 90% 70% / 0.12), hsl(${TONES[starter.tone]} 80% 60% / 0.05))`,
+              boxShadow: `inset 0 1px 0 hsl(${TONES[starter.tone]} 90% 80% / 0.16), inset 0 0 0 1px hsl(${TONES[starter.tone]} 80% 70% / 0.14)`
+            }}
             initial={{ opacity: 0, y: 8 }}
             // Giriş sırayla gecikmeli; üstüne gelme ve basma gecikmesiz
             animate={{
@@ -161,7 +166,7 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
                 delay: 0.35 + index * 0.06
               }
             }}
-            whileHover={{ y: -2, backgroundColor: 'rgb(255 255 255 / 0.07)' }}
+            whileHover={{ y: -3, scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 400, damping: 28 }}
           >

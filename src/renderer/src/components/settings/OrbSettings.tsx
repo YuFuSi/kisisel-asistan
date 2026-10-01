@@ -1,5 +1,11 @@
 import Orb from '../jarvis/Orb'
-import { ORB_INTENSITIES, ORB_THEMES, setOrbPrefs, useOrbPrefs } from '../../lib/orbPrefs'
+import {
+  CHARACTERS,
+  ORB_INTENSITIES,
+  ORB_THEMES,
+  setOrbPrefs,
+  useOrbPrefs
+} from '../../lib/orbPrefs'
 import { playSfx, setSfxEnabled, useSfxEnabled } from '../../lib/soundEffects'
 import Field from './Field'
 
@@ -34,6 +40,22 @@ function OrbSettings(): React.JSX.Element {
                   aria-hidden
                 />
                 {theme.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field
+          label="Karakter"
+          hint="Ana Sayfa'da Jarvis'i temsil eden karakter. Pet karakterler imleci takip eder, sevinir, üzülür, boşta kalınca uyur."
+        >
+          <div className="flex flex-wrap gap-2">
+            {CHARACTERS.map((character) => (
+              <button
+                key={character.id}
+                onClick={() => setOrbPrefs({ character: character.id })}
+                className={chip(prefs.character === character.id)}
+              >
+                {character.label}
               </button>
             ))}
           </div>

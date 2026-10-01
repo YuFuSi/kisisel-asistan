@@ -36,10 +36,25 @@ export interface OrbPrefs {
   intensity: string
   /** Kürede ışıktan gözler (yüz) gösterilsin mi */
   face: boolean
+  /** Ana Sayfa'daki karakter: klasik küre veya pet (prototip "Jarvis Cam") */
+  character: CharacterId
 }
 
+export type CharacterId = 'orb' | 'robot' | 'cube'
+
+export const CHARACTERS: { id: CharacterId; label: string }[] = [
+  { id: 'robot', label: 'Cam robot' },
+  { id: 'cube', label: 'Jöle küp' },
+  { id: 'orb', label: 'Küre' }
+]
+
 const KEY = 'orbPrefs'
-const DEFAULTS: OrbPrefs = { theme: 'indigo', intensity: 'balanced', face: true }
+const DEFAULTS: OrbPrefs = {
+  theme: 'indigo',
+  intensity: 'balanced',
+  face: true,
+  character: 'robot'
+}
 
 function load(): OrbPrefs {
   try {
@@ -51,7 +66,10 @@ function load(): OrbPrefs {
       intensity: ORB_INTENSITIES.some((i) => i.id === parsed.intensity)
         ? String(parsed.intensity)
         : DEFAULTS.intensity,
-      face: typeof parsed.face === 'boolean' ? parsed.face : DEFAULTS.face
+      face: typeof parsed.face === 'boolean' ? parsed.face : DEFAULTS.face,
+      character: CHARACTERS.some((c) => c.id === parsed.character)
+        ? (parsed.character as CharacterId)
+        : DEFAULTS.character
     }
   } catch {
     return DEFAULTS

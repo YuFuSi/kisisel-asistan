@@ -5,6 +5,8 @@ import type { CalendarItem, HomeWeather, Memory, Reminder, Task } from '@shared/
 import CommandBox from '../components/home/CommandBox'
 import Orb from '../components/jarvis/Orb'
 import OrbHalo from '../components/jarvis/OrbHalo'
+import Pet from '../components/jarvis/Pet'
+import { useOrbPrefs } from '../lib/orbPrefs'
 import OrbitTools from '../components/jarvis/OrbitTools'
 import TaskOrbit from '../components/jarvis/TaskOrbit'
 import Button from '../components/ui/Button'
@@ -99,7 +101,7 @@ function voiceHint(voice: VoiceSnapshot): string {
   if (voice.sessionActive) {
     switch (voice.phase) {
       case 'capturing':
-        return 'Dinliyorum... Bitirmek için “dur” de veya küreye dokun.'
+        return 'Dinliyorum... Bitirmek için “dur” de veya Jarvis’e dokun.'
       case 'transcribing':
         return 'Söylediğini yazıya çeviriyorum...'
       case 'responding':
@@ -107,8 +109,8 @@ function voiceHint(voice: VoiceSnapshot): string {
     }
   }
   return voice.phase === 'wake'
-    ? '“Hey Jarvis” de veya konuşmak için küreye dokun'
-    : 'Konuşmak için küreye dokun'
+    ? '“Hey Jarvis” de veya konuşmak için Jarvis’e dokun'
+    : 'Konuşmak için Jarvis’e dokun'
 }
 
 // Ana deneyim küre ve komut; günlük bağlam kullanıcı açtığında görünür.
@@ -119,6 +121,7 @@ function HomePage({
   handControlOn,
   onHandControlChange
 }: HomePageProps): React.JSX.Element {
+  const { character } = useOrbPrefs()
   const state = useAssistantState()
   const emotion = useAssistantEmotion()
   const steps = useWorkSteps()
@@ -307,26 +310,37 @@ function HomePage({
               className="absolute inset-0 flex items-center justify-center"
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 70, damping: 16 }}
+              transition={{ type: 'spring', stiffness: 150, damping: 18 }}
             >
               {!handControlOn && <OrbHalo state={state} size={330} />}
-              <button
-                onClick={toggleVoiceSession}
-                aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-                title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-                className="max-w-full cursor-pointer rounded-full transition-transform duration-[var(--motion-control)] focus-visible:outline-offset-[-24px]"
-                style={{ transform: `scale(${orbScale})` }}
-              >
-                <Orb
+              {!handControlOn && character !== 'orb' ? (
+                <Pet
+                  variant={character}
                   state={state}
-                  size={handControlOn ? 440 : 300}
-                  excite={dragging ? 1 : excite}
                   emotion={emotion}
-                  steps={steps}
-                  notice={notice}
-                  glass
+                  size={170}
+                  onClick={toggleVoiceSession}
+                  label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 />
-              </button>
+              ) : (
+                <button
+                  onClick={toggleVoiceSession}
+                  aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+                  title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+                  className="max-w-full cursor-pointer rounded-full transition-transform duration-[var(--motion-control)] focus-visible:outline-offset-[-24px]"
+                  style={{ transform: `scale(${orbScale})` }}
+                >
+                  <Orb
+                    state={state}
+                    size={handControlOn ? 440 : 300}
+                    excite={dragging ? 1 : excite}
+                    emotion={emotion}
+                    steps={steps}
+                    notice={notice}
+                    glass
+                  />
+                </button>
+              )}
               {handControlOn && !draggingWindow && (taskMode || tasks) && (
                 <div className="pointer-events-none absolute">
                   {taskMode ? (
