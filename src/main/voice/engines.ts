@@ -1,3 +1,4 @@
+import { ROBOT_PITCH } from '../../shared/api'
 import { app } from 'electron'
 import { join, sep } from 'node:path'
 import vadModelPath from '../../../resources/voice/silero_vad.onnx?asset'
@@ -55,7 +56,15 @@ export function getWhisper(): WhisperServer {
 const lengthScaleFromRate = (rate: number): number => Math.round((1 / rate) * 1000) / 1000
 
 export function getPiper(): PiperVoice {
-  const lengthScale = lengthScaleFromRate(getSettings().speechRate)
+  const settings = getSettings()
+  // Robot tonunda ses çalarken hızlandırılıp inceltilir; burada aynı oranda yavaş üretilir ki
+  // konuşma hızı değişmesin
+  const lengthScale =
+    Math.round(
+      lengthScaleFromRate(settings.speechRate) *
+        (settings.voiceStyle === 'robot' ? ROBOT_PITCH : 1) *
+        1000
+    ) / 1000
   if (piper) {
     piper.setLengthScale(lengthScale)
     return piper

@@ -49,6 +49,7 @@ const defaults: AppSettings = {
   voiceBargeIn: false,
   // Test edildi (2026-09-14): length_scale 0,75-0,80 arası gerçek hızı ~1,24x yapıyor, doğallık bozulmuyor
   speechRate: 1.3,
+  voiceStyle: 'robot',
   speechVolume: 1,
   semanticSearchEnabled: false,
   notchEnabled: true
@@ -117,6 +118,8 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   }
   if (typeof patch.speakReplies === 'boolean') next.speakReplies = patch.speakReplies
   if (typeof patch.voiceUri === 'string') next.voiceUri = patch.voiceUri
+  if (patch.voiceStyle === 'natural' || patch.voiceStyle === 'robot')
+    next.voiceStyle = patch.voiceStyle
   if (typeof patch.briefEnabled === 'boolean') next.briefEnabled = patch.briefEnabled
   if (typeof patch.briefTime === 'string') {
     if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(patch.briefTime.trim())) {

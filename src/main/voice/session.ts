@@ -1,3 +1,4 @@
+import { ROBOT_PITCH } from '../../shared/api'
 import { isReplying, sendMessage, stopChat, type ReplyResult } from '../ai/chat'
 import { transcribeAudio } from '../ai/speech'
 import { createConversation } from '../data/conversations'
@@ -144,7 +145,8 @@ function enqueueSpeech(text: string, caption = false): void {
       text: clean,
       voiceUri: settings.voiceUri,
       rate: settings.speechRate,
-      volume: settings.speechVolume
+      volume: settings.speechVolume,
+      pitch: settings.voiceStyle === 'robot' ? ROBOT_PITCH : 1
     })
   })
 }
