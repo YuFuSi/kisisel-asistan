@@ -61,6 +61,31 @@ export function ThinkingDots({ size }: { size: number }): React.JSX.Element {
   )
 }
 
+/** Konuşurken gözlerin altında açılıp kapanan ışıktan ağız */
+export function SpeakingMouth({ size }: { size: number }): React.JSX.Element {
+  const h = size * 0.06
+  return (
+    <motion.span
+      className="absolute left-1/2 block bg-[#c9d0ff]"
+      style={{
+        bottom: size * 0.07,
+        width: size * 0.13,
+        marginLeft: -size * 0.065,
+        height: h,
+        borderRadius: h,
+        boxShadow: '0 0 10px rgb(190 200 255 / 0.9)'
+      }}
+      initial={{ scaleY: 0.2, opacity: 0 }}
+      animate={{
+        opacity: 1,
+        scaleY: [0.25, 1, 0.45, 0.85, 0.2, 0.7, 0.35, 1, 0.25],
+        scaleX: [1, 0.8, 1, 0.85, 1.05, 0.9, 1, 0.8, 1]
+      }}
+      transition={{ duration: 1.3, repeat: Infinity, ease: 'easeInOut' }}
+    />
+  )
+}
+
 /** Sevinince ekranın üstünden uçup giden kalpler */
 export function FloatingHearts({ size }: { size: number }): React.JSX.Element {
   return (

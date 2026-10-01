@@ -8,7 +8,7 @@ import {
   type TargetAndTransition
 } from 'motion/react'
 import type { AssistantState, EmotionSignal } from '../../lib/assistantState'
-import { FloatingHearts, Hands, ScreenIcon, ThinkingDots } from './petParts'
+import { FloatingHearts, Hands, ScreenIcon, SpeakingMouth, ThinkingDots } from './petParts'
 import { ANTENNA_COLOR, toolIcon, type HandGesture, type PetMood } from '../../lib/petLook'
 
 // Jarvis'in pet karakteri (prototip "Jarvis Cam"): cam robot ya da jöle küp. İki görünüm aynı
@@ -239,7 +239,38 @@ function Pet({
     return () => window.removeEventListener('pointermove', onMove)
   }, [lookX, lookY, leanX, leanRotate, antennaSource, size, reduced])
 
-  const mood = moodFor(state, activeEmotion, asleep)
+  // Okşama: imleç robotun üstünde ileri geri gidince sevinir; sürüklenince şaşırır
+  const [petted, setPetted] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const dragMoved = useRef(false)
+  const rub = useRef({ lastX: 0, dir: 0, turns: 0, at: 0 })
+  useEffect(() => {
+    if (!petted) return
+    const end = setTimeout(() => setPetted(0), 1600)
+    return () => clearTimeout(end)
+  }, [petted])
+  const onRub = (event: React.PointerEvent): void => {
+    if (reduced || dragging) return
+    const r = rub.current
+    const dx = event.clientX - r.lastX
+    r.lastX = event.clientX
+    if (Math.abs(dx) < 3) return
+    const dir = Math.sign(dx)
+    const now = performance.now()
+    if (now - r.at > 700) r.turns = 0
+    if (dir !== r.dir) {
+      r.dir = dir
+      r.turns += 1
+      r.at = now
+      if (r.turns >= 4) {
+        r.turns = 0
+        setPetted(Date.now())
+      }
+    }
+  }
+
+  const baseMood = moodFor(state, activeEmotion, asleep)
+  const mood: Mood = petted && (baseMood === 'idle' || baseMood === 'sleep') ? 'happy' : baseMood
   const height = size * 0.84
   const glowing = mood === 'work' || mood === 'listen' || mood === 'speak'
 
@@ -279,9 +310,13 @@ function Pet({
   // Yazarken komut kutusuna (aşağı) bakar ve başını sallar
   const watching = attention > 0 && mood === 'idle'
   // Üstüne gelinince ya da yazarken gözler merakla büyür
-  const eyeMood: Mood = mood === 'idle' && (hovered || watching) ? 'listen' : mood
+  const eyeMood: Mood = dragging || (mood === 'idle' && (hovered || watching)) ? 'listen' : mood
   const ActivityIcon = mood === 'work' ? toolIcon(activity) : null
-  const gesture: HandGesture = mood === 'idle' && fidget?.kind === 'wave' ? 'wave' : mood
+  const gesture: HandGesture = dragging
+    ? 'happy'
+    : mood === 'idle' && fidget?.kind === 'wave'
+      ? 'wave'
+      : mood
   const gestureKey = gesture === 'wave' ? (fidget?.key ?? 0) : 0
   const antenna = ANTENNA_COLOR[mood]
 
@@ -289,7 +324,23 @@ function Pet({
     <motion.button
       ref={rootRef}
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        if (dragMoved.current) {
+          dragMoved.current = false
+          return
+        }
+        onClick?.()
+      }}
+      onPointerMove={onRub}
+      drag={!reduced}
+      dragSnapToOrigin
+      dragElastic={0.35}
+      dragTransition={{ bounceStiffness: 500, bounceDamping: 14 }}
+      onDragStart={() => {
+        dragMoved.current = true
+        setDragging(true)
+      }}
+      onDragEnd={() => setDragging(false)}
       aria-label={label}
       title={label}
       className="relative flex cursor-pointer flex-col items-center rounded-[32px] outline-offset-8"
@@ -300,6 +351,7 @@ function Pet({
       onHoverEnd={() => setHovered(false)}
       whileHover={reduced ? undefined : { scale: 1.05 }}
       whileTap={reduced ? undefined : { scale: 0.93 }}
+      whileDrag={{ scale: 1.08, rotate: -6 }}
       transition={{ type: 'spring', stiffness: 300, damping: 18 }}
     >
       {/* Robotun üst boşluğu: anten gövdenin üstünde durur */}
@@ -416,7 +468,7 @@ function Pet({
                 className="absolute inset-0 flex items-center justify-center"
                 style={{ x: lookX, y: lookY, gap: size * 0.13 }}
                 animate={
-                  ActivityIcon || mood === 'think'
+                  ActivityIcon || mood === 'think' || mood === 'speak'
                     ? { scale: 0.82, translateY: -size * 0.045 }
                     : { scale: 1, translateY: 0 }
                 }
@@ -452,8 +504,28 @@ function Pet({
                 )}
               </AnimatePresence>
               {mood === 'think' && !reduced && <ThinkingDots size={size} />}
+              {mood === 'speak' && <SpeakingMouth size={size} />}
             </div>
-            {mood === 'happy' && !reduced && <FloatingHearts key={emotionSeq} size={size} />}
+            {mood === 'happy' && !reduced && (
+              <FloatingHearts key={petted || emotionSeq} size={size} />
+            )}
+            {/* Okşanınca yanaklar kızarır */}
+            {petted > 0 &&
+              [-1, 1].map((side) => (
+                <motion.span
+                  key={side}
+                  className="pointer-events-none absolute rounded-full bg-[#ff8fbf] blur-[3px]"
+                  style={{
+                    top: height * 0.55,
+                    left: side < 0 ? size * 0.2 : undefined,
+                    right: side > 0 ? size * 0.2 : undefined,
+                    width: size * 0.12,
+                    height: size * 0.05
+                  }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.7 }}
+                />
+              ))}
 
             {/* Onay bekliyor: amber ünlem balonu */}
             {mood === 'approval' && (
