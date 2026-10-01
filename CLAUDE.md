@@ -149,16 +149,22 @@ src/
 │                           chat.ts (sistem talimatı, akışlı cevap, araç takibi), errors.ts (Türkçe hatalar)
 ├─ preload/index.ts         window.api köprüsü (sadece tanımlı işlemler)
 └─ renderer/src/            Arayüz
-   ├─ App.tsx               Sayfa geçişi. Sohbet sayfası hep mount'lu kalır, sadece gizlenir.
-   ├─ pages/                HomePage, ChatPage, TasksPage, CalendarPage, NotesPage (Hafıza Merkezi), AutomationsPage,
-   │                        AnalyticsPage, AchievementsPage, GesturesPage (menüde yok, komut paletinde), SettingsPage
-   ├─ components/jarvis/    Orb (canvas küre), Logo
-   ├─ components/home/      CommandBox, FloatingTile, AuroraBackground
-   ├─ components/activity/  ActivityList (Ayarlar ve Ana Sayfa)
-   ├─ components/           Sidebar, TitleBar, CommandPalette, SystemStatusIcons; chat/*, tasks/*, notes/*,
-   │                        automations/*, settings/*, ui/* (Button + buttonStyles, Modal, ConfirmDialog, Toggle, Select...)
-   └─ lib/                  useLiveData.ts (veri yükle ve değişince yenile), dates.ts,
-                            errors.ts (IPC hata öneki temizleme), styles.ts (ortak Tailwind sınıfları)
+   ├─ App.tsx               Sayfa geçişi. Sohbet sayfası hep mount'lu kalır, sadece gizlenir. ApprovalDock ve ses katmanı burada.
+   ├─ NotchApp.tsx          Jarvis Çentiği penceresi (#notch): gözlü damla, onay, sonuç, kart, belge bırakma
+   ├─ pages/                HomePage, ChatPage (Asistan), PlanningPage (Görevler/Hatırlatmalar/Rutinler sekmeleri;
+   │                        Rutinler sekmesi AutomationsPage'i gösterir), CalendarPage, NotesPage (Hafıza),
+   │                        AnalyticsPage (Başarımlar da burada), SettingsPage; GesturesPage menüde yok, komut paletinde
+   ├─ components/jarvis/    Orb (canvas küre + yüz), VoiceOverlay (her sayfada ses katmanı), ApprovalDock (her sayfada
+   │                        onay), ResultCard (bağlamsal kartlar), OrbitTools ve TaskOrbit (el kontrolü), Logo
+   ├─ components/chat/      ActivitySurface (araç adımları, onay, sonuç), ApprovalCard, MessageBubble, Composer,
+   │                        ConversationList, HistoryDrawer (dar pencerede sohbet geçmişi)
+   ├─ components/home/      CommandBox
+   ├─ components/activity/  ActivityList (Ayarlar)
+   ├─ components/           Sidebar, TitleBar, CommandPalette, SystemStatusIcons; analytics/*, tasks/*, notes/*,
+   │                        automations/*, settings/*, ui/* (Button + buttonStyles, Modal, ConfirmDialog, Toggle, Tabs...)
+   └─ lib/                  assistantState.ts (ortak durum, onaylar, sonuçlar, kartlar), orbFace.ts (gözler),
+                            remoteAssistant.ts (çentiğin durumu), useLiveData.ts (veri yükle ve değişince yenile),
+                            dates.ts, errors.ts (IPC hata öneki temizleme), styles.ts (ortak Tailwind sınıfları)
 scripts/cdp.mjs             Electron penceresini test için uzaktan süren yardımcı
 vitest.config.ts            Test ayarları
 ```
@@ -238,7 +244,7 @@ vitest.config.ts            Test ayarları
    - `window.confirm` gerekiyorsa önce `window.confirm = () => true` yapılır.
    - PowerShell 5.1, programlara giden argümanlardaki çift tırnakları bozar. JS ifadelerinde tek tırnak kullanılır, gerekirse `\'` ile kaçırılır.
    - React kontrollü `<input type="date">` değeri, native value setter ve ardından `input` olayıyla değiştirilir.
-   - **Onay kartı testi:** `document.body.innerText.includes('açılsın mı')` ile kart beklenir, sonra metni "Onayla" veya "İptal" olan butona tıklanır. Uygulamanın gerçekten açıldığı `tasklist` ile doğrulanır ve test sonunda kapatılır.
+   - **Onay kartı testi:** `document.body.innerText.includes('açılsın mı')` ile kart beklenir, sonra metni "Onayla" veya "Reddet" olan butona tıklanır. Uygulamanın gerçekten açıldığı `tasklist` ile doğrulanır ve test sonunda kapatılır.
    - **Ters bölü tuzağı:** Bash heredoc veya python ile dosya yazarken `\` işaretleri teke iniyor. Ters bölü içeren içerik (Windows yolları, regex) Write aracıyla yazılmalı.
    - Test için oluşturulan veriler (görev, hatırlatma, hafıza vb.) test sonunda **silinir**. Gerçek hatırlatmalar bildirim gösterir, sahte hafıza kayıtları asistanı yanıltır.
    - `eval` verilen ifadeyi `(...)` içine alır; birden çok satır gerekiyorsa `(async () => { ... })()` yazılır.

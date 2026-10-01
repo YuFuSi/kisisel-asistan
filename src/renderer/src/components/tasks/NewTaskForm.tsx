@@ -12,20 +12,27 @@ function NewTaskForm({ onCreate }: NewTaskFormProps): React.JSX.Element {
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
+  // Kayıt sürerken ikinci Enter/tıklama aynı görevi tekrar oluşturmasın
+  const [saving, setSaving] = useState(false)
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (!title.trim()) return
-    if (
-      await onCreate({
-        title,
-        dueDate: dueDate || null,
-        dueTime: dueDate && dueTime ? dueTime : null
-      })
-    ) {
-      setTitle('')
-      setDueDate('')
-      setDueTime('')
+    if (!title.trim() || saving) return
+    setSaving(true)
+    try {
+      if (
+        await onCreate({
+          title,
+          dueDate: dueDate || null,
+          dueTime: dueDate && dueTime ? dueTime : null
+        })
+      ) {
+        setTitle('')
+        setDueDate('')
+        setDueTime('')
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -59,7 +66,7 @@ function NewTaskForm({ onCreate }: NewTaskFormProps): React.JSX.Element {
           className={`${compactInputClass} w-28`}
         />
       )}
-      <button type="submit" disabled={!title.trim()} className={primaryButtonClass}>
+      <button type="submit" disabled={!title.trim() || saving} className={primaryButtonClass}>
         <Plus className="h-4 w-4" />
         Ekle
       </button>
