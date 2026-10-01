@@ -320,6 +320,7 @@ function HomePage({
                   emotion={emotion}
                   size={170}
                   attention={excite}
+                  activity={running?.name ?? null}
                   onClick={toggleVoiceSession}
                   label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 />

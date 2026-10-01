@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  AnimatePresence,
   motion,
   useMotionValue,
   useReducedMotion,
@@ -7,13 +8,15 @@ import {
   type TargetAndTransition
 } from 'motion/react'
 import type { AssistantState, EmotionSignal } from '../../lib/assistantState'
+import { FloatingHearts, Hands, ScreenIcon, ThinkingDots } from './petParts'
+import { ANTENNA_COLOR, toolIcon, type HandGesture, type PetMood } from '../../lib/petLook'
 
 // Jarvis'in pet karakteri (prototip "Jarvis Cam"): cam robot ya da jöle küp. İki görünüm aynı
 // "beyni" paylaşır: duruma göre ruh hâli, imleci izleyen gözler, göz kırpma, boşta kalınca uyku.
 
 export type PetVariant = 'robot' | 'cube'
 
-type Mood = 'idle' | 'listen' | 'think' | 'work' | 'speak' | 'approval' | 'happy' | 'sad' | 'sleep'
+type Mood = PetMood
 
 interface PetProps {
   variant: PetVariant
@@ -25,6 +28,8 @@ interface PetProps {
   label?: string
   /** Kullanıcı yazarken 1 (Ana Sayfa'daki "heyecan"); pet komut kutusuna bakar */
   attention?: number
+  /** Şu an çalışan aracın adı; ekranda ona uygun simge belirir */
+  activity?: string | null
 }
 
 // Bu kadar süre hiçbir şey olmazsa pet uyur
@@ -98,8 +103,8 @@ const BODY: Record<Mood, TargetAndTransition> = {
   }
 }
 
-type Fidget = 'look' | 'hop' | 'tilt' | 'wiggle'
-const FIDGETS: Fidget[] = ['look', 'hop', 'tilt', 'wiggle', 'look']
+type Fidget = 'look' | 'hop' | 'tilt' | 'wiggle' | 'wave'
+const FIDGETS: Fidget[] = ['look', 'hop', 'tilt', 'wiggle', 'look', 'wave']
 
 // Kendi kendine yapılan küçük hareketlerin gövde ve göz hareketi (tek seferlik)
 const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
@@ -111,7 +116,8 @@ const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
     transition: { duration: 0.8, ease: 'easeOut' }
   },
   tilt: { rotate: [0, -11, -11, 0], transition: { duration: 1.6, times: [0, 0.25, 0.75, 1] } },
-  wiggle: { rotate: [0, 4, -4, 3, -2, 0], transition: { duration: 0.7 } }
+  wiggle: { rotate: [0, 4, -4, 3, -2, 0], transition: { duration: 0.7 } },
+  wave: { rotate: [0, -4, 0], transition: { duration: 1.8 } }
 }
 
 function moodFor(
@@ -144,7 +150,8 @@ function Pet({
   size = 170,
   onClick,
   label = 'Jarvis ile konuş',
-  attention = 0
+  attention = 0,
+  activity = null
 }: PetProps): React.JSX.Element {
   const reduced = useReducedMotion()
   const rootRef = useRef<HTMLButtonElement>(null)
@@ -238,7 +245,10 @@ function Pet({
 
   // Boştayken kendi kendine küçük hareketler: etrafa bakınma, minik zıplama, baş eğme, anten
   // sallama. Üstüne gelince sevinip sıçrar. Her yeni hareket kendi anahtarıyla bir kez oynar.
-  const [fidget, setFidget] = useState<{ kind: Fidget; key: number } | null>(null)
+  // Açılışta el sallayarak selam verir
+  const [fidget, setFidget] = useState<{ kind: Fidget; key: number } | null>(() =>
+    reduced ? null : { kind: 'wave', key: 1 }
+  )
   const [hovered, setHovered] = useState(false)
   useEffect(() => {
     if (reduced || mood !== 'idle') return
@@ -270,6 +280,10 @@ function Pet({
   const watching = attention > 0 && mood === 'idle'
   // Üstüne gelinince ya da yazarken gözler merakla büyür
   const eyeMood: Mood = mood === 'idle' && (hovered || watching) ? 'listen' : mood
+  const ActivityIcon = mood === 'work' ? toolIcon(activity) : null
+  const gesture: HandGesture = mood === 'idle' && fidget?.kind === 'wave' ? 'wave' : mood
+  const gestureKey = gesture === 'wave' ? (fidget?.key ?? 0) : 0
+  const antenna = ANTENNA_COLOR[mood]
 
   return (
     <motion.button
@@ -295,9 +309,13 @@ function Pet({
         {/* Kendi kendine küçük hareketler (zıplama, baş eğme, sallanma) */}
         <motion.div
           key={fidget?.key ?? 0}
+          className="relative"
           style={{ transformOrigin: '50% 100%' }}
           animate={reduced || !fidget ? undefined : FIDGET_BODY[fidget.kind]}
         >
+          {variant === 'robot' && !reduced && (
+            <Hands gesture={gesture} width={size} height={height} gestureKey={gestureKey} />
+          )}
           <motion.div
             className="relative"
             style={{ width: size, height, transformOrigin: '50% 100%' }}
@@ -327,14 +345,22 @@ function Pet({
                 />
                 <motion.div
                   className="absolute top-0 left-0 rounded-full"
-                  style={{ width: size * 0.09, height: size * 0.09, background: '#a3b0ff' }}
+                  style={{ width: size * 0.09, height: size * 0.09 }}
                   animate={{
-                    boxShadow: glowing
-                      ? ['0 0 6px #8b9bff', '0 0 22px #a3b0ff', '0 0 6px #8b9bff']
-                      : '0 0 8px #8b9bff',
-                    opacity: mood === 'sleep' ? 0.35 : 1
+                    backgroundColor: antenna,
+                    boxShadow:
+                      glowing || mood === 'approval' || mood === 'happy' || mood === 'sad'
+                        ? [`0 0 6px ${antenna}`, `0 0 24px ${antenna}`, `0 0 6px ${antenna}`]
+                        : `0 0 8px ${antenna}`,
+                    opacity: mood === 'sleep' ? 0.5 : 1
                   }}
-                  transition={{ duration: 0.9, repeat: glowing ? Infinity : 0 }}
+                  transition={{
+                    backgroundColor: { duration: 0.4 },
+                    default: {
+                      duration: mood === 'approval' ? 1.4 : 0.9,
+                      repeat: mood === 'sleep' || mood === 'idle' || mood === 'think' ? 0 : Infinity
+                    }
+                  }}
                 />
               </motion.div>
             )}
@@ -389,6 +415,12 @@ function Pet({
               <motion.div
                 className="absolute inset-0 flex items-center justify-center"
                 style={{ x: lookX, y: lookY, gap: size * 0.13 }}
+                animate={
+                  ActivityIcon || mood === 'think'
+                    ? { scale: 0.82, translateY: -size * 0.045 }
+                    : { scale: 1, translateY: 0 }
+                }
+                transition={{ type: 'spring', stiffness: 260, damping: 22 }}
               >
                 <motion.div
                   key={fidget?.kind === 'look' ? fidget.key : 'eyes'}
@@ -414,7 +446,14 @@ function Pet({
                   <Eye mood={eyeMood} blinking={blinking} size={size} right />
                 </motion.div>
               </motion.div>
+              <AnimatePresence>
+                {ActivityIcon && (
+                  <ScreenIcon key={activity ?? ''} icon={ActivityIcon} size={size} />
+                )}
+              </AnimatePresence>
+              {mood === 'think' && !reduced && <ThinkingDots size={size} />}
             </div>
+            {mood === 'happy' && !reduced && <FloatingHearts key={emotionSeq} size={size} />}
 
             {/* Onay bekliyor: amber ünlem balonu */}
             {mood === 'approval' && (
