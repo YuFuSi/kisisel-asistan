@@ -49,7 +49,10 @@ function createNotchWindow(): BrowserWindow {
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: true
+      sandbox: true,
+      // Odak almayan, her zaman üstte küçük pencereyi Chromium "gizli" sayıyordu: damla donuyor,
+      // gözler kırpmıyordu (document.hidden = true). Görünür sayılsın; kare hızını küre kendisi düşürür.
+      backgroundThrottling: false
     }
   })
   window.setAlwaysOnTop(true, 'screen-saver')
