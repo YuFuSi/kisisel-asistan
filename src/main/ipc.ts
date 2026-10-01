@@ -10,6 +10,7 @@ import { getPersonalNote } from './ai/personalNote'
 import { getHomeWeather } from './system/homeWeather'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
 import { resizeNotch } from './system/notch'
+import { setDesktopPetInteractive } from './system/desktopPet'
 import { getForegroundWindowId, moveWindow } from './lib/windows'
 import { sendAttachPaths, sendCommand, showMainWindow } from './system/window'
 import {
@@ -139,6 +140,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:openLogs', () => openLogDirectory())
 
   // Çentik: fare üstündeyken tıklamaları alır; "Sohbette aç" ana pencerede sayfa açar
+  ipcMain.on('pet:interactive', (_event, interactive: unknown) =>
+    setDesktopPetInteractive(interactive === true)
+  )
   ipcMain.on('notch:resize', (_event, width: unknown, height: unknown) =>
     resizeNotch(Number(width), Number(height))
   )

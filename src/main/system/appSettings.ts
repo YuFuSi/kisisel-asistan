@@ -1,3 +1,4 @@
+import { applyDesktopPet } from './desktopPet'
 import { applyNotch } from './notch'
 import { getSecretStatus, getSettings, getUnreadableSecrets, updateSettings } from '../settings'
 import { notifyDataChanged } from '../events'
@@ -41,6 +42,7 @@ export function applySettingsPatch(patch: SettingsPatch): SettingsView {
   // "Hey Jarvis" açılıp kapanınca dinleme durumu hemen değişsin
   if (typeof patch.wakeWordEnabled === 'boolean') refreshVoiceSession()
   if (typeof patch.notchEnabled === 'boolean') applyNotch(next.notchEnabled)
+  if (typeof patch.desktopPetEnabled === 'boolean') applyDesktopPet(next.desktopPetEnabled)
 
   notifyDataChanged('settings')
   return getSettingsView()

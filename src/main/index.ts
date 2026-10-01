@@ -15,6 +15,7 @@ import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
 import { applyNotch, disposeNotch } from './system/notch'
+import { applyDesktopPet, disposeDesktopPet } from './system/desktopPet'
 import { installDownloadedUpdate, startUpdater } from './system/updater'
 import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
@@ -135,6 +136,7 @@ if (!app.requestSingleInstanceLock()) {
     }
     applyOpenAtLogin(settings.openAtLogin)
     applyNotch(settings.notchEnabled)
+    applyDesktopPet(settings.desktopPetEnabled)
     stopReminderScheduler = startReminderScheduler()
     stopBriefScheduler = startBriefScheduler()
     stopMaintenance = startMaintenance()
@@ -187,6 +189,7 @@ if (!app.requestSingleInstanceLock()) {
     ;(async () => {
       disposeGlobalShortcut()
       disposeNotch()
+      disposeDesktopPet()
       destroyTray()
       stopReminderScheduler?.()
       stopBriefScheduler?.()
