@@ -24,8 +24,9 @@ function check(): void {
 
 /** Paketlenmiş uygulamada güncelleme denetimini başlatır. Durdurmak için dönen fonksiyon çağrılır. */
 export function startUpdater(): () => void {
-  // Geliştirme modunda app-update.yml yok, denetim anlamsız
-  if (!app.isPackaged) return () => {}
+  // Geliştirme modunda app-update.yml yok, denetim anlamsız; paket denemesinde (JARVIS_TEST_DATA)
+  // de güncelleme indirilmesin
+  if (!app.isPackaged || process.env['JARVIS_TEST_DATA'] === '1') return () => {}
 
   autoUpdater.logger = log
   autoUpdater.autoDownload = true

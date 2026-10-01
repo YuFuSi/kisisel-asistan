@@ -69,11 +69,14 @@ function toggleNotch(): void {
 // Tek kopya kilidi de bu klasöre bağlı olduğundan her şeyden önce ayarlanır.
 // 2026-09-30: geliştirme sırasında gerçek veritabanı iki kez karıştı/bozuldu. Bu yüzden geliştirme
 // modu (paketlenmemiş uygulama) artık ayrı bir test klasörü kullanır; gerçek veriyle denemek
-// gerekirse JARVIS_REAL_DATA=1 ile başlatılır.
+// gerekirse JARVIS_REAL_DATA=1 ile başlatılır. Paketli sürümü yayından önce denerken gerçek veriye
+// dokunmamak için JARVIS_TEST_DATA=1 ile başlatılır (kisisel-asistan-test klasörü).
 const dataFolder =
-  app.isPackaged || process.env['JARVIS_REAL_DATA'] === '1'
-    ? 'kisisel-asistan'
-    : 'kisisel-asistan-dev'
+  process.env['JARVIS_TEST_DATA'] === '1'
+    ? 'kisisel-asistan-test'
+    : app.isPackaged || process.env['JARVIS_REAL_DATA'] === '1'
+      ? 'kisisel-asistan'
+      : 'kisisel-asistan-dev'
 app.setPath('userData', join(app.getPath('appData'), dataFolder))
 
 // Aynı anda tek kopya çalışsın; ikinci kez açılmaya çalışılırsa mevcut pencere öne gelir
