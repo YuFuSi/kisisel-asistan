@@ -68,7 +68,7 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
 
   return (
     <aside
-      className={`flex shrink-0 flex-col overflow-y-auto border-r border-line bg-app py-4 transition-[width] duration-200 ${
+      className={`flex shrink-0 flex-col overflow-y-auto border-r border-white/5 bg-black/10 py-4 transition-[width] duration-200 ${
         collapsed ? 'w-[64px] px-2' : 'w-[264px] px-3'
       }`}
     >

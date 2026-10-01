@@ -1,4 +1,5 @@
 import 'highlight.js/styles/github-dark-dimmed.css'
+import '@fontsource-variable/inter/wght.css'
 import './assets/main.css'
 
 import { StrictMode } from 'react'

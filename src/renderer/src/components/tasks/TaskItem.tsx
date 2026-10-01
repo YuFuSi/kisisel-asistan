@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Check, Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { Task } from '@shared/api'
 import { describeDueDate } from '../../lib/dates'
 import { iconButtonClass, inputClass } from '../../lib/styles'
@@ -40,7 +41,15 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
   else if (due && !done && due.today) dueClass = 'bg-caution/10 text-caution'
 
   return (
-    <li className="group flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-surface">
+    <motion.li
+      layout
+      layoutId={`task-${task.id}`}
+      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 28, transition: { duration: 0.2 } }}
+      transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+      className="glass-soft group flex items-center gap-3 px-3 py-2 transition-colors hover:bg-white/[0.06]"
+    >
       <button
         onClick={onToggle}
         role="checkbox"
@@ -48,11 +57,30 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
         aria-label={done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control"
       >
-        <span
-          className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${done ? 'border-positive bg-positive text-app' : 'border-line-strong'}`}
+        <motion.span
+          className="flex h-[22px] w-[22px] items-center justify-center rounded-full"
+          animate={{
+            backgroundColor: done ? 'rgb(95 201 160 / 1)' : 'rgb(255 255 255 / 0)',
+            boxShadow: done
+              ? 'inset 0 0 0 1.5px rgb(95 201 160 / 1), 0 0 14px rgb(95 201 160 / 0.45)'
+              : 'inset 0 0 0 1.5px rgb(255 255 255 / 0.28), 0 0 0px rgb(95 201 160 / 0)'
+          }}
+          whileTap={{ scale: 0.85 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
         >
-          {done && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-        </span>
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden>
+            <motion.path
+              d="M5 12.5l4.5 4.5L19 7.5"
+              stroke="#0b0c0f"
+              strokeWidth={3.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={false}
+              animate={{ pathLength: done ? 1 : 0, opacity: done ? 1 : 0 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </svg>
+        </motion.span>
       </button>
 
       {editing ? (
@@ -84,14 +112,16 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
       )}
 
       {due && !editing && (
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${dueClass}`}>{due.text}</span>
+        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${dueClass}`}>
+          {due.text}
+        </span>
       )}
       {!editing && (
         <button
           onClick={startEditing}
           aria-label="Görevi düzenle"
           title="Düzenle"
-          className={`${iconButtonClass} hover:text-ink`}
+          className={`${iconButtonClass} opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-ink`}
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -100,11 +130,11 @@ function TaskItem({ task, onToggle, onRename, onDelete }: TaskItemProps): React.
         onClick={onDelete}
         aria-label="Görevi sil"
         title="Sil"
-        className={`${iconButtonClass} hover:text-negative`}
+        className={`${iconButtonClass} opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-negative`}
       >
         <Trash2 className="h-4 w-4" />
       </button>
-    </li>
+    </motion.li>
   )
 }
 

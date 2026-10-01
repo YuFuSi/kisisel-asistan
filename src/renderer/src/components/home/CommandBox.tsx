@@ -8,7 +8,9 @@ import {
   Sun,
   type LucideIcon
 } from 'lucide-react'
+import { motion } from 'motion/react'
 import Button from '../ui/Button'
+import IconTile, { type IconTone } from '../ui/IconTile'
 import { useDictation } from '../../lib/useDictation'
 
 export const HOME_COMMAND_ID = 'home-command'
@@ -19,13 +21,14 @@ interface Starter {
   text: string
   /** true ise metin doğrudan gönderilir, değilse kutuya yazılıp tamamlanması beklenir */
   send?: boolean
+  tone: IconTone
 }
 
 const STARTERS: Starter[] = [
-  { label: 'Görev oluştur', icon: ListPlus, text: 'Listeme görev ekle: ' },
-  { label: 'Hatırlatma kur', icon: BellPlus, text: 'Bana hatırlat: ' },
-  { label: 'Günümü özetle', icon: Sun, text: 'Günlük özetimi hazırla.', send: true },
-  { label: 'Dosya bul', icon: FolderSearch, text: 'Bilgisayarımda şu dosyayı bul: ' }
+  { label: 'Görev oluştur', icon: ListPlus, text: 'Listeme görev ekle: ', tone: 'lilac' },
+  { label: 'Hatırlatma kur', icon: BellPlus, text: 'Bana hatırlat: ', tone: 'pink' },
+  { label: 'Günümü özetle', icon: Sun, text: 'Günlük özetimi hazırla.', send: true, tone: 'amber' },
+  { label: 'Dosya bul', icon: FolderSearch, text: 'Bilgisayarımda şu dosyayı bul: ', tone: 'blue' }
 ]
 
 interface CommandBoxProps {
@@ -38,6 +41,7 @@ interface CommandBoxProps {
 // Ana Sayfa'daki büyük komut kutusu: yaz, konuş veya hazır bir başlangıç seç
 function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element {
   const [text, setText] = useState('')
+  const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dictation = useDictation((spoken) => {
     setText((previous) => (previous ? `${previous} ${spoken}` : spoken))
@@ -67,7 +71,16 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="flex h-14 items-center gap-3 rounded-xl border border-line bg-surface pr-2 pl-5 transition-colors focus-within:border-accent/70 focus-within:ring-2 focus-within:ring-accent/15">
+      {/* Cam komut kutusu: odaklanınca lila ışıkla yumuşakça parlar */}
+      <motion.div
+        className="glass flex h-16 items-center gap-3 !rounded-[26px] pr-2.5 pl-6"
+        animate={{
+          boxShadow: focused
+            ? 'inset 0 1px 0 rgb(255 255 255 / 0.1), 0 0 0 1px rgb(139 155 255 / 0.45), 0 18px 60px -12px rgb(139 155 255 / 0.35)'
+            : 'inset 0 1px 0 rgb(255 255 255 / 0.08), 0 0 0 1px rgb(139 155 255 / 0), 0 24px 48px -24px rgb(0 0 0 / 0.7)'
+        }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      >
         <input
           aria-label="Jarvis’e komut ver"
           id={HOME_COMMAND_ID}
@@ -77,6 +90,8 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
             setText(e.target.value)
             onTyping?.()
           }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
               e.preventDefault()
@@ -84,19 +99,8 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
             }
           }}
           placeholder="Bir soru sor, görev ekle veya bir şey söyle..."
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] text-ink outline-none placeholder:text-faint"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-base text-ink outline-none placeholder:text-faint"
         />
-        {text.trim() && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={SendHorizontal}
-            onClick={() => submit()}
-            aria-label="Gönder"
-            title="Gönder"
-            className="!p-2 text-muted hover:bg-transparent hover:text-ink"
-          />
-        )}
         <Button
           variant={dictation.recording ? 'danger' : 'ghost'}
           icon={Mic}
@@ -107,7 +111,26 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
           title={dictation.recording ? 'Kaydı bitir ve yazıya çevir' : 'Sesle söyle'}
           className={`h-10 w-10 !rounded-full !p-0 ${dictation.recording ? 'animate-pulse' : ''}`}
         />
-      </div>
+        {/* Gönder: lila degrade, yazı varken tam parlak */}
+        <motion.button
+          type="button"
+          onClick={() => submit()}
+          aria-label="Gönder"
+          title="Gönder"
+          disabled={!text.trim()}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white disabled:cursor-default"
+          style={{
+            background: 'linear-gradient(140deg, #a3b0ff, #7b85f2)',
+            boxShadow:
+              'inset 0 1px 1px rgb(255 255 255 / 0.45), 0 6px 18px -4px rgb(139 155 255 / 0.6)'
+          }}
+          animate={{ opacity: text.trim() ? 1 : 0.45, scale: text.trim() ? 1 : 0.92 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+        >
+          <SendHorizontal className="h-[18px] w-[18px]" />
+        </motion.button>
+      </motion.div>
 
       {(dictation.recording || dictation.transcribing || dictation.error) && (
         <p className="mt-2 text-center text-xs">
@@ -119,23 +142,34 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
         </p>
       )}
 
-      <details className="mt-3 text-center">
-        <summary className="inline-flex min-h-8 cursor-pointer items-center rounded-control px-3 text-xs text-muted">
-          Başlangıç önerileri
-        </summary>
-        <div className="mt-2 flex flex-wrap justify-center gap-1">
-          {STARTERS.map(({ label, icon: Icon, ...starter }) => (
-            <button
-              key={label}
-              onClick={() => applyStarter({ label, icon: Icon, ...starter })}
-              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </details>
+      {/* Başlangıç önerileri: renkli ikonlu cam haplar; üstüne gelince hafifçe yükselir */}
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {STARTERS.map((starter, index) => (
+          <motion.button
+            key={starter.label}
+            onClick={() => applyStarter(starter)}
+            className="glass-soft flex min-h-10 items-center gap-2.5 !rounded-full py-1.5 pr-4 pl-1.5 text-sm text-muted hover:text-ink"
+            initial={{ opacity: 0, y: 8 }}
+            // Giriş sırayla gecikmeli; üstüne gelme ve basma gecikmesiz
+            animate={{
+              opacity: 1,
+              y: 0,
+              transition: {
+                type: 'spring',
+                stiffness: 260,
+                damping: 24,
+                delay: 0.35 + index * 0.06
+              }
+            }}
+            whileHover={{ y: -2, backgroundColor: 'rgb(255 255 255 / 0.07)' }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+          >
+            <IconTile icon={starter.icon} tone={starter.tone} size={26} />
+            {starter.label}
+          </motion.button>
+        ))}
+      </div>
     </div>
   )
 }

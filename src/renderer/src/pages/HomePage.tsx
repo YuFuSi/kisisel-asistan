@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { MessageSquare, Square } from 'lucide-react'
+import { CalendarDays, CloudSun, ListTodo, MessageSquare, Square } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { CalendarItem, HomeWeather, Memory, Reminder, Task } from '@shared/api'
 import CommandBox from '../components/home/CommandBox'
 import Orb from '../components/jarvis/Orb'
+import OrbHalo from '../components/jarvis/OrbHalo'
 import OrbitTools from '../components/jarvis/OrbitTools'
 import TaskOrbit from '../components/jarvis/TaskOrbit'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
+import IconTile from '../components/ui/IconTile'
 import {
   STATE_LABELS,
   celebrate,
@@ -73,6 +76,13 @@ function orbScaleFromSpread(spread: number): number {
   )
   return MIN_ORB_SCALE + t * (MAX_ORB_SCALE - MIN_ORB_SCALE)
 }
+
+// Ana Sayfa öğeleri sırayla, yumuşak bir yaylanmayla belirir (Jarvis Cam)
+const rise = (delay: number): Record<string, unknown> => ({
+  initial: { opacity: 0, y: 14, filter: 'blur(6px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  transition: { type: 'spring', stiffness: 120, damping: 20, delay }
+})
 
 interface HomePageProps {
   onNavigate: (page: PageId) => void
@@ -293,7 +303,13 @@ function HomePage({
           <div
             className={`relative w-full shrink-0 ${handControlOn ? 'h-[440px]' : 'h-[280px] sm:h-[340px]'}`}
           >
-            <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 70, damping: 16 }}
+            >
+              {!handControlOn && <OrbHalo state={state} size={330} />}
               <button
                 onClick={toggleVoiceSession}
                 aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
@@ -308,6 +324,7 @@ function HomePage({
                   emotion={emotion}
                   steps={steps}
                   notice={notice}
+                  glass
                 />
               </button>
               {handControlOn && !draggingWindow && (taskMode || tasks) && (
@@ -333,22 +350,28 @@ function HomePage({
                   )}
                 </div>
               )}
-            </div>
+            </motion.div>
           </div>
 
           <video ref={handVideoRef} className="hidden" muted playsInline />
 
-          <h1 className="text-center text-3xl leading-tight font-medium tracking-tight text-ink sm:text-4xl">
+          <motion.h1
+            {...rise(0.15)}
+            className="bg-gradient-to-b from-white to-white/70 bg-clip-text text-center text-4xl leading-tight font-semibold tracking-[-0.025em] text-transparent sm:text-[46px]"
+          >
             {greeting(now.getHours())}
             {userName ? `, ${userName}` : ''}
-          </h1>
-          <div className="mt-2 flex min-h-6 max-w-2xl items-center justify-center text-center">
+          </motion.h1>
+          <motion.div
+            {...rise(0.22)}
+            className="mt-2 flex min-h-6 max-w-2xl items-center justify-center text-center"
+          >
             <p className="text-base text-muted">
               {next
                 ? `Bir sonraki işin ${countdown(next.time, now)}: ${next.label}`
                 : (summary ?? 'Buradayım. Ne yapalım?')}
             </p>
-          </div>
+          </motion.div>
           <p role="status" className="mt-2 min-h-5 max-w-xl text-center text-xs text-muted">
             {caption}
           </p>
@@ -402,18 +425,20 @@ function HomePage({
             </p>
           )}
 
-          <div className="mt-5 flex w-full justify-center">
+          <motion.div {...rise(0.3)} className="mt-6 flex w-full justify-center">
             <CommandBox onSubmit={onAsk} onTyping={noteTyping} />
-          </div>
+          </motion.div>
           {!handControlOn && (
-            <details
+            <motion.details
+              {...rise(0.5)}
               onToggle={(event) => setTodayOpen(event.currentTarget.open)}
-              className="mt-6 w-full max-w-2xl rounded-control border border-line bg-surface text-left"
+              className="glass-soft mt-7 w-full max-w-2xl !rounded-[22px] text-left"
             >
-              <summary className="min-h-10 cursor-pointer rounded-control px-4 py-3 text-sm text-muted">
+              <summary className="flex min-h-12 cursor-pointer items-center gap-3 rounded-[22px] px-4 py-2.5 text-sm text-muted hover:text-ink">
+                <IconTile icon={CalendarDays} tone="blue" size={26} />
                 Gününü gör
               </summary>
-              <div className="space-y-3 border-t border-line px-4 py-4 text-sm">
+              <div className="space-y-3 border-t border-white/5 px-5 py-4 text-sm">
                 <p className="text-muted">
                   {personalNote ?? summary ?? 'Günün bilgileri hazırlanıyor.'}
                 </p>
@@ -438,12 +463,18 @@ function HomePage({
                     ))}
                 </ul>
                 {weather && (
-                  <p className="text-muted">
+                  <p className="flex items-center gap-2 text-muted">
+                    <IconTile icon={CloudSun} tone="amber" size={22} />
                     {weather.temperature}° · {weather.condition}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => onNavigate('tasks')}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={ListTodo}
+                    onClick={() => onNavigate('tasks')}
+                  >
                     Görevler{today ? ` · ${today.dueTasks}` : ''}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => onNavigate('calendar')}>
@@ -451,7 +482,7 @@ function HomePage({
                   </Button>
                 </div>
               </div>
-            </details>
+            </motion.details>
           )}
         </div>
       </div>
