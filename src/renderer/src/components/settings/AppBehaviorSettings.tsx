@@ -36,12 +36,6 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         checked={settings.notchEnabled}
         onChange={(checked) => void onUpdate({ notchEnabled: checked })}
       />
-      <Toggle
-        label="Masaüstü pet"
-        description="Jarvis robotu görev çubuğunun üstünde dolaşır, fareyi kovalar, sıkılınca uyur. Tıklayınca Jarvis açılır. Jarvis penceresi öndeyken ve tam ekranda gizlenir."
-        checked={settings.desktopPetEnabled}
-        onChange={(checked) => void onUpdate({ desktopPetEnabled: checked })}
-      />
       <Field
         label="Hızlı açma kısayolu"
         hint="Hangi programda olursan ol, bu tuşlara basınca asistan açılır; tekrar basınca gizlenir."

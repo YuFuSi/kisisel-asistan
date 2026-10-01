@@ -6,15 +6,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import NotchApp from './NotchApp'
-import DesktopPetApp from './DesktopPetApp'
 import ToastProvider from './components/ui/ToastProvider'
 
 // Ayrı bir electron-vite giriş noktası açmadan, aynı bundle #notch ile çentik penceresini render eder
 const isNotch = window.location.hash === '#notch'
-// Masaüstü pet de aynı bundle'dan #pet ile açılır
-const isPet = window.location.hash === '#pet'
-// Çentik ve masaüstü pet saydam zeminli yardımcı pencereler
-if (isNotch || isPet) document.body.classList.add('hud-mode')
+// Çentik saydam zeminli yardımcı pencere
+if (isNotch) document.body.classList.add('hud-mode')
 
 // Arayüzde yakalanmayan hatalar günlük dosyasına yazılsın (sorun ayıklarken gerekli)
 window.addEventListener('error', (event) => {
@@ -33,8 +30,6 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isNotch ? (
       <NotchApp />
-    ) : isPet ? (
-      <DesktopPetApp />
     ) : (
       <ToastProvider>
         <App />

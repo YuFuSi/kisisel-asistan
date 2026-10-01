@@ -155,9 +155,6 @@ const api: Api = {
       return () => ipcRenderer.removeListener('app:attach-paths', handler)
     }
   },
-  pet: {
-    setInteractive: (interactive) => ipcRenderer.send('pet:interactive', interactive)
-  },
   notch: {
     resize: (width, height) => ipcRenderer.send('notch:resize', width, height),
     dropFiles: (paths) => ipcRenderer.send('notch:drop-files', paths),

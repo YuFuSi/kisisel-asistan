@@ -37,8 +37,6 @@ interface PetProps {
   label?: string
   /** Kullanıcı yazarken 1 (Ana Sayfa'daki "heyecan"); pet komut kutusuna bakar */
   attention?: number
-  /** Ruh hâli değişince haber verir (masaüstü pet uyurken yürümesin) */
-  onMoodChange?: (mood: PetMood) => void
   /** Komut kutusunda yazılan metnin uzunluğu; gözler harfleri takip eder */
   typed?: number
   /** Şu an çalışan aracın adı; ekranda ona uygun simge belirir */
@@ -293,7 +291,6 @@ function Pet({
   label = 'Jarvis ile konuş',
   attention = 0,
   typed = 0,
-  onMoodChange,
   activity = null
 }: PetProps): React.JSX.Element {
   const reduced = useReducedMotion()
@@ -488,10 +485,6 @@ function Pet({
   // Yazarken komut kutusuna (aşağı) bakar ve başını sallar
   const watching = attention > 0 && mood === 'idle'
   // Üstüne gelinince ya da yazarken gözler merakla büyür
-  useEffect(() => {
-    onMoodChange?.(mood)
-  }, [mood, onMoodChange])
-
   const sneezing = mood === 'idle' && fidget?.kind === 'sneeze'
   const yawning = mood === 'idle' && fidget?.kind === 'yawn'
   // Oyun oynarken üstüne gelinirse hemen kapatıp masum masum bakar

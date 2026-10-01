@@ -227,8 +227,6 @@ export interface AppSettings {
   semanticSearchEnabled: boolean
   /** Ekranın üst ortasındaki Jarvis Çentiği (onay, iş bitti, çalışan adım) */
   notchEnabled: boolean
-  /** Görev çubuğunun üstünde dolaşan masaüstü pet (Jarvis robotu) */
-  desktopPetEnabled: boolean
 }
 
 export interface SettingsPatch {
@@ -261,7 +259,6 @@ export interface SettingsPatch {
   speechVolume?: number
   semanticSearchEnabled?: boolean
   notchEnabled?: boolean
-  desktopPetEnabled?: boolean
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -915,10 +912,6 @@ export interface Api {
     onCommand(listener: (command: AppCommand) => void): () => void
     /** Çentiğe bırakılan belgelerin yolları: ana pencere bunları yeni sohbete ekler */
     onAttachPaths(listener: (paths: string[]) => void): () => void
-  }
-  pet: {
-    /** Masaüstü pet: fare robotun üstündeyken pencere tıklamaları alsın mı */
-    setInteractive(interactive: boolean): void
   }
   notch: {
     /** Çentik penceresini içeriğinin boyuna getirir (ekranın üst ortasında kalır) */

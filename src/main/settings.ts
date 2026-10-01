@@ -51,8 +51,7 @@ const defaults: AppSettings = {
   speechRate: 1.3,
   speechVolume: 1,
   semanticSearchEnabled: false,
-  notchEnabled: true,
-  desktopPetEnabled: true
+  notchEnabled: true
 }
 
 function readValue(key: string): string | undefined {
@@ -129,7 +128,6 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.briefSpoken === 'boolean') next.briefSpoken = patch.briefSpoken
   if (typeof patch.noticesSpoken === 'boolean') next.noticesSpoken = patch.noticesSpoken
   if (typeof patch.notchEnabled === 'boolean') next.notchEnabled = patch.notchEnabled
-  if (typeof patch.desktopPetEnabled === 'boolean') next.desktopPetEnabled = patch.desktopPetEnabled
   for (const key of ['quietStart', 'quietEnd'] as const) {
     const value = patch[key]
     if (typeof value !== 'string') continue
