@@ -319,6 +319,7 @@ function HomePage({
                   state={state}
                   emotion={emotion}
                   size={170}
+                  attention={excite}
                   onClick={toggleVoiceSession}
                   label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
                 />
