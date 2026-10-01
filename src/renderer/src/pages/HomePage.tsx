@@ -3,6 +3,7 @@ import { CalendarDays, CloudSun, ListTodo, MessageSquare, Square } from 'lucide-
 import { motion } from 'motion/react'
 import type { CalendarItem, HomeWeather, Memory, Reminder, Task } from '@shared/api'
 import CommandBox from '../components/home/CommandBox'
+import { isPraise, sendPetSignal } from '../lib/petEvents'
 import Orb from '../components/jarvis/Orb'
 import OrbHalo from '../components/jarvis/OrbHalo'
 import Pet from '../components/jarvis/Pet'
@@ -176,6 +177,7 @@ function HomePage({
     }
   }, [noteHour, todayOpen])
   const [excite, setExcite] = useState(0)
+  const [typed, setTyped] = useState(0)
   const [dragging, setDragging] = useState(false)
   const {
     videoRef: handVideoRef,
@@ -282,7 +284,8 @@ function HomePage({
     }, 700)
   }
 
-  function noteTyping(): void {
+  function noteTyping(length = 0): void {
+    setTyped(length)
     setExcite(1)
     clearTimeout(exciteTimer.current)
     exciteTimer.current = setTimeout(() => setExcite(0), EXCITE_MS)
@@ -320,6 +323,7 @@ function HomePage({
                   emotion={emotion}
                   size={170}
                   attention={excite}
+                  typed={typed}
                   activity={running?.name ?? null}
                   onClick={toggleVoiceSession}
                   label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
@@ -442,7 +446,13 @@ function HomePage({
           )}
 
           <motion.div {...rise(0.3)} className="mt-6 flex w-full justify-center">
-            <CommandBox onSubmit={onAsk} onTyping={noteTyping} />
+            <CommandBox
+              onSubmit={(text) => {
+                if (isPraise(text)) sendPetSignal('praise')
+                onAsk(text)
+              }}
+              onTyping={noteTyping}
+            />
           </motion.div>
           {!handControlOn && (
             <motion.details

@@ -8,7 +8,16 @@ import {
   type TargetAndTransition
 } from 'motion/react'
 import type { AssistantState, EmotionSignal } from '../../lib/assistantState'
-import { FloatingHearts, Hands, ScreenIcon, SpeakingMouth, ThinkingDots } from './petParts'
+import { Cookie, Heart, Settings, Star } from 'lucide-react'
+import {
+  FloatingHearts,
+  Hands,
+  ScreenIcon,
+  SnakeGame,
+  SpeakingMouth,
+  ThinkingDots
+} from './petParts'
+import { onPetSignal } from '../../lib/petEvents'
 import { ANTENNA_COLOR, toolIcon, type HandGesture, type PetMood } from '../../lib/petLook'
 
 // Jarvis'in pet karakteri (prototip "Jarvis Cam"): cam robot ya da jöle küp. İki görünüm aynı
@@ -28,6 +37,8 @@ interface PetProps {
   label?: string
   /** Kullanıcı yazarken 1 (Ana Sayfa'daki "heyecan"); pet komut kutusuna bakar */
   attention?: number
+  /** Komut kutusunda yazılan metnin uzunluğu; gözler harfleri takip eder */
+  typed?: number
   /** Şu an çalışan aracın adı; ekranda ona uygun simge belirir */
   activity?: string | null
 }
@@ -80,12 +91,13 @@ const BODY: Record<Mood, TargetAndTransition> = {
     scaleY: 1,
     transition: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
   },
+  // Zafer dansı: zıplar, sağa sola kıvırır, bir daha zıplar
   happy: {
-    y: [0, -30, 0, -12, 0],
-    rotate: [0, -6, 4, 0, 0],
-    scaleX: [1, 0.92, 1.1, 0.97, 1],
-    scaleY: [1, 1.1, 0.88, 1.04, 1],
-    transition: { duration: 0.95, ease: 'easeOut' }
+    y: [0, -30, 0, -6, 0, -6, 0, -14, 0],
+    rotate: [0, -6, 4, -10, 10, -10, 10, 0, 0],
+    scaleX: [1, 0.92, 1.1, 1, 1, 1, 1, 0.95, 1],
+    scaleY: [1, 1.1, 0.88, 1, 1, 1, 1, 1.06, 1],
+    transition: { duration: 1.6, ease: 'easeOut' }
   },
   sad: {
     y: 5,
@@ -94,12 +106,20 @@ const BODY: Record<Mood, TargetAndTransition> = {
     scaleY: 0.88,
     transition: { type: 'spring', stiffness: 160, damping: 14 }
   },
+  // Horlar: yavaşça şişer, sonra kendi horlamasıyla irkilip uyanır gibi olur
   sleep: {
-    y: 4,
-    rotate: 3,
-    scaleX: [1.02, 1.05, 1.02],
-    scaleY: [0.97, 0.94, 0.97],
-    transition: { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }
+    y: [4, 4, 4, -6, 4],
+    rotate: [3, 3, 3, -4, 3],
+    scaleX: [1.02, 1.07, 1.02, 0.97, 1.02],
+    scaleY: [0.97, 0.91, 0.97, 1.06, 0.97],
+    transition: { duration: 7, times: [0, 0.4, 0.8, 0.85, 1], repeat: Infinity }
+  },
+  shy: {
+    y: 2,
+    rotate: [-4, 4, -4],
+    scaleX: 1,
+    scaleY: 1,
+    transition: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }
   },
   tickle: {
     y: [0, -8, 0],
@@ -132,17 +152,29 @@ const BODY: Record<Mood, TargetAndTransition> = {
 }
 
 // Tepkiler ve süreleri (ms)
-type Reaction = 'happy' | 'tickle' | 'dizzy' | 'angry'
+type Reaction = 'happy' | 'tickle' | 'dizzy' | 'angry' | 'shy'
 const REACTION_MS: Record<Reaction, number> = {
   happy: 1600,
   tickle: 1800,
   dizzy: 2600,
-  angry: 2600
+  angry: 2600,
+  shy: 2200
 }
 // Bu kadar süre etkileşim olmazsa canı sıkılır (uykudan önce)
 const BORED_AFTER_MS = 45_000
 
-type Fidget = 'look' | 'hop' | 'tilt' | 'wiggle' | 'wave' | 'spin' | 'dance' | 'sneeze' | 'stretch'
+type Fidget =
+  | 'look'
+  | 'hop'
+  | 'tilt'
+  | 'wiggle'
+  | 'wave'
+  | 'spin'
+  | 'dance'
+  | 'sneeze'
+  | 'stretch'
+  | 'yawn'
+  | 'game'
 const FIDGETS: Fidget[] = [
   'look',
   'hop',
@@ -153,13 +185,30 @@ const FIDGETS: Fidget[] = [
   'spin',
   'dance',
   'sneeze',
-  'stretch'
+  'stretch',
+  'game'
 ]
 // Eli de kullanan hareketler (bitince eller dinlenme konumuna döner)
 const HAND_FIDGETS: Partial<Record<Fidget, HandGesture>> = {
   wave: 'wave',
   dance: 'dance',
-  stretch: 'stretch'
+  stretch: 'stretch',
+  yawn: 'stretch',
+  game: 'game'
+}
+
+// Sabah ilk açılışta esneyerek uyanır, diğer açılışlarda el sallar
+function firstGreeting(): Fidget {
+  const now = new Date()
+  if (now.getHours() < 5 || now.getHours() >= 11) return 'wave'
+  const today = now.toDateString()
+  try {
+    if (localStorage.getItem('jarvis-pet-yawn') === today) return 'wave'
+    localStorage.setItem('jarvis-pet-yawn', today)
+  } catch {
+    // Depolama yoksa her sabah açılışında esner
+  }
+  return 'yawn'
 }
 
 // Kendi kendine yapılan küçük hareketlerin gövde ve göz hareketi (tek seferlik)
@@ -191,6 +240,17 @@ const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
     y: [0, -4, -6, 8, 0],
     rotate: [0, -6, -9, 12, 0],
     transition: { duration: 1.1, times: [0, 0.35, 0.6, 0.7, 1] }
+  },
+  yawn: {
+    scaleY: [1, 1.16, 1.16, 1.16, 1],
+    scaleX: [1, 0.92, 0.92, 0.92, 1],
+    rotate: [0, -4, 4, -2, 0],
+    transition: { duration: 2.4, times: [0, 0.25, 0.5, 0.75, 1] }
+  },
+  // Gizlice ekranında oyun oynar
+  game: {
+    y: [0, 2, 0, 2, 0],
+    transition: { duration: 4.5 }
   },
   stretch: {
     scaleY: [1, 1.14, 1.14, 1],
@@ -230,6 +290,7 @@ function Pet({
   onClick,
   label = 'Jarvis ile konuş',
   attention = 0,
+  typed = 0,
   activity = null
 }: PetProps): React.JSX.Element {
   const reduced = useReducedMotion()
@@ -338,6 +399,15 @@ function Pet({
     return () => clearTimeout(end)
   }, [reaction])
   const react = (kind: Reaction): void => setReaction({ kind, key: Date.now() })
+  useEffect(
+    () =>
+      onPetSignal((signal) => {
+        if (signal === 'praise') setReaction({ kind: 'shy', key: Date.now() })
+      }),
+    []
+  )
+  // Gece yarısından sonra pijama başlığı takar
+  const [night] = useState(() => new Date().getHours() < 5)
   const onRub = (event: React.PointerEvent): void => {
     if (reduced || dragging) return
     const r = rub.current
@@ -363,7 +433,11 @@ function Pet({
   const baseMood = moodFor(state, activeEmotion, asleep)
   const calm = baseMood === 'idle' || baseMood === 'sleep'
   const mood: Mood =
-    reaction && calm ? reaction.kind : baseMood === 'idle' && bored ? 'bored' : baseMood
+    reaction && (calm || reaction.kind === 'shy')
+      ? reaction.kind
+      : baseMood === 'idle' && bored
+        ? 'bored'
+        : baseMood
   const height = size * 0.84
   const glowing = mood === 'work' || mood === 'listen' || mood === 'speak'
 
@@ -371,7 +445,7 @@ function Pet({
   // sallama. Üstüne gelince sevinip sıçrar. Her yeni hareket kendi anahtarıyla bir kez oynar.
   // Açılışta el sallayarak selam verir
   const [fidget, setFidget] = useState<{ kind: Fidget; key: number } | null>(() =>
-    reduced ? null : { kind: 'wave', key: 1 }
+    reduced ? null : { kind: firstGreeting(), key: 1 }
   )
   // Ellerin anahtarı sadece yeni bir el hareketi başlayınca değişir; böylece eller
   // durumlar arasında yumuşakça geçer, bir yerden bir yere ışınlanmaz
@@ -412,13 +486,20 @@ function Pet({
   const watching = attention > 0 && mood === 'idle'
   // Üstüne gelinince ya da yazarken gözler merakla büyür
   const sneezing = mood === 'idle' && fidget?.kind === 'sneeze'
+  const yawning = mood === 'idle' && fidget?.kind === 'yawn'
+  // Oyun oynarken üstüne gelinirse hemen kapatıp masum masum bakar
+  const gaming = mood === 'idle' && fidget?.kind === 'game' && !hovered && !watching
+  // Yazarken gözler harflerle birlikte sağa kayar
+  const typingX = ((Math.min(typed, 40) / 40) * 2 - 1) * size * 0.08
   const eyeMood: Mood = dragging
     ? 'listen'
     : sneezing
       ? 'tickle'
-      : mood === 'idle' && (hovered || watching)
-        ? 'listen'
-        : mood
+      : yawning
+        ? 'sleep'
+        : mood === 'idle' && (hovered || watching)
+          ? 'listen'
+          : mood
   const ActivityIcon = mood === 'work' ? toolIcon(activity) : null
   const fidgetHands = mood === 'idle' && fidget ? HAND_FIDGETS[fidget.kind] : undefined
   const gesture: HandGesture = dragging ? 'happy' : (fidgetHands ?? mood)
@@ -593,11 +674,11 @@ function Pet({
                 <motion.div
                   key={fidget?.kind === 'look' ? fidget.key : 'eyes'}
                   className="flex items-center"
-                  style={{ gap: size * 0.13 }}
+                  style={{ gap: size * 0.13, opacity: gaming ? 0 : 1 }}
                   animate={
                     watching
                       ? {
-                          x: 0,
+                          x: typingX,
                           y: [size * 0.05, size * 0.08, size * 0.05],
                           transition: { duration: 0.6, repeat: Infinity }
                         }
@@ -621,12 +702,28 @@ function Pet({
               </AnimatePresence>
               {mood === 'think' && !reduced && <ThinkingDots size={size} />}
               {mood === 'speak' && <SpeakingMouth size={size} />}
+              {yawning && (
+                <motion.span
+                  className="absolute left-1/2 block rounded-full bg-[#c9d0ff]"
+                  style={{
+                    bottom: size * 0.05,
+                    width: size * 0.1,
+                    height: size * 0.12,
+                    marginLeft: -size * 0.05,
+                    boxShadow: '0 0 10px rgb(190 200 255 / 0.9)'
+                  }}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [0, 1, 1, 0] }}
+                  transition={{ duration: 2.4, times: [0, 0.3, 0.75, 1] }}
+                />
+              )}
+              <AnimatePresence>{gaming && <SnakeGame size={size} />}</AnimatePresence>
             </div>
-            {mood === 'happy' && !reduced && (
+            {(mood === 'happy' || mood === 'shy') && !reduced && (
               <FloatingHearts key={reaction?.key ?? emotionSeq} size={size} />
             )}
             {/* Okşanınca yanaklar kızarır */}
-            {(mood === 'tickle' || reaction?.kind === 'happy') &&
+            {(mood === 'tickle' || mood === 'shy' || reaction?.kind === 'happy') &&
               [-1, 1].map((side) => (
                 <motion.span
                   key={side}
@@ -643,7 +740,8 @@ function Pet({
                 />
               ))}
 
-            <ReactionExtras mood={mood} size={size} reduced={!!reduced} />
+            <ReactionExtras mood={mood} size={size} reduced={!!reduced} night={night} />
+            {night && variant === 'robot' && <NightCap size={size} />}
             {/* Onay bekliyor: amber ünlem balonu */}
             {mood === 'approval' && (
               <motion.div
@@ -716,7 +814,7 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
   const h = size * 0.17
   const glow = '0 0 12px rgb(190 200 255 / 0.95)'
 
-  if (mood === 'happy') {
+  if (mood === 'happy' || mood === 'shy') {
     return (
       <motion.span
         className="block"
@@ -787,7 +885,8 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
     tickle: { w, h, rotate: 0, y: 0 },
     dizzy: { w, h, rotate: 0, y: 0 },
     angry: { w: w * 1.15, h: h * 0.5, rotate: right ? 18 : -18, y: size * 0.01 },
-    bored: { w: w * 1.1, h: h * 0.38, rotate: 0, y: size * 0.035 }
+    bored: { w: w * 1.1, h: h * 0.38, rotate: 0, y: size * 0.035 },
+    shy: { w, h, rotate: 0, y: 0 }
   }
   const s = shape[mood]
   return (
@@ -810,13 +909,79 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
 function ReactionExtras({
   mood,
   size,
-  reduced
+  reduced,
+  night
 }: {
   mood: Mood
   size: number
   reduced: boolean
+  night: boolean
 }): React.JSX.Element | null {
   if (reduced) return null
+  if (mood === 'think') {
+    // Uzun düşünürse (4 sn) tepesinde dişli çark döner
+    return (
+      <motion.span
+        className="pointer-events-none absolute text-[#c9d0ff]"
+        style={{ right: -size * 0.12, top: -size * 0.12 }}
+        initial={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: 1, scale: 1, rotate: 360 }}
+        transition={{
+          opacity: { delay: 4, duration: 0.4 },
+          scale: { delay: 4, type: 'spring', stiffness: 300, damping: 14 },
+          rotate: { duration: 2.5, repeat: Infinity, ease: 'linear' }
+        }}
+      >
+        <Settings
+          style={{ width: size * 0.16, height: size * 0.16 }}
+          className="drop-shadow-[0_0_6px_rgb(160_175_255_/_0.9)]"
+        />
+      </motion.span>
+    )
+  }
+  if (mood === 'sleep') {
+    // Rüya balonu: sırayla kalp, yıldız, kurabiye
+    const dreams = [Heart, Star, Cookie]
+    return (
+      <span
+        className="pointer-events-none absolute"
+        style={{ left: -size * 0.32, top: -size * 0.28 }}
+      >
+        <span
+          className="absolute rounded-full bg-white/15"
+          style={{ left: size * 0.26, top: size * 0.24, width: size * 0.04, height: size * 0.04 }}
+        />
+        <span
+          className="absolute rounded-full bg-white/15"
+          style={{ left: size * 0.21, top: size * 0.18, width: size * 0.06, height: size * 0.06 }}
+        />
+        <span
+          className="glass-soft absolute flex items-center justify-center !rounded-full"
+          style={{ left: 0, top: 0, width: size * 0.22, height: size * 0.18 }}
+        >
+          {dreams.map((Icon, i) => (
+            <motion.span
+              key={i}
+              className="absolute text-[#ffb3d1]"
+              animate={{ opacity: [0, 1, 1, 0, 0] }}
+              transition={{
+                duration: 9,
+                times: [0, 0.05, 0.28, 0.33, 1],
+                repeat: Infinity,
+                delay: i * 3
+              }}
+            >
+              <Icon
+                style={{ width: size * 0.09, height: size * 0.09 }}
+                fill="currentColor"
+                strokeWidth={0}
+              />
+            </motion.span>
+          ))}
+        </span>
+      </span>
+    )
+  }
   if (mood === 'angry') {
     return (
       <>
@@ -867,31 +1032,74 @@ function ReactionExtras({
       </motion.div>
     )
   }
-  if (mood === 'tickle' || mood === 'bored') {
+  if (mood === 'tickle' || mood === 'bored' || (night && mood === 'idle')) {
     const tickle = mood === 'tickle'
+    const sleepy = night && mood === 'idle'
     return (
       <motion.span
         key={mood}
         className="pointer-events-none absolute font-semibold whitespace-nowrap"
         style={{
-          right: -size * 0.25,
           top: -size * 0.02,
           fontSize: size * 0.1,
-          color: tickle ? '#ff9ec7' : '#8a90a8'
+          color: tickle ? '#ff9ec7' : '#8a90a8',
+          right: sleepy ? -size * 0.55 : -size * 0.25
         }}
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: [0, 1, 1, 0], y: -size * 0.12 }}
         transition={{
           duration: tickle ? 1.2 : 2.4,
           repeat: Infinity,
-          repeatDelay: tickle ? 0 : 3
+          repeatDelay: tickle ? 0 : sleepy ? 9 : 3
         }}
       >
-        {tickle ? 'hi hi!' : 'ıhh…'}
+        {tickle ? 'hi hi!' : sleepy ? 'uyusan mı artık?' : 'ıhh…'}
       </motion.span>
     )
   }
   return null
+}
+
+// Pijama başlığı (gece yarısından sonra)
+function NightCap({ size }: { size: number }): React.JSX.Element {
+  return (
+    <motion.span
+      className="pointer-events-none absolute block"
+      style={{ left: size * 0.02, top: -size * 0.2, width: size * 0.4, height: size * 0.34 }}
+      initial={{ rotate: -24 }}
+      animate={{ rotate: [-24, -18, -24] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      <span
+        className="absolute inset-0 block"
+        style={{
+          clipPath: 'polygon(50% 0, 100% 100%, 0 100%)',
+          background: 'linear-gradient(160deg, #8b9bff, #4b4fb8)'
+        }}
+      />
+      <span
+        className="absolute block rounded-full"
+        style={{
+          left: 0,
+          right: 0,
+          bottom: -size * 0.02,
+          height: size * 0.07,
+          background: '#e8ebff'
+        }}
+      />
+      <span
+        className="absolute block rounded-full bg-[#e8ebff]"
+        style={{
+          left: '50%',
+          top: -size * 0.04,
+          width: size * 0.08,
+          height: size * 0.08,
+          marginLeft: -size * 0.04,
+          boxShadow: '0 0 8px rgb(232 235 255 / 0.8)'
+        }}
+      />
+    </motion.span>
+  )
 }
 
 export default Pet

@@ -35,7 +35,8 @@ interface CommandBoxProps {
   /** Yazılan istek; yeni sohbette cevaplanır */
   onSubmit: (text: string) => void
   /** Kullanıcı kutuya yazarken çağrılır; küre buna tepki verir */
-  onTyping?: () => void
+  /** Yazılan metnin uzunluğu (pet gözleriyle takip eder) */
+  onTyping?: (length: number) => void
 }
 
 // Ana Sayfa'daki büyük komut kutusu: yaz, konuş veya hazır bir başlangıç seç
@@ -88,7 +89,7 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
           value={text}
           onChange={(e) => {
             setText(e.target.value)
-            onTyping?.()
+            onTyping?.(e.target.value.length)
           }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

@@ -30,6 +30,7 @@ export type PetMood =
   | 'dizzy'
   | 'angry'
   | 'bored'
+  | 'shy'
 
 /** Anten ucunun rengi: durum ışığı */
 export const ANTENNA_COLOR: Record<PetMood, string> = {
@@ -45,7 +46,8 @@ export const ANTENNA_COLOR: Record<PetMood, string> = {
   tickle: '#ff9ec7',
   dizzy: '#c49bff',
   angry: '#ff5a5a',
-  bored: '#8a90a8'
+  bored: '#8a90a8',
+  shy: '#ff9ec7'
 }
 
 // Çalışan aracın adına göre ekranda gösterilecek simge (ilk eşleşen önek kazanır)
@@ -75,4 +77,4 @@ export function toolIcon(toolName: string | null | undefined): LucideIcon | null
   return TOOL_ICONS.find(([prefix]) => toolName.startsWith(prefix))?.[1] ?? null
 }
 
-export type HandGesture = PetMood | 'wave' | 'dance' | 'stretch'
+export type HandGesture = PetMood | 'wave' | 'dance' | 'stretch' | 'game'

@@ -86,6 +86,44 @@ export function SpeakingMouth({ size }: { size: number }): React.JSX.Element {
   )
 }
 
+/** Ekranda gizlice oynanan minik yılan oyunu */
+export function SnakeGame({ size }: { size: number }): React.JSX.Element {
+  const cell = size * 0.035
+  // Yılanın ekranda dolaştığı dikdörtgen yol
+  const xs = [-0.18, 0.18, 0.18, -0.18, -0.18].map((v) => v * size)
+  const ys = [-0.07, -0.07, 0.07, 0.07, -0.07].map((v) => v * size)
+  return (
+    <motion.span
+      className="absolute inset-0 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.08 } }}
+    >
+      {/* Elma */}
+      <motion.span
+        className="absolute block rounded-full bg-[#ff7d9c]"
+        style={{ width: cell, height: cell, boxShadow: '0 0 6px #ff7d9c' }}
+        animate={{ x: [size * 0.1, -size * 0.12, size * 0.05], y: [size * 0.04, -size * 0.05, 0] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'steps(1)' as never }}
+      />
+      {[0, 1, 2, 3].map((i) => (
+        <motion.span
+          key={i}
+          className="absolute block rounded-[2px] bg-[#7ef0b5]"
+          style={{
+            width: cell,
+            height: cell,
+            opacity: 1 - i * 0.18,
+            boxShadow: '0 0 6px rgb(126 240 181 / 0.8)'
+          }}
+          animate={{ x: xs, y: ys }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'linear', delay: -i * 0.09 }}
+        />
+      ))}
+    </motion.span>
+  )
+}
+
 /** Sevinince ekranın üstünden uçup giden kalpler */
 export function FloatingHearts({ size }: { size: number }): React.JSX.Element {
   return (
@@ -235,6 +273,25 @@ function gestureFor(
         y: [-h * 0.3, -h * 0.36, -h * 0.3],
         rotate: [dir * 12, -dir * 6, dir * 12],
         transition: { duration: 0.14, repeat: Infinity }
+      }
+    case 'shy':
+      // Elleri yanaklarında, utanıp kıpırdanıyor
+      return {
+        x: -dir * w * 0.17,
+        y: [-h * 0.12, -h * 0.08, -h * 0.12],
+        rotate: -dir * 20,
+        transition: {
+          y: { duration: 0.5, repeat: Infinity },
+          default: { type: 'spring', stiffness: 260, damping: 16 }
+        }
+      }
+    case 'game':
+      // Oyun kolu tutuyor gibi, parmaklar hızlı hızlı
+      return {
+        x: -dir * w * 0.12,
+        y: [h * 0.02, -h * 0.03, h * 0.02],
+        rotate: dir * -10,
+        transition: { duration: right ? 0.18 : 0.24, repeat: Infinity }
       }
     case 'bored':
       // Sağ el sabırsızca tıkırdatıyor, sol el sarkık
