@@ -100,11 +100,67 @@ const BODY: Record<Mood, TargetAndTransition> = {
     scaleX: [1.02, 1.05, 1.02],
     scaleY: [0.97, 0.94, 0.97],
     transition: { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }
+  },
+  tickle: {
+    y: [0, -8, 0],
+    rotate: [-7, 7, -7],
+    scaleX: [1, 1.05, 1],
+    scaleY: [1, 0.95, 1],
+    transition: { duration: 0.22, repeat: Infinity }
+  },
+  dizzy: {
+    y: 2,
+    rotate: [-12, 10, -12],
+    scaleX: 1,
+    scaleY: 1,
+    transition: { duration: 1.1, repeat: Infinity, ease: 'easeInOut' }
+  },
+  angry: {
+    y: [0, -2, 0],
+    rotate: [-2, 2, -2],
+    scaleX: 1.04,
+    scaleY: 0.95,
+    transition: { duration: 0.12, repeat: Infinity }
+  },
+  bored: {
+    y: 4,
+    rotate: -4,
+    scaleX: [1.02, 1.04, 1.02],
+    scaleY: [0.98, 0.96, 0.98],
+    transition: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }
   }
 }
 
-type Fidget = 'look' | 'hop' | 'tilt' | 'wiggle' | 'wave'
-const FIDGETS: Fidget[] = ['look', 'hop', 'tilt', 'wiggle', 'look', 'wave']
+// Tepkiler ve süreleri (ms)
+type Reaction = 'happy' | 'tickle' | 'dizzy' | 'angry'
+const REACTION_MS: Record<Reaction, number> = {
+  happy: 1600,
+  tickle: 1800,
+  dizzy: 2600,
+  angry: 2600
+}
+// Bu kadar süre etkileşim olmazsa canı sıkılır (uykudan önce)
+const BORED_AFTER_MS = 45_000
+
+type Fidget = 'look' | 'hop' | 'tilt' | 'wiggle' | 'wave' | 'spin' | 'dance' | 'sneeze' | 'stretch'
+const FIDGETS: Fidget[] = [
+  'look',
+  'hop',
+  'tilt',
+  'wiggle',
+  'look',
+  'wave',
+  'spin',
+  'dance',
+  'sneeze',
+  'stretch'
+]
+// Eli de kullanan hareketler (bitince eller dinlenme konumuna döner)
+const HAND_FIDGETS: Partial<Record<Fidget, HandGesture>> = {
+  wave: 'wave',
+  dance: 'dance',
+  stretch: 'stretch'
+}
 
 // Kendi kendine yapılan küçük hareketlerin gövde ve göz hareketi (tek seferlik)
 const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
@@ -117,7 +173,30 @@ const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
   },
   tilt: { rotate: [0, -11, -11, 0], transition: { duration: 1.1, times: [0, 0.25, 0.75, 1] } },
   wiggle: { rotate: [0, 4, -4, 3, -2, 0], transition: { duration: 0.7 } },
-  wave: { rotate: [0, -4, 0], transition: { duration: 1.05 } }
+  wave: { rotate: [0, -4, 0], transition: { duration: 1.3 } },
+  // Havada takla
+  spin: {
+    rotate: [0, 360],
+    y: [0, -24, 0],
+    transition: { duration: 0.8, ease: 'easeInOut' }
+  },
+  dance: {
+    rotate: [0, -8, 8, -8, 8, 0],
+    y: [0, -6, 0, -6, 0, 0],
+    transition: { duration: 1.6 }
+  },
+  // Ha... ha... hapşu!
+  sneeze: {
+    scaleY: [1, 1.08, 1.1, 0.84, 1],
+    y: [0, -4, -6, 8, 0],
+    rotate: [0, -6, -9, 12, 0],
+    transition: { duration: 1.1, times: [0, 0.35, 0.6, 0.7, 1] }
+  },
+  stretch: {
+    scaleY: [1, 1.14, 1.14, 1],
+    scaleX: [1, 0.93, 0.93, 1],
+    transition: { duration: 1.4, times: [0, 0.3, 0.75, 1] }
+  }
 }
 
 function moodFor(
@@ -173,17 +252,23 @@ function Pet({
   }, [emotionSeq, emotionKind])
 
   // Uyku: uzun süre fare/klavye hareketi ve iş olmazsa uyur, ilk harekette uyanır
+  const [bored, setBored] = useState(false)
   useEffect(() => {
     let timer = setTimeout(() => setAsleep(true), SLEEP_AFTER_MS)
+    let boredTimer = setTimeout(() => setBored(true), BORED_AFTER_MS)
     const wake = (): void => {
       clearTimeout(timer)
+      clearTimeout(boredTimer)
       setAsleep(false)
+      setBored(false)
       timer = setTimeout(() => setAsleep(true), SLEEP_AFTER_MS)
+      boredTimer = setTimeout(() => setBored(true), BORED_AFTER_MS)
     }
     window.addEventListener('pointermove', wake)
     window.addEventListener('keydown', wake)
     return () => {
       clearTimeout(timer)
+      clearTimeout(boredTimer)
       window.removeEventListener('pointermove', wake)
       window.removeEventListener('keydown', wake)
     }
@@ -239,16 +324,20 @@ function Pet({
     return () => window.removeEventListener('pointermove', onMove)
   }, [lookX, lookY, leanX, leanRotate, antennaSource, size, reduced])
 
-  // Okşama: imleç robotun üstünde ileri geri gidince sevinir; sürüklenince şaşırır
-  const [petted, setPetted] = useState(0)
+  // Kişilik tepkileri: başını okşayınca sevinir, karnını gıdıklayınca güler, hızlı sallanınca
+  // başı döner, art arda sürüklenince sinirlenir
+  const [reaction, setReaction] = useState<{ kind: Reaction; key: number } | null>(null)
   const [dragging, setDragging] = useState(false)
   const dragMoved = useRef(false)
+  const dragPath = useRef(0)
+  const dragTimes = useRef<number[]>([])
   const rub = useRef({ lastX: 0, dir: 0, turns: 0, at: 0 })
   useEffect(() => {
-    if (!petted) return
-    const end = setTimeout(() => setPetted(0), 1600)
+    if (!reaction) return
+    const end = setTimeout(() => setReaction(null), REACTION_MS[reaction.kind])
     return () => clearTimeout(end)
-  }, [petted])
+  }, [reaction])
+  const react = (kind: Reaction): void => setReaction({ kind, key: Date.now() })
   const onRub = (event: React.PointerEvent): void => {
     if (reduced || dragging) return
     const r = rub.current
@@ -264,13 +353,17 @@ function Pet({
       r.at = now
       if (r.turns >= 4) {
         r.turns = 0
-        setPetted(Date.now())
+        const rect = rootRef.current?.getBoundingClientRect()
+        const belly = rect ? event.clientY > rect.top + rect.height * 0.6 : false
+        react(belly ? 'tickle' : 'happy')
       }
     }
   }
 
   const baseMood = moodFor(state, activeEmotion, asleep)
-  const mood: Mood = petted && (baseMood === 'idle' || baseMood === 'sleep') ? 'happy' : baseMood
+  const calm = baseMood === 'idle' || baseMood === 'sleep'
+  const mood: Mood =
+    reaction && calm ? reaction.kind : baseMood === 'idle' && bored ? 'bored' : baseMood
   const height = size * 0.84
   const glowing = mood === 'work' || mood === 'listen' || mood === 'speak'
 
@@ -280,6 +373,14 @@ function Pet({
   const [fidget, setFidget] = useState<{ kind: Fidget; key: number } | null>(() =>
     reduced ? null : { kind: 'wave', key: 1 }
   )
+  // Ellerin anahtarı sadece yeni bir el hareketi başlayınca değişir; böylece eller
+  // durumlar arasında yumuşakça geçer, bir yerden bir yere ışınlanmaz
+  const [handKey, setHandKey] = useState(1)
+  const startFidget = (kind: Fidget): void => {
+    const key = Date.now()
+    setFidget({ kind, key })
+    if (HAND_FIDGETS[kind]) setHandKey(key)
+  }
   const [hovered, setHovered] = useState(false)
   useEffect(() => {
     if (reduced || mood !== 'idle') return
@@ -287,7 +388,7 @@ function Pet({
     const next = (): void => {
       timer = setTimeout(
         () => {
-          setFidget({ kind: FIDGETS[Math.floor(Math.random() * FIDGETS.length)], key: Date.now() })
+          startFidget(FIDGETS[Math.floor(Math.random() * FIDGETS.length)])
           next()
         },
         3000 + Math.random() * 4000
@@ -310,14 +411,17 @@ function Pet({
   // Yazarken komut kutusuna (aşağı) bakar ve başını sallar
   const watching = attention > 0 && mood === 'idle'
   // Üstüne gelinince ya da yazarken gözler merakla büyür
-  const eyeMood: Mood = dragging || (mood === 'idle' && (hovered || watching)) ? 'listen' : mood
+  const sneezing = mood === 'idle' && fidget?.kind === 'sneeze'
+  const eyeMood: Mood = dragging
+    ? 'listen'
+    : sneezing
+      ? 'tickle'
+      : mood === 'idle' && (hovered || watching)
+        ? 'listen'
+        : mood
   const ActivityIcon = mood === 'work' ? toolIcon(activity) : null
-  const gesture: HandGesture = dragging
-    ? 'happy'
-    : mood === 'idle' && fidget?.kind === 'wave'
-      ? 'wave'
-      : mood
-  const gestureKey = gesture === 'wave' ? (fidget?.key ?? 0) : 0
+  const fidgetHands = mood === 'idle' && fidget ? HAND_FIDGETS[fidget.kind] : undefined
+  const gesture: HandGesture = dragging ? 'happy' : (fidgetHands ?? mood)
   const antenna = ANTENNA_COLOR[mood]
 
   return (
@@ -338,15 +442,27 @@ function Pet({
       dragTransition={{ bounceStiffness: 500, bounceDamping: 14 }}
       onDragStart={() => {
         dragMoved.current = true
+        dragPath.current = 0
+        const now = Date.now()
+        dragTimes.current = [...dragTimes.current.filter((t) => now - t < 12_000), now]
         setDragging(true)
       }}
-      onDragEnd={() => setDragging(false)}
+      onDrag={(_, info) => {
+        dragPath.current += Math.hypot(info.delta.x, info.delta.y)
+      }}
+      onDragEnd={() => {
+        setDragging(false)
+        if (dragTimes.current.length >= 3) {
+          dragTimes.current = []
+          react('angry')
+        } else if (dragPath.current > 1200) react('dizzy')
+      }}
       aria-label={label}
       title={label}
       className="relative flex cursor-pointer flex-col items-center rounded-[32px] outline-offset-8"
       onHoverStart={() => {
         setHovered(true)
-        if (!reduced && mood === 'idle') setFidget({ kind: 'hop', key: Date.now() })
+        if (!reduced && mood === 'idle') startFidget('hop')
       }}
       onHoverEnd={() => setHovered(false)}
       whileHover={reduced ? undefined : { scale: 1.05 }}
@@ -366,7 +482,7 @@ function Pet({
           animate={reduced || !fidget ? undefined : FIDGET_BODY[fidget.kind]}
         >
           {variant === 'robot' && !reduced && (
-            <Hands gesture={gesture} width={size} height={height} gestureKey={gestureKey} />
+            <Hands gesture={gesture} width={size} height={height} gestureKey={handKey} />
           )}
           <motion.div
             className="relative"
@@ -507,10 +623,10 @@ function Pet({
               {mood === 'speak' && <SpeakingMouth size={size} />}
             </div>
             {mood === 'happy' && !reduced && (
-              <FloatingHearts key={petted || emotionSeq} size={size} />
+              <FloatingHearts key={reaction?.key ?? emotionSeq} size={size} />
             )}
             {/* Okşanınca yanaklar kızarır */}
-            {petted > 0 &&
+            {(mood === 'tickle' || reaction?.kind === 'happy') &&
               [-1, 1].map((side) => (
                 <motion.span
                   key={side}
@@ -527,6 +643,7 @@ function Pet({
                 />
               ))}
 
+            <ReactionExtras mood={mood} size={size} reduced={!!reduced} />
             {/* Onay bekliyor: amber ünlem balonu */}
             {mood === 'approval' && (
               <motion.div
@@ -619,6 +736,44 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
     )
   }
 
+  if (mood === 'tickle') {
+    // Gülmekten kısılmış > < gözler
+    const t = size * 0.03
+    return (
+      <motion.span
+        className="block"
+        style={{
+          width: w * 0.9,
+          height: w * 0.9,
+          borderTop: `${t}px solid #f1f3ff`,
+          borderRight: `${t}px solid #f1f3ff`,
+          borderRadius: t * 0.5,
+          filter: 'drop-shadow(0 0 6px rgb(190 200 255 / 0.9))'
+        }}
+        initial={{ scale: 0.6, rotate: right ? -135 : 45 }}
+        animate={{ scale: 1, rotate: right ? -135 : 45 }}
+      />
+    )
+  }
+  if (mood === 'dizzy') {
+    // Dönen sarmal gözler
+    return (
+      <motion.span
+        className="block rounded-full"
+        style={{
+          width: w * 1.5,
+          height: w * 1.5,
+          border: `${size * 0.025}px solid #f1f3ff`,
+          borderTopColor: 'transparent',
+          borderRightColor: right ? 'transparent' : '#f1f3ff',
+          filter: 'drop-shadow(0 0 6px rgb(190 200 255 / 0.9))'
+        }}
+        animate={{ rotate: right ? -360 : 360 }}
+        transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+      />
+    )
+  }
+
   const shape: Record<Mood, { w: number; h: number; rotate: number; y: number }> = {
     idle: { w, h, rotate: 0, y: 0 },
     listen: { w: w * 1.15, h: h * 1.2, rotate: 0, y: 0 },
@@ -628,7 +783,11 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
     approval: { w: w * 1.05, h: h * 1.05, rotate: 0, y: 0 },
     happy: { w, h, rotate: 0, y: 0 },
     sad: { w: w * 1.1, h: h * 0.28, rotate: right ? -14 : 14, y: size * 0.03 },
-    sleep: { w: w * 1.1, h: size * 0.02, rotate: 0, y: size * 0.03 }
+    sleep: { w: w * 1.1, h: size * 0.02, rotate: 0, y: size * 0.03 },
+    tickle: { w, h, rotate: 0, y: 0 },
+    dizzy: { w, h, rotate: 0, y: 0 },
+    angry: { w: w * 1.15, h: h * 0.5, rotate: right ? 18 : -18, y: size * 0.01 },
+    bored: { w: w * 1.1, h: h * 0.38, rotate: 0, y: size * 0.035 }
   }
   const s = shape[mood]
   return (
@@ -644,6 +803,95 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
       transition={{ type: 'spring', stiffness: 420, damping: 26 }}
     />
   )
+}
+
+// Tepkilerin ek efektleri: sinirlenince buhar, başı dönünce tepesinde dönen yıldızlar,
+// gıdıklanınca "hi hi", canı sıkılınca iç çekiş
+function ReactionExtras({
+  mood,
+  size,
+  reduced
+}: {
+  mood: Mood
+  size: number
+  reduced: boolean
+}): React.JSX.Element | null {
+  if (reduced) return null
+  if (mood === 'angry') {
+    return (
+      <>
+        {[-1, 1, -1, 1].map((side, i) => (
+          <motion.span
+            key={i}
+            className="pointer-events-none absolute rounded-full bg-white/70 blur-[2px]"
+            style={{
+              top: size * 0.02,
+              left: side < 0 ? size * 0.12 : undefined,
+              right: side > 0 ? size * 0.12 : undefined,
+              width: size * 0.08,
+              height: size * 0.08
+            }}
+            animate={{
+              opacity: [0, 0.9, 0],
+              y: -size * 0.3,
+              x: side * size * 0.1,
+              scale: [0.5, 1.4]
+            }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.22, ease: 'easeOut' }}
+          />
+        ))}
+      </>
+    )
+  }
+  if (mood === 'dizzy') {
+    return (
+      <motion.div
+        className="pointer-events-none absolute left-1/2"
+        style={{ top: -size * 0.1, width: 0, height: 0 }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
+      >
+        {[0, 120, 240].map((deg) => (
+          <span
+            key={deg}
+            className="absolute text-[#ffe08a]"
+            style={{
+              fontSize: size * 0.1,
+              transform: `rotate(${deg}deg) translate(${size * 0.32}px) rotate(-${deg}deg)`,
+              textShadow: '0 0 8px rgb(255 224 138 / 0.9)'
+            }}
+          >
+            ★
+          </span>
+        ))}
+      </motion.div>
+    )
+  }
+  if (mood === 'tickle' || mood === 'bored') {
+    const tickle = mood === 'tickle'
+    return (
+      <motion.span
+        key={mood}
+        className="pointer-events-none absolute font-semibold whitespace-nowrap"
+        style={{
+          right: -size * 0.25,
+          top: -size * 0.02,
+          fontSize: size * 0.1,
+          color: tickle ? '#ff9ec7' : '#8a90a8'
+        }}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: [0, 1, 1, 0], y: -size * 0.12 }}
+        transition={{
+          duration: tickle ? 1.2 : 2.4,
+          repeat: Infinity,
+          repeatDelay: tickle ? 0 : 3
+        }}
+      >
+        {tickle ? 'hi hi!' : 'ıhh…'}
+      </motion.span>
+    )
+  }
+  return null
 }
 
 export default Pet

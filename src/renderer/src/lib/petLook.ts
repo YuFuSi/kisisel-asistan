@@ -16,7 +16,20 @@ import {
 // Pet karakterinin görünüm sabitleri: ruh hâli, anten rengi, araç simgeleri (prototip "Jarvis Cam")
 
 export type PetMood =
-  'idle' | 'listen' | 'think' | 'work' | 'speak' | 'approval' | 'happy' | 'sad' | 'sleep'
+  | 'idle'
+  | 'listen'
+  | 'think'
+  | 'work'
+  | 'speak'
+  | 'approval'
+  | 'happy'
+  | 'sad'
+  | 'sleep'
+  // Kişilik tepkileri: gıdıklanma, baş dönmesi, sinir, can sıkıntısı
+  | 'tickle'
+  | 'dizzy'
+  | 'angry'
+  | 'bored'
 
 /** Anten ucunun rengi: durum ışığı */
 export const ANTENNA_COLOR: Record<PetMood, string> = {
@@ -28,7 +41,11 @@ export const ANTENNA_COLOR: Record<PetMood, string> = {
   approval: '#f6b84b',
   happy: '#5fd9a8',
   sad: '#ef7d7d',
-  sleep: '#6b7180'
+  sleep: '#6b7180',
+  tickle: '#ff9ec7',
+  dizzy: '#c49bff',
+  angry: '#ff5a5a',
+  bored: '#8a90a8'
 }
 
 // Çalışan aracın adına göre ekranda gösterilecek simge (ilk eşleşen önek kazanır)
@@ -58,4 +75,4 @@ export function toolIcon(toolName: string | null | undefined): LucideIcon | null
   return TOOL_ICONS.find(([prefix]) => toolName.startsWith(prefix))?.[1] ?? null
 }
 
-export type HandGesture = PetMood | 'wave'
+export type HandGesture = PetMood | 'wave' | 'dance' | 'stretch'

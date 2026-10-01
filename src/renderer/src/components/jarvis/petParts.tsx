@@ -132,10 +132,11 @@ function gestureFor(
     case 'wave':
       return right
         ? {
-            x: -w * 0.02,
-            y: -h * 0.62,
+            // El kalkar, sallar ve yumuşakça geri iner
+            x: [0, -w * 0.02, -w * 0.02, -w * 0.02, -w * 0.02, -w * 0.02, -w * 0.02, 0],
+            y: [0, -h * 0.62, -h * 0.62, -h * 0.62, -h * 0.62, -h * 0.62, -h * 0.62, 0],
             rotate: [0, 32, -16, 32, -16, 32, -16, 0],
-            transition: { duration: 1.05, ease: 'easeInOut' }
+            transition: { duration: 1.3, ease: 'easeInOut' }
           }
         : { x: 0, y: [0, -4, 0], rotate: 0, transition: { duration: 2.2, repeat: Infinity } }
     case 'happy':
@@ -198,6 +199,58 @@ function gestureFor(
       }
     case 'sleep':
       return { x: -dir * w * 0.04, y: h * 0.16, rotate: dir * 10, transition: { duration: 1.2 } }
+    case 'dance':
+      return {
+        x: [0, -dir * w * 0.03, 0, -dir * w * 0.03, 0],
+        y: right ? [0, -h * 0.4, 0, -h * 0.4, 0] : [0, h * 0.05, -h * 0.4, h * 0.05, 0],
+        rotate: [0, dir * 20, -dir * 10, dir * 20, 0],
+        transition: { duration: 1.6, ease: 'easeInOut' }
+      }
+    case 'stretch':
+      return {
+        x: [0, -dir * w * 0.06, -dir * w * 0.06, 0],
+        y: [0, -h * 0.72, -h * 0.72, 0],
+        rotate: [0, -dir * 8, -dir * 8, 0],
+        transition: { duration: 1.4, times: [0, 0.3, 0.75, 1] }
+      }
+    case 'tickle':
+      // Karnını tutup gülüyor
+      return {
+        x: -dir * w * 0.14,
+        y: [h * 0.12, h * 0.06, h * 0.12],
+        rotate: [dir * 10, -dir * 10, dir * 10],
+        transition: { duration: 0.2, repeat: Infinity }
+      }
+    case 'dizzy':
+      return {
+        x: [0, dir * w * 0.04, 0],
+        y: [-h * 0.05, h * 0.08, -h * 0.05],
+        rotate: [dir * 30, -dir * 10, dir * 30],
+        transition: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }
+      }
+    case 'angry':
+      // Yumruklar havada titriyor
+      return {
+        x: -dir * w * 0.02,
+        y: [-h * 0.3, -h * 0.36, -h * 0.3],
+        rotate: [dir * 12, -dir * 6, dir * 12],
+        transition: { duration: 0.14, repeat: Infinity }
+      }
+    case 'bored':
+      // Sağ el sabırsızca tıkırdatıyor, sol el sarkık
+      return right
+        ? {
+            x: -w * 0.05,
+            y: [h * 0.12, h * 0.06, h * 0.12],
+            rotate: 0,
+            transition: { duration: 0.28, repeat: Infinity }
+          }
+        : {
+            x: 0,
+            y: h * 0.14,
+            rotate: 15,
+            transition: { type: 'spring', stiffness: 90, damping: 14 }
+          }
     default:
       return {
         x: 0,
