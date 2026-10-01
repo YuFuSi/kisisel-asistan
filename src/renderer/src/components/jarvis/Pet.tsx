@@ -548,10 +548,7 @@ function Pet({
       aria-label={label}
       title={label}
       className="relative flex cursor-pointer flex-col items-center rounded-[32px] outline-offset-8"
-      onHoverStart={() => {
-        setHovered(true)
-        if (!reduced && mood === 'idle') startFidget('hop')
-      }}
+      onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       whileHover={reduced ? undefined : { scale: 1.05 }}
       whileTap={reduced ? undefined : { scale: 0.93 }}
