@@ -18,6 +18,7 @@ import {
   ThinkingDots
 } from './petParts'
 import { onPetSignal } from '../../lib/petEvents'
+import { bondStage, bumpBond, openBond, useBond } from '../../lib/petBond'
 import { ANTENNA_COLOR, toolIcon, type HandGesture, type PetMood } from '../../lib/petLook'
 
 // Jarvis'in pet karakteri (prototip "Jarvis Cam"): cam robot ya da jöle küp. İki görünüm aynı
@@ -118,6 +119,14 @@ const BODY: Record<Mood, TargetAndTransition> = {
     scaleY: [0.97, 0.91, 0.97, 1.06, 0.97],
     transition: { duration: 7, times: [0, 0.4, 0.8, 0.85, 1], repeat: Infinity }
   },
+  // Küs: arkasını yarı döner, omuzları düşük
+  sulk: {
+    y: 3,
+    rotate: -10,
+    scaleX: 0.94,
+    scaleY: 0.97,
+    transition: { type: 'spring', stiffness: 160, damping: 14 }
+  },
   shy: {
     y: 2,
     rotate: [-4, 4, -4],
@@ -156,13 +165,23 @@ const BODY: Record<Mood, TargetAndTransition> = {
 }
 
 // Tepkiler ve süreleri (ms)
-type Reaction = 'happy' | 'tickle' | 'dizzy' | 'angry' | 'shy'
+type Reaction = 'happy' | 'tickle' | 'dizzy' | 'angry' | 'shy' | 'sulk'
 const REACTION_MS: Record<Reaction, number> = {
   happy: 1600,
   tickle: 1800,
   dizzy: 2600,
   angry: 2600,
-  shy: 2200
+  shy: 2200,
+  sulk: 3500
+}
+// Etkileşimlerin mutluluğa etkisi
+const REACTION_BOND: Record<Reaction, number> = {
+  happy: 8,
+  tickle: 5,
+  shy: 12,
+  dizzy: -3,
+  angry: -8,
+  sulk: 0
 }
 // Bu kadar süre etkileşim olmazsa canı sıkılır (uykudan önce)
 const BORED_AFTER_MS = 45_000
@@ -310,6 +329,7 @@ function Pet({
   const emotionKind = emotion?.kind
   useEffect(() => {
     if (emotionKind !== 'success' && emotionKind !== 'error') return
+    if (emotionKind === 'success') bumpBond(4)
     const show = setTimeout(() => setActiveEmotion(emotionKind), 0)
     const hide = setTimeout(() => setActiveEmotion(null), EMOTION_MS[emotionKind])
     return () => {
@@ -404,14 +424,33 @@ function Pet({
     const end = setTimeout(() => setReaction(null), REACTION_MS[reaction.kind])
     return () => clearTimeout(end)
   }, [reaction])
-  const react = (kind: Reaction): void => setReaction({ kind, key: Date.now() })
+  const react = (kind: Reaction): void => {
+    setReaction({ kind, key: Date.now() })
+    bumpBond(REACTION_BOND[kind])
+  }
   useEffect(
     () =>
       onPetSignal((signal) => {
-        if (signal === 'praise') setReaction({ kind: 'shy', key: Date.now() })
+        if (signal === 'praise') {
+          setReaction({ kind: 'shy', key: Date.now() })
+          bumpBond(REACTION_BOND.shy)
+        }
       }),
     []
   )
+  const bond = useBond()
+  const stage = bondStage(bond)
+  const bondRef = useRef({ happiness: bond.happiness, stage })
+  useEffect(() => {
+    bondRef.current = { happiness: bond.happiness, stage }
+  }, [bond.happiness, stage])
+  // 6 saatten uzun ayrı kalınca önce küser ("nihayet…"), sonra barışır
+  const [awayHours] = useState(() => (compact ? 0 : openBond()))
+  useEffect(() => {
+    if (reduced || awayHours < 6) return
+    const start = setTimeout(() => setReaction({ kind: 'sulk', key: Date.now() }), 400)
+    return () => clearTimeout(start)
+  }, [awayHours, reduced])
   // Gece yarısından sonra pijama başlığı takar
   const [night] = useState(() => new Date().getHours() < 5)
   const onRub = (event: React.PointerEvent): void => {
@@ -441,7 +480,7 @@ function Pet({
   const mood: Mood =
     reaction && (calm || reaction.kind === 'shy')
       ? reaction.kind
-      : baseMood === 'idle' && bored
+      : baseMood === 'idle' && (bored || bond.happiness < 25)
         ? 'bored'
         : baseMood
   const height = size * 0.84
@@ -462,16 +501,25 @@ function Pet({
     if (HAND_FIDGETS[kind]) setHandKey(key)
   }
   const [hovered, setHovered] = useState(false)
+  const shyAt = useRef(0)
   useEffect(() => {
     if (reduced || mood !== 'idle') return
     let timer: ReturnType<typeof setTimeout>
     const next = (): void => {
       timer = setTimeout(
         () => {
-          startFidget(FIDGETS[Math.floor(Math.random() * FIDGETS.length)])
+          const { happiness, stage: bondLevel } = bondRef.current
+          const pool: Fidget[] =
+            happiness < 40
+              ? FIDGETS.filter((kind) => kind !== 'spin' && kind !== 'dance')
+              : bondLevel === 'buddy'
+                ? [...FIDGETS, 'dance', 'spin', 'game']
+                : FIDGETS
+          startFidget(pool[Math.floor(Math.random() * pool.length)])
           next()
         },
-        3000 + Math.random() * 4000
+        (3000 + Math.random() * 4000) *
+          (bondRef.current.happiness > 70 ? 0.7 : bondRef.current.happiness < 40 ? 1.6 : 1)
       )
     }
     next()
@@ -548,7 +596,14 @@ function Pet({
       aria-label={label}
       title={label}
       className="relative flex cursor-pointer flex-col items-center rounded-[32px] outline-offset-8"
-      onHoverStart={() => setHovered(true)}
+      onHoverStart={() => {
+        setHovered(true)
+        const now = Date.now()
+        if (stage === 'shy' && mood === 'idle' && !reduced && now - shyAt.current > 20_000) {
+          shyAt.current = now
+          setReaction({ kind: 'shy', key: now })
+        }
+      }}
       onHoverEnd={() => setHovered(false)}
       whileHover={reduced ? undefined : { scale: 1.05 }}
       whileTap={reduced ? undefined : { scale: 0.93 }}
@@ -905,7 +960,8 @@ function Eye({ mood, blinking, size, right = false }: EyeProps): React.JSX.Eleme
     dizzy: { w, h, rotate: 0, y: 0 },
     angry: { w: w * 1.15, h: h * 0.5, rotate: right ? 18 : -18, y: size * 0.01 },
     bored: { w: w * 1.1, h: h * 0.38, rotate: 0, y: size * 0.035 },
-    shy: { w, h, rotate: 0, y: 0 }
+    shy: { w, h, rotate: 0, y: 0 },
+    sulk: { w: w * 1.1, h: h * 0.4, rotate: right ? 10 : -10, y: size * 0.03 }
   }
   const s = shape[mood]
   return (
@@ -1049,6 +1105,18 @@ function ReactionExtras({
           </span>
         ))}
       </motion.div>
+    )
+  }
+  if (mood === 'sulk') {
+    return (
+      <motion.span
+        className="pointer-events-none absolute font-semibold whitespace-nowrap text-[#8a90a8]"
+        style={{ right: -size * 0.4, top: -size * 0.02, fontSize: size * 0.1 }}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: -size * 0.08 }}
+      >
+        nihayet…
+      </motion.span>
     )
   }
   if (mood === 'tickle' || mood === 'bored' || (night && mood === 'idle')) {

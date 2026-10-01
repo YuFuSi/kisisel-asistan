@@ -274,6 +274,14 @@ function gestureFor(
         rotate: [dir * 12, -dir * 6, dir * 12],
         transition: { duration: 0.14, repeat: Infinity }
       }
+    case 'sulk':
+      // Kollarını kavuşturmuş, küs
+      return {
+        x: -dir * w * 0.2,
+        y: h * 0.06,
+        rotate: dir * 40,
+        transition: { type: 'spring', stiffness: 200, damping: 16 }
+      }
     case 'shy':
       // Elleri yanaklarında, utanıp kıpırdanıyor
       return {

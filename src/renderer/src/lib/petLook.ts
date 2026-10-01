@@ -31,6 +31,8 @@ export type PetMood =
   | 'angry'
   | 'bored'
   | 'shy'
+  // Uzun süre ihmal edilince surat asar
+  | 'sulk'
 
 /** Anten ucunun rengi: durum ışığı */
 export const ANTENNA_COLOR: Record<PetMood, string> = {
@@ -47,7 +49,8 @@ export const ANTENNA_COLOR: Record<PetMood, string> = {
   dizzy: '#c49bff',
   angry: '#ff5a5a',
   bored: '#8a90a8',
-  shy: '#ff9ec7'
+  shy: '#ff9ec7',
+  sulk: '#8a90a8'
 }
 
 // Çalışan aracın adına göre ekranda gösterilecek simge (ilk eşleşen önek kazanır)
