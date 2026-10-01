@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Flame, Wrench } from 'lucide-react'
 import type { UsageStats } from '@shared/api'
 import AchievementsSection from '../components/analytics/AchievementsSection'
 import Card from '../components/ui/Card'
+import InlineError from '../components/ui/InlineError'
 import PageLayout from '../components/ui/PageLayout'
 import Skeleton from '../components/ui/Skeleton'
+import { useLiveData } from '../lib/useLiveData'
+
+// Bileşen dışında tanımlı olmalı (bkz. useLiveData); her yeni işlemde (activity) yenilenir
+const loadUsage = (): Promise<UsageStats> => window.api.analytics.usage()
 
 // Yerel tarihi "22 Eyl" gibi kısa gösterir
 function shortDay(isoDate: string): string {
@@ -93,29 +97,22 @@ function ToolBar({
 
 // Kullanım istatistikleri: tamamı activity_log'dan hesaplanır, dışarı hiçbir şey gönderilmez
 function AnalyticsPage(): React.JSX.Element {
-  const [stats, setStats] = useState<UsageStats | null>(null)
-
-  useEffect(() => {
-    let active = true
-    window.api.analytics.usage().then((value) => {
-      if (active) setStats(value)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data: stats, error } = useLiveData(loadUsage, 'activity')
 
   return (
     <PageLayout
       title="Analizler"
       description="Jarvis'i nasıl kullandığın; tamamı bu bilgisayardaki verilerden hesaplanır."
     >
+      <InlineError message={error} />
       {!stats ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[72px]" />
-          ))}
-        </div>
+        error ? null : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[72px]" />
+            ))}
+          </div>
+        )
       ) : stats.totalCalls === 0 ? (
         <Card className="flex flex-col items-center gap-2 py-14 text-center">
           <Wrench className="h-8 w-8 text-faint" />

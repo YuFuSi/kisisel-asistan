@@ -252,9 +252,17 @@ export function noteReplyFailed(conversationId: number): void {
 
 /** Onayı yanıtlar; kart her yerden aynı anda kalkar */
 export function respondToApproval(approvalId: string, approved: boolean): void {
-  setApprovals(approvals.filter((item) => item.approval.id !== approvalId))
+  const item = approvals.find((entry) => entry.approval.id === approvalId)
+  setApprovals(approvals.filter((entry) => entry.approval.id !== approvalId))
   update()
-  void window.api.chat.respondToApproval(approvalId, approved)
+  // Yanıt ana sürece ulaşmazsa kart geri gelir; yoksa kullanıcı onayladığını sanır, Jarvis beklerdi
+  window.api.chat.respondToApproval(approvalId, approved).catch((err: unknown) => {
+    console.error('Onay yanıtı gönderilemedi:', err)
+    if (item && !approvals.some((entry) => entry.approval.id === approvalId)) {
+      setApprovals([...approvals, item])
+      update()
+    }
+  })
 }
 
 export function setListening(value: boolean): void {

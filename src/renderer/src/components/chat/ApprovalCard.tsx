@@ -35,7 +35,7 @@ function ApprovalCard({ approval, onRespond }: ApprovalCardProps): React.JSX.Ele
           className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-3 py-1.5 text-sm text-ink transition-colors hover:bg-elevated"
         >
           <X className="h-4 w-4" />
-          İptal
+          Reddet
         </button>
       </div>
     </div>

@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
 import { Lock, Trophy } from 'lucide-react'
 import type { Achievement } from '@shared/api'
 import Card from '../ui/Card'
+import InlineError from '../ui/InlineError'
 import Skeleton from '../ui/Skeleton'
+import { useLiveData } from '../../lib/useLiveData'
+
+// Bileşen dışında tanımlı olmalı (bkz. useLiveData); her yeni işlemde (activity) yenilenir
+const loadAchievements = (): Promise<Achievement[]> => window.api.analytics.achievements()
 
 function AchievementCard({ achievement }: { achievement: Achievement }): React.JSX.Element {
   return (
@@ -27,17 +31,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }): React.J
 // Başarımlar: Analizler sayfasının bir bölümü (eskiden ayrı sayfaydı). Tamamı activity_log'dan
 // hesaplanır, dışarı hiçbir şey gönderilmez.
 function AchievementsSection(): React.JSX.Element {
-  const [achievements, setAchievements] = useState<Achievement[] | null>(null)
-
-  useEffect(() => {
-    let active = true
-    window.api.analytics.achievements().then((value) => {
-      if (active) setAchievements(value)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
+  const { data: achievements, error } = useLiveData(loadAchievements, 'activity')
 
   const achievedCount = achievements?.filter((a) => a.achieved).length ?? 0
 
@@ -51,12 +45,14 @@ function AchievementsSection(): React.JSX.Element {
           </span>
         )}
       </div>
+      <InlineError message={error} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {achievements
           ? achievements.map((achievement) => (
               <AchievementCard key={achievement.id} achievement={achievement} />
             ))
-          : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[72px]" />)}
+          : !error &&
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[72px]" />)}
       </div>
     </section>
   )

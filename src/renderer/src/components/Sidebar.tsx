@@ -101,7 +101,7 @@ function Sidebar({ active, onSelect }: SidebarProps): React.JSX.Element {
       </nav>
 
       <div className="mt-auto space-y-1 border-t border-line pt-3">
-        {['thinking', 'executing', 'approval'].includes(state) && (
+        {['thinking', 'working', 'approval'].includes(state) && (
           <p
             role="status"
             title="Bir işlem sürüyor"
