@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, FileText, MessageSquare, X } from 'lucide-react'
 import Orb from './components/jarvis/Orb'
+import Pet from './components/jarvis/Pet'
+import { useOrbPrefs } from './lib/orbPrefs'
 import ResultCard from './components/jarvis/ResultCard'
 import {
   respondToApproval,
@@ -39,6 +41,7 @@ function worthShowing(outcome: Outcome | null): boolean {
 function NotchApp(): React.JSX.Element {
   const { state, sessionActive, notice } = useRemoteAssistant()
   const emotion = useAssistantEmotion()
+  const { character } = useOrbPrefs()
   const steps = useWorkSteps()
   const approvals = usePendingApprovals()
   const outcome = useLastOutcome()
@@ -68,7 +71,7 @@ function NotchApp(): React.JSX.Element {
     running && state !== 'approval' ? `${running.label} çalışıyor` : STATE_LABELS[state]
 
   const expanded = Boolean(approval) || Boolean(shownOutcome) || hover || dragging
-  const targetWidth = expanded ? 420 : busy ? 220 : 96
+  const targetWidth = expanded ? 420 : busy ? 220 : 104
 
   // Pencere her zaman içerik kadar: genişlerken hedef genişlik hemen istenir (içerik kesilmesin),
   // daralırken animasyon boyunca ölçülen boy izlenir
@@ -110,20 +113,37 @@ function NotchApp(): React.JSX.Element {
         style={{ width: targetWidth }}
         className="flex h-fit flex-col overflow-hidden rounded-b-[22px] border border-t-0 border-line bg-app/95 transition-[width] duration-200 ease-out"
       >
-        <div className="flex h-11 items-center gap-2 px-3">
-          <button
-            onClick={() => toggleRemoteVoice(sessionActive)}
-            aria-label={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-            title={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-            className="relative -my-2 h-11 w-11 shrink-0 cursor-pointer rounded-full"
-          >
-            <span
-              className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 [&_canvas]:max-w-none"
-              style={{ width: 60, height: 60 }}
-            >
-              <Orb state={state} size={60} emotion={emotion} steps={steps} notice={notice} />
+        <div className={`flex items-center gap-2 px-3 ${character !== 'orb' ? 'h-14' : 'h-11'}`}>
+          {character !== 'orb' ? (
+            // Pet karakter: çentikte küçük cam robot
+            <span className="mx-2 flex h-14 shrink-0 items-end pb-0.5">
+              <Pet
+                variant={character}
+                state={state}
+                emotion={emotion}
+                size={36}
+                compact
+                hungry={dragging}
+                activity={running?.name ?? null}
+                onClick={() => toggleRemoteVoice(sessionActive)}
+                label={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+              />
             </span>
-          </button>
+          ) : (
+            <button
+              onClick={() => toggleRemoteVoice(sessionActive)}
+              aria-label={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+              title={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+              className="relative -my-2 h-11 w-11 shrink-0 cursor-pointer rounded-full"
+            >
+              <span
+                className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 [&_canvas]:max-w-none"
+                style={{ width: 60, height: 60 }}
+              >
+                <Orb state={state} size={60} emotion={emotion} steps={steps} notice={notice} />
+              </span>
+            </button>
+          )}
           {(busy || expanded) && (
             <span className="min-w-0 truncate text-xs text-muted">
               {busy ? status : 'Jarvis hazır · konuşmak için tıkla'}

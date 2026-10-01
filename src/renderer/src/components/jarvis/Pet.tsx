@@ -37,6 +37,10 @@ interface PetProps {
   label?: string
   /** Kullanıcı yazarken 1 (Ana Sayfa'daki "heyecan"); pet komut kutusuna bakar */
   attention?: number
+  /** Küçük hâli (çentik): sürükleme ve büyük efektler kapalı */
+  compact?: boolean
+  /** Üstüne belge sürükleniyor: ağzını açıp bekler */
+  hungry?: boolean
   /** Komut kutusunda yazılan metnin uzunluğu; gözler harfleri takip eder */
   typed?: number
   /** Şu an çalışan aracın adı; ekranda ona uygun simge belirir */
@@ -291,6 +295,8 @@ function Pet({
   label = 'Jarvis ile konuş',
   attention = 0,
   typed = 0,
+  compact = false,
+  hungry = false,
   activity = null
 }: PetProps): React.JSX.Element {
   const reduced = useReducedMotion()
@@ -491,15 +497,16 @@ function Pet({
   const gaming = mood === 'idle' && fidget?.kind === 'game' && !hovered && !watching
   // Yazarken gözler harflerle birlikte sağa kayar
   const typingX = ((Math.min(typed, 40) / 40) * 2 - 1) * size * 0.08
-  const eyeMood: Mood = dragging
-    ? 'listen'
-    : sneezing
-      ? 'tickle'
-      : yawning
-        ? 'sleep'
-        : mood === 'idle' && (hovered || watching)
-          ? 'listen'
-          : mood
+  const eyeMood: Mood =
+    dragging || hungry
+      ? 'listen'
+      : sneezing
+        ? 'tickle'
+        : yawning
+          ? 'sleep'
+          : mood === 'idle' && (hovered || watching)
+            ? 'listen'
+            : mood
   const ActivityIcon = mood === 'work' ? toolIcon(activity) : null
   const fidgetHands = mood === 'idle' && fidget ? HAND_FIDGETS[fidget.kind] : undefined
   const gesture: HandGesture = dragging ? 'happy' : (fidgetHands ?? mood)
@@ -517,7 +524,7 @@ function Pet({
         onClick?.()
       }}
       onPointerMove={onRub}
-      drag={!reduced}
+      drag={!reduced && !compact}
       dragSnapToOrigin
       dragElastic={0.35}
       dragTransition={{ bounceStiffness: 500, bounceDamping: 14 }}
@@ -702,6 +709,21 @@ function Pet({
               </AnimatePresence>
               {mood === 'think' && !reduced && <ThinkingDots size={size} />}
               {mood === 'speak' && <SpeakingMouth size={size} />}
+              {hungry && (
+                <motion.span
+                  className="absolute left-1/2 block rounded-full bg-[#c9d0ff]"
+                  style={{
+                    bottom: size * 0.04,
+                    width: size * 0.16,
+                    height: size * 0.14,
+                    marginLeft: -size * 0.08,
+                    boxShadow: '0 0 10px rgb(190 200 255 / 0.9)'
+                  }}
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: [0.7, 1, 0.7] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                />
+              )}
               {yawning && (
                 <motion.span
                   className="absolute left-1/2 block rounded-full bg-[#c9d0ff]"
@@ -740,8 +762,8 @@ function Pet({
                 />
               ))}
 
-            <ReactionExtras mood={mood} size={size} reduced={!!reduced} night={night} />
-            {night && variant === 'robot' && <NightCap size={size} />}
+            <ReactionExtras mood={mood} size={size} reduced={!!reduced || compact} night={night} />
+            {night && !compact && variant === 'robot' && <NightCap size={size} />}
             {/* Onay bekliyor: amber ünlem balonu */}
             {mood === 'approval' && (
               <motion.div
