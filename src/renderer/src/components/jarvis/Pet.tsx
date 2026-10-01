@@ -43,7 +43,7 @@ const BODY: Record<Mood, TargetAndTransition> = {
     rotate: 0,
     scaleX: 1,
     scaleY: 1,
-    transition: { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+    transition: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
   },
   listen: {
     y: -4,
@@ -115,9 +115,9 @@ const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
     scaleY: [1, 1.07, 0.93, 1.02, 1],
     transition: { duration: 0.8, ease: 'easeOut' }
   },
-  tilt: { rotate: [0, -11, -11, 0], transition: { duration: 1.6, times: [0, 0.25, 0.75, 1] } },
+  tilt: { rotate: [0, -11, -11, 0], transition: { duration: 1.1, times: [0, 0.25, 0.75, 1] } },
   wiggle: { rotate: [0, 4, -4, 3, -2, 0], transition: { duration: 0.7 } },
-  wave: { rotate: [0, -4, 0], transition: { duration: 1.8 } }
+  wave: { rotate: [0, -4, 0], transition: { duration: 1.05 } }
 }
 
 function moodFor(
@@ -259,7 +259,7 @@ function Pet({
           setFidget({ kind: FIDGETS[Math.floor(Math.random() * FIDGETS.length)], key: Date.now() })
           next()
         },
-        4500 + Math.random() * 5500
+        3000 + Math.random() * 4000
       )
     }
     next()

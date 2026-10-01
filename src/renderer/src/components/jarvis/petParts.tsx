@@ -109,16 +109,16 @@ function gestureFor(
         ? {
             x: -w * 0.02,
             y: -h * 0.62,
-            rotate: [0, 28, -12, 28, -12, 20, 0],
-            transition: { duration: 1.8, ease: 'easeInOut' }
+            rotate: [0, 32, -16, 32, -16, 32, -16, 0],
+            transition: { duration: 1.05, ease: 'easeInOut' }
           }
-        : { x: 0, y: [0, -4, 0], rotate: 0, transition: { duration: 3, repeat: Infinity } }
+        : { x: 0, y: [0, -4, 0], rotate: 0, transition: { duration: 2.2, repeat: Infinity } }
     case 'happy':
       return {
         x: -dir * w * 0.04,
         y: [-h * 0.55, -h * 0.68, -h * 0.55],
         rotate: [dir * 10, -dir * 10, dir * 10],
-        transition: { duration: 0.45, repeat: 3 }
+        transition: { duration: 0.3, repeat: 4 }
       }
     case 'think':
       return right
@@ -127,24 +127,24 @@ function gestureFor(
             y: [h * 0.22, h * 0.19, h * 0.22],
             rotate: -20,
             transition: {
-              y: { duration: 0.8, repeat: Infinity },
-              default: { type: 'spring', stiffness: 140, damping: 16 }
+              y: { duration: 0.55, repeat: Infinity },
+              default: { type: 'spring', stiffness: 260, damping: 18 }
             }
           }
-        : { x: 0, y: [0, -3, 0], rotate: 0, transition: { duration: 3, repeat: Infinity } }
+        : { x: 0, y: [0, -3, 0], rotate: 0, transition: { duration: 2.2, repeat: Infinity } }
     case 'listen':
       return {
         x: -dir * w * 0.06,
         y: -h * 0.18,
         rotate: dir * 15,
-        transition: { type: 'spring', stiffness: 160, damping: 14 }
+        transition: { type: 'spring', stiffness: 280, damping: 16 }
       }
     case 'work':
       return {
         x: -dir * w * 0.1,
         y: right ? [h * 0.05, -h * 0.02, h * 0.05] : [-h * 0.02, h * 0.05, -h * 0.02],
         rotate: 0,
-        transition: { duration: 0.32, repeat: Infinity }
+        transition: { duration: 0.22, repeat: Infinity }
       }
     case 'speak':
       return right
@@ -152,16 +152,16 @@ function gestureFor(
             x: w * 0.02,
             y: [-h * 0.12, -h * 0.2, -h * 0.12],
             rotate: [0, 14, 0],
-            transition: { duration: 1.1, repeat: Infinity }
+            transition: { duration: 0.75, repeat: Infinity }
           }
-        : { x: 0, y: [0, -4, 0], rotate: 0, transition: { duration: 3, repeat: Infinity } }
+        : { x: 0, y: [0, -4, 0], rotate: 0, transition: { duration: 2.2, repeat: Infinity } }
     case 'approval':
       return right
         ? {
             x: -w * 0.04,
             y: -h * 0.5,
             rotate: -8,
-            transition: { type: 'spring', stiffness: 200, damping: 12 }
+            transition: { type: 'spring', stiffness: 320, damping: 14 }
           }
         : { x: 0, y: 0, rotate: 0, transition: { type: 'spring', stiffness: 120, damping: 14 } }
     case 'sad':
@@ -178,7 +178,7 @@ function gestureFor(
         x: 0,
         y: [0, -5, 0],
         rotate: 0,
-        transition: { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: right ? 0.6 : 0 }
+        transition: { duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: right ? 0.4 : 0 }
       }
   }
 }
