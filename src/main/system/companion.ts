@@ -1,4 +1,4 @@
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow, powerMonitor, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { classifyActivity, type Activity } from '../../shared/activity'
@@ -20,6 +20,9 @@ let companionWindow: BrowserWindow | null = null
 let pollTimer: ReturnType<typeof setInterval> | undefined
 let hidden = false
 let lastActivity: Activity = { kind: 'other', detail: '', fullscreen: false }
+// Kullanıcı bu kadar süre fare/klavyeye dokunmazsa "uzakta" sayılır; dönünce robot karşılar
+const AWAY_AFTER_S = 10 * 60
+let away = false
 
 function companionBounds(): Electron.Rectangle {
   const { workArea } = screen.getPrimaryDisplay()
@@ -88,6 +91,16 @@ async function poll(): Promise<void> {
   }
   if (!companionWindow || companionWindow.isDestroyed()) return
 
+  // Uzakta mı: uzun süre hareketsizlikten sonra ilk dokunuşta "hoş geldin"
+  const idleSeconds = powerMonitor.getSystemIdleTime()
+  if (!away && idleSeconds >= AWAY_AFTER_S) {
+    away = true
+    companionWindow.webContents.send('companion:presence', 'away')
+  } else if (away && idleSeconds < 5) {
+    away = false
+    companionWindow.webContents.send('companion:presence', 'back')
+  }
+
   if (activity.kind !== 'jarvis' && !sameActivity(activity, lastActivity)) {
     if (activity.kind !== lastActivity.kind) {
       // Sadece tür yazılır; pencere başlıkları günlüğe girmez (gizlilik)
@@ -135,6 +148,16 @@ export function applyCompanion(enabled: boolean): void {
 export function setCompanionInteractive(interactive: boolean): void {
   if (!companionWindow || companionWindow.isDestroyed()) return
   companionWindow.setIgnoreMouseEvents(!interactive, { forward: true })
+}
+
+/** Robota soru yazarken klavye odağı alabilsin; bitince yine odak çalmayan pencere olur */
+export function setCompanionFocusable(focusable: boolean): void {
+  if (!companionWindow || companionWindow.isDestroyed()) return
+  companionWindow.setFocusable(focusable)
+  if (focusable) {
+    companionWindow.setIgnoreMouseEvents(false)
+    companionWindow.focus()
+  }
 }
 
 /** Arayüz açılınca son bilinen aktiviteyi ister */

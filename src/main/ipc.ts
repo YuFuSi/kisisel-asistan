@@ -10,9 +10,9 @@ import { getPersonalNote } from './ai/personalNote'
 import { getHomeWeather } from './system/homeWeather'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
 import { resizeNotch } from './system/notch'
-import { currentActivity, setCompanionInteractive } from './system/companion'
+import { currentActivity, setCompanionFocusable, setCompanionInteractive } from './system/companion'
 import { getForegroundWindowId, moveWindow } from './lib/windows'
-import { sendAttachPaths, sendCommand, showMainWindow } from './system/window'
+import { sendAttachPaths, sendCommand, showMainWindow, sendAsk } from './system/window'
 import {
   getVoiceState,
   pushVoiceAudio,
@@ -145,6 +145,15 @@ export function registerIpcHandlers(): void {
     setCompanionInteractive(interactive === true)
   )
   ipcMain.handle('companion:activity-now', () => currentActivity())
+  ipcMain.on('companion:focusable', (_event, focusable: unknown) =>
+    setCompanionFocusable(focusable === true)
+  )
+  // Robota yazılan soru: ana penceredeki sohbet sayfası yeni sohbette gönderir (pencere açılmaz)
+  ipcMain.on('companion:ask', (_event, text: unknown) => {
+    if (typeof text !== 'string') return
+    const clean = text.trim().slice(0, 4000)
+    if (clean) sendAsk(clean)
+  })
   ipcMain.on('notch:resize', (_event, width: unknown, height: unknown) =>
     resizeNotch(Number(width), Number(height))
   )

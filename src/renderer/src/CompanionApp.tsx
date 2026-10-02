@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { animate, motion, useMotionValue, useTransform } from 'motion/react'
-import { Check, MessageSquare, X } from 'lucide-react'
+import { animate, motion, useDragControls, useMotionValue, useTransform } from 'motion/react'
+import { ArrowUp, Check, MessageSquare, X } from 'lucide-react'
 import type { Activity } from '@shared/activity'
 import type { SettingsView } from '@shared/api'
 import Pet from './components/jarvis/Pet'
@@ -36,6 +36,23 @@ const BOX = SIZE * 1.8
 const SPEED = 90 // px/sn
 const OUTCOME_MS = 7000
 const BUBBLE_W = 300
+// Robotu elle bir yere bırakınca bu kadar süre kendi kendine dolaşmaz
+const REST_AFTER_PLACE_MS = 3 * 60_000
+// Cevap balonu süresi: kısa cevaplar az, uzunlar biraz daha uzun kalır
+const replyMs = (text: string): number => Math.min(20_000, 6000 + text.length * 40)
+
+// Sohbet cevabını balona sığacak düz metne çevirir (Markdown işaretleri atılır, uzunsa kısaltılır)
+function bubbleText(markdown: string, max = 280): string {
+  const plain = markdown
+    .replace(/```[\s\S]*?```/g, ' (kod) ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[#*_`>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (plain.length <= max) return plain
+  const cut = plain.slice(0, max)
+  return `${cut.slice(0, cut.lastIndexOf(' ') > 0 ? cut.lastIndexOf(' ') : max)}…`
+}
 const LINE_MS = 5500
 // Video bu kadar sürerse robot uyuyakalır
 const VIDEO_SLEEP_MS = 10 * 60_000
@@ -109,6 +126,21 @@ function CompanionApp(): React.JSX.Element {
   const [videoSleepy, setVideoSleepy] = useState(false)
   // Pencere gizliyken (tam ekran oyun, Jarvis önde) dolaşma, yorum ve ses durur
   const [shown, setShown] = useState(true)
+  // Kullanıcı uzun süre uzaktayken robot uyur, dönünce karşılar
+  const [away, setAway] = useState(false)
+  // Elle taşındı: bir süre olduğu yerde durur
+  const [resting, setResting] = useState(false)
+  const [carrying, setCarrying] = useState(false)
+  const carried = useRef(false)
+  const dragControls = useDragControls()
+  // Robota soru yazma ve cevabı
+  const [asking, setAsking] = useState(false)
+  const [question, setQuestion] = useState('')
+  const [reply, setReply] = useState<{ text: string; key: number } | null>(null)
+  const awaitingReply = useRef(false)
+  const replyConversation = useRef<number | null>(null)
+  // En güncel say fonksiyonu (olay dinleyicileri ve zamanlayıcılar eski kopyayı tutmasın)
+  const sayRef = useRef<(key: LineKey, skipGap?: boolean, test?: boolean) => void>(() => {})
   const lastLineAt = useRef(0)
   const pointerX = useRef<number | null>(null)
   const hovering = useRef(false)
@@ -123,11 +155,64 @@ function CompanionApp(): React.JSX.Element {
     window.api.companion.currentActivity().then(setActivity, () => {})
     const offActivity = window.api.companion.onActivity(setActivity)
     const offVisible = window.api.companion.onVisible(setShown)
+    const offPresence = window.api.companion.onPresence((presence) => {
+      setAway(presence === 'away')
+      if (presence === 'back') sayRef.current('welcomeBack', true)
+    })
     return () => {
       offActivity()
       offVisible()
+      offPresence()
     }
   }, [])
+
+  // --- Soru: robota yazılan soru Jarvis'e gider; cevabı bu pencere de dinler (sohbet olayları
+  // tüm pencerelere yayınlanıyor) ve kısaltılmış hâlini balonda söyler
+  useEffect(
+    () =>
+      window.api.chat.onEvent((event) => {
+        if (awaitingReply.current && replyConversation.current === null) {
+          replyConversation.current = event.conversationId
+        }
+        if (event.conversationId !== replyConversation.current) return
+        if (event.type === 'done' || event.type === 'error' || event.type === 'stopped') {
+          awaitingReply.current = false
+          replyConversation.current = null
+          const text =
+            event.type === 'done'
+              ? bubbleText(event.message.content)
+              : event.type === 'error'
+                ? `${pickLine('error') ?? ''} ${event.error}`
+                : 'Durdurdum.'
+          if (text) setReply({ text, key: Date.now() })
+        }
+      }),
+    []
+  )
+  useEffect(() => {
+    if (!reply) return
+    const hide = setTimeout(() => setReply(null), replyMs(reply.text))
+    return () => clearTimeout(hide)
+  }, [reply])
+
+  const closeAsk = (): void => {
+    setAsking(false)
+    setQuestion('')
+    window.api.companion.setFocusable(false)
+  }
+  const openAsk = (): void => {
+    setReply(null)
+    setAsking(true)
+    window.api.companion.setFocusable(true)
+  }
+  const submitAsk = (): void => {
+    const text = question.trim()
+    if (!text) return
+    awaitingReply.current = true
+    replyConversation.current = null
+    window.api.companion.ask(text)
+    closeAsk()
+  }
   const meeting = activity?.kind === 'meeting'
   const quietHours = inQuietHours(settings ?? null)
 
@@ -150,7 +235,6 @@ function CompanionApp(): React.JSX.Element {
     lastLineAt.current = now
     setLine({ text, key: now })
   }
-  const sayRef = useRef(say)
   useEffect(() => {
     sayRef.current = say
   })
@@ -255,7 +339,16 @@ function CompanionApp(): React.JSX.Element {
   }, [activityKind])
 
   const free =
-    shown && !busy && !approval && mood === 'idle' && activityKind !== 'video' && !dragging
+    shown &&
+    !busy &&
+    !approval &&
+    !asking &&
+    !resting &&
+    !carrying &&
+    !away &&
+    mood === 'idle' &&
+    activityKind !== 'video' &&
+    !dragging
 
   // Boştayken arada kendi kendine konuşur (konuşkanlık sınırına uyar)
   useEffect(() => {
@@ -295,6 +388,12 @@ function CompanionApp(): React.JSX.Element {
       setTimeout(() => setWalking(0), 0)
     }
   }, [free, reduced])
+
+  useEffect(() => {
+    if (!resting) return
+    const timer = setTimeout(() => setResting(false), REST_AFTER_PLACE_MS)
+    return () => clearTimeout(timer)
+  }, [resting])
 
   // --- Tıklama geçirgenliği: fare robotun/balonun üstündeyken pencere tıklamaları alır
   const setInteractive = (value: boolean): void => window.api.companion.setInteractive(value)
@@ -367,38 +466,52 @@ function CompanionApp(): React.JSX.Element {
             </>
           )
         }
-      : shownOutcome
+      : reply
         ? {
-            text:
-              shownOutcome.kind === 'completed'
-                ? (pickLine('done', shownOutcome.seq) ?? OUTCOME_TEXT.completed)
-                : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
-                  ? `${pickLine('error', shownOutcome.seq) ?? ''} ${OUTCOME_TEXT[shownOutcome.kind]}`
-                  : OUTCOME_TEXT[shownOutcome.kind],
-            tone:
-              shownOutcome.kind === 'completed'
-                ? 'success'
-                : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
-                  ? 'error'
-                  : 'normal',
+            text: reply.text,
+            tone: 'normal',
             actions: (
-              <div className="w-full space-y-2">
-                {cards.length > 0 && !meeting && <ResultCard card={cards[cards.length - 1]} />}
-                <button
-                  onClick={() => void window.api.notch.navigate('chat')}
-                  className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  Sohbette aç
-                </button>
-              </div>
+              <button
+                onClick={() => void window.api.notch.navigate('chat')}
+                className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Sohbette aç
+              </button>
             )
           }
-        : running && state === 'working'
-          ? { text: `${running.label} çalışıyor...`, tone: 'normal' }
-          : line
-            ? { text: line.text, tone: 'normal' }
-            : null
+        : shownOutcome
+          ? {
+              text:
+                shownOutcome.kind === 'completed'
+                  ? (pickLine('done', shownOutcome.seq) ?? OUTCOME_TEXT.completed)
+                  : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
+                    ? `${pickLine('error', shownOutcome.seq) ?? ''} ${OUTCOME_TEXT[shownOutcome.kind]}`
+                    : OUTCOME_TEXT[shownOutcome.kind],
+              tone:
+                shownOutcome.kind === 'completed'
+                  ? 'success'
+                  : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
+                    ? 'error'
+                    : 'normal',
+              actions: (
+                <div className="w-full space-y-2">
+                  {cards.length > 0 && !meeting && <ResultCard card={cards[cards.length - 1]} />}
+                  <button
+                    onClick={() => void window.api.notch.navigate('chat')}
+                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Sohbette aç
+                  </button>
+                </div>
+              )
+            }
+          : running && state === 'working'
+            ? { text: `${running.label} çalışıyor...`, tone: 'normal' }
+            : line
+              ? { text: line.text, tone: 'normal' }
+              : null
 
   // Robot konuşurken "bip-bop" robot dilinde mırıldanır (ses efektleri açıksa)
   const talkText = talk?.text
@@ -422,6 +535,20 @@ function CompanionApp(): React.JSX.Element {
       <motion.div
         className="pointer-events-auto absolute bottom-0"
         style={{ x, width: BOX }}
+        drag="x"
+        dragListener={false}
+        dragControls={dragControls}
+        dragMomentum={false}
+        dragElastic={0}
+        dragConstraints={{ left: 0, right: window.innerWidth - BOX }}
+        onDragStart={() => {
+          carried.current = true
+          setCarrying(true)
+        }}
+        onDragEnd={() => {
+          setCarrying(false)
+          setResting(true)
+        }}
         onPointerEnter={() => {
           hovering.current = true
           setInteractive(true)
@@ -441,7 +568,62 @@ function CompanionApp(): React.JSX.Element {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
       >
-        {talk && (
+        {asking && (
+          <motion.form
+            className="glass absolute flex flex-col gap-2 p-3"
+            style={{
+              bottom: SIZE * 1.3 - 12,
+              width: BUBBLE_W,
+              left: bubbleLeft,
+              background: 'rgb(20 21 30 / 0.96)'
+            }}
+            initial={reduced ? false : { opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            onSubmit={(event) => {
+              event.preventDefault()
+              submitAsk()
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') closeAsk()
+                }}
+                aria-label="Jarvis’e sor"
+                placeholder="Jarvis’e sor..."
+                className="min-h-9 min-w-0 flex-1 rounded-[12px] bg-white/5 px-3 text-sm text-ink outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent/60"
+              />
+              <button
+                type="submit"
+                aria-label="Gönder"
+                disabled={!question.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-app disabled:opacity-40"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  closeAsk()
+                  void window.api.notch.navigate('home')
+                }}
+                className="text-accent hover:text-accent-hover"
+              >
+                Jarvis’i aç
+              </button>
+              <button type="button" onClick={closeAsk} className="text-muted hover:text-ink">
+                Kapat
+              </button>
+            </div>
+          </motion.form>
+        )}
+
+        {talk && !asking && (
           <motion.div
             className="absolute overflow-y-auto pb-3 [scrollbar-width:thin]"
             style={{
@@ -463,7 +645,13 @@ function CompanionApp(): React.JSX.Element {
           </motion.div>
         )}
 
-        <div className="flex h-[200px] items-end justify-center">
+        <div
+          className="flex h-[200px] cursor-grab items-end justify-center active:cursor-grabbing"
+          onPointerDown={(event) => {
+            carried.current = false
+            dragControls.start(event)
+          }}
+        >
           {/* Yürürken adım adım sallanır ve gittiği yöne eğilir */}
           <motion.div
             animate={
@@ -483,13 +671,25 @@ function CompanionApp(): React.JSX.Element {
               size={SIZE}
               activity={running?.name ?? null}
               forceMood={
-                videoSleepy && !busy ? 'sleep' : activityKind === 'video' && !busy ? 'listen' : null
+                away && !busy
+                  ? 'sleep'
+                  : videoSleepy && !busy
+                    ? 'sleep'
+                    : activityKind === 'video' && !busy
+                      ? 'listen'
+                      : null
               }
               hungry={dragging}
+              draggable={false}
               paused={!shown}
               onMoodChange={setMood}
-              onClick={() => void window.api.notch.navigate('home')}
-              label="Jarvis’i aç"
+              onClick={() => {
+                // Sürükleyip bırakmak tıklama sayılmaz
+                if (carried.current) return
+                if (asking) closeAsk()
+                else openAsk()
+              }}
+              label="Jarvis’e sor"
             />
           </motion.div>
         </div>

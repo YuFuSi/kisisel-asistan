@@ -62,6 +62,8 @@ interface PetProps {
   onMoodChange?: (mood: PetMood) => void
   /** Boştayken ruh hâlini dışarıdan belirler (ör. video izlerken dikkatle bakar, sonra uyur) */
   forceMood?: PetMood | null
+  /** false: kendi sürükle-bırak tepkisi kapalı (masaüstünde robotu dış kap taşır) */
+  draggable?: boolean
   /** Pencere gizliyken (masaüstü arkadaş) tüm sürekli animasyonlar durur */
   paused?: boolean
   /** Üstüne belge sürükleniyor: ağzını açıp bekler */
@@ -342,6 +344,7 @@ function Pet({
   compact = false,
   hungry = false,
   paused = false,
+  draggable = true,
   onMoodChange,
   forceMood = null,
   activity = null
@@ -616,7 +619,7 @@ function Pet({
         onClick?.()
       }}
       onPointerMove={onRub}
-      drag={!reduced && !compact}
+      drag={!reduced && !compact && draggable}
       dragSnapToOrigin
       dragElastic={0.35}
       dragTransition={{ bounceStiffness: 500, bounceDamping: 14 }}
