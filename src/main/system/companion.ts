@@ -160,6 +160,28 @@ export function setCompanionFocusable(focusable: boolean): void {
   }
 }
 
+// Robota yazılan son soru: sohbet sayfası bu metni gönderince hangi sohbette gittiği robota
+// bildirilir; böylece robot başka bir sohbetin cevabını yanlışlıkla söylemez
+let pendingAsk: string | null = null
+
+export function rememberAsk(text: string): void {
+  pendingAsk = text
+}
+
+/** Bir sohbete mesaj gönderildi: robotun sorusuysa hangi sohbette olduğunu robota bildirir */
+export function noteChatSent(text: string, conversationId: number): void {
+  if (pendingAsk === null || text.trim() !== pendingAsk) return
+  pendingAsk = null
+  if (companionWindow && !companionWindow.isDestroyed()) {
+    companionWindow.webContents.send('companion:ask-started', conversationId)
+  }
+}
+
+/** Yeni açılan robot penceresi kullanıcının uzakta olup olmadığını bilsin */
+export function isAway(): boolean {
+  return away
+}
+
 /** Arayüz açılınca son bilinen aktiviteyi ister */
 export function currentActivity(): Activity {
   return lastActivity

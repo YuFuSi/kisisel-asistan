@@ -736,6 +736,7 @@ export type AppCommand =
   | 'open-automations'
   | 'notified'
   | `open-page:${string}`
+  | `open-conversation:${number}`
 
 // window.api üzerinden arayüzün kullanabildiği işlemler
 /** Sohbete eklenen belgenin okunan ilk parçası */
@@ -950,6 +951,12 @@ export interface Api {
     setFocusable(focusable: boolean): void
     /** Robota yazılan soruyu Jarvis'e gönderir (yeni sohbet, ana pencere açılmaz) */
     ask(text: string): void
+    /** Robotun sorusu hangi sohbette gönderildi (cevabı doğru sohbetten almak için) */
+    onAskStarted(listener: (conversationId: number) => void): () => void
+    /** Kullanıcı şu an uzakta mı (pencere yeniden açılınca) */
+    presenceNow(): Promise<boolean>
+    /** Ana pencerede verilen sohbeti açar */
+    openConversation(conversationId: number): void
   }
   notch: {
     /** Çentik penceresini içeriğinin boyuna getirir (ekranın üst ortasında kalır) */
