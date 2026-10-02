@@ -20,6 +20,11 @@ import { useVoice } from '../../lib/voiceClient'
 const STT_IDS: SpeechProvider[] = ['local', 'groq', 'openai']
 
 const TTS_OPTIONS: { id: TtsEngine; label: string; description: string }[] = [
+  {
+    id: 'chatterbox',
+    label: 'Canlı ses',
+    description: 'Neşeli ve doğal; ekran kartında çalışır, ilk cümlede ~10 sn hazırlanır'
+  },
   { id: 'piper', label: 'Jarvis sesi', description: 'Doğal Türkçe ses, internetsiz' },
   { id: 'windows', label: 'Windows sesi', description: "Windows'ta yüklü sesler" }
 ]
@@ -264,12 +269,19 @@ function SpeechSettings({
             <button
               key={option.id}
               onClick={() => void onUpdate({ ttsEngine: option.id })}
-              disabled={option.id === 'piper' && !piperReady}
+              disabled={
+                (option.id === 'piper' && !piperReady) ||
+                (option.id === 'chatterbox' && !settings.chatterboxReady)
+              }
               className={choiceClass(option.id === settings.ttsEngine)}
             >
               <div className="text-sm font-medium">{option.label}</div>
               <div className="mt-1 text-xs text-muted">
-                {option.id === 'piper' && !piperReady ? 'Ses paketi gerekir' : option.description}
+                {option.id === 'piper' && !piperReady
+                  ? 'Ses paketi gerekir'
+                  : option.id === 'chatterbox' && !settings.chatterboxReady
+                    ? 'Bu bilgisayarda kurulu değil'
+                    : option.description}
               </div>
             </button>
           ))}

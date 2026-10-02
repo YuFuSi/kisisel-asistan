@@ -12,6 +12,8 @@ import { isApprovalPending, onApprovalRequested, respondToApproval } from '../to
 import {
   disposeVoiceEngines,
   getPiper,
+  getChatterbox,
+  isChatterboxReady,
   getVad,
   getVoicePaths,
   getWakeWordDetector,
@@ -117,13 +119,24 @@ function enqueueSpeech(text: string, caption = false): void {
   const id = ++nextPlaybackId
   outstanding.set(id, null)
   const settings = getSettings()
-  const usePiper = settings.ttsEngine === 'piper' && isPiperReady()
+  const useChatterbox = settings.ttsEngine === 'chatterbox' && isChatterboxReady()
+  // Canlı ses hata verirse yedek olarak Piper (kuruluysa) ya da Windows sesi kullanılır
+  const usePiper = (settings.ttsEngine === 'piper' || useChatterbox) && isPiperReady()
 
   // Cümleler sırayla üretilir ve sırayla gönderilir; arayüz de aynı sırayla çalar
   synthChain = synthChain.then(async () => {
     if (gen !== generation) return
     let audio: ArrayBuffer | null = null
-    if (usePiper) {
+    let live = false
+    if (useChatterbox) {
+      try {
+        audio = await getChatterbox().synthesize(clean)
+        live = true
+      } catch (err) {
+        console.error('Canlı ses üretemedi, yedek ses kullanılıyor:', err)
+      }
+    }
+    if (!audio && usePiper) {
       try {
         audio = await getPiper().synthesize(clean)
       } catch (err) {
@@ -131,9 +144,7 @@ function enqueueSpeech(text: string, caption = false): void {
       }
     }
     if (gen !== generation || !outstanding.has(id)) return
-    const estimatedMs = audio
-      ? (audio.byteLength / (22050 * 2)) * 1000
-      : (clean.length * 90) / settings.speechRate
+    const estimatedMs = audio ? wavDurationMs(audio) : (clean.length * 90) / settings.speechRate
     outstanding.set(
       id,
       setTimeout(() => voicePlaybackEnded(id), estimatedMs + PLAYBACK_GRACE_MS)
@@ -146,7 +157,8 @@ function enqueueSpeech(text: string, caption = false): void {
       voiceUri: settings.voiceUri,
       rate: settings.speechRate,
       volume: settings.speechVolume,
-      pitch: settings.voiceStyle === 'robot' ? ROBOT_PITCH : 1
+      // Canlı ses zaten karakterli; robot tonu sadece Piper ve Windows sesine uygulanır
+      pitch: !live && settings.voiceStyle === 'robot' ? ROBOT_PITCH : 1
     })
   })
 }
@@ -183,6 +195,13 @@ function maybeFinishTurn(): void {
   else setPhase(idlePhase())
 }
 
+// WAV başlığındaki bayt hızından süre (Piper 22050 Hz, canlı ses 24000 Hz)
+function wavDurationMs(audio: ArrayBuffer): number {
+  const view = new DataView(audio)
+  const byteRate = audio.byteLength > 44 ? view.getUint32(28, true) : 0
+  return ((audio.byteLength - 44) / (byteRate || 22050 * 2)) * 1000
+}
+
 // ---- Oturum ----
 
 function warmUpEngines(): void {
@@ -193,6 +212,7 @@ function warmUpEngines(): void {
       .catch((err) => console.error('Konuşma tanıma başlatılamadı:', err))
   }
   if (settings.ttsEngine === 'piper' && isPiperReady()) getPiper().warmUp()
+  if (settings.ttsEngine === 'chatterbox' && isChatterboxReady()) getChatterbox().warmUp()
   getVad().catch((err) => console.error('Konuşma algılama modeli yüklenemedi:', err))
 }
 

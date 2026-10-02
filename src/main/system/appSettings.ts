@@ -1,3 +1,4 @@
+import { isChatterboxReady } from '../voice/engines'
 import { applyNotch } from './notch'
 import { getSecretStatus, getSettings, getUnreadableSecrets, updateSettings } from '../settings'
 import { notifyDataChanged } from '../events'
@@ -12,6 +13,7 @@ export function getSettingsView(): SettingsView {
     ...getSettings(),
     hasSecret: getSecretStatus(),
     loginItemSupported: isLoginItemSupported(),
+    chatterboxReady: isChatterboxReady(),
     shortcutActive: isShortcutActive(),
     unreadableSecrets: getUnreadableSecrets()
   }

@@ -71,7 +71,7 @@ export const SECRET_IDS: SecretId[] = [
 export type SpeechProvider = 'local' | 'groq' | 'openai'
 
 /** Cevapları seslendiren motor */
-export type TtsEngine = 'windows' | 'piper'
+export type TtsEngine = 'windows' | 'piper' | 'chatterbox'
 
 /** Yerel ses paketinin parçaları */
 export type VoicePackComponent = 'wakeword' | 'piper' | 'piperVoice' | 'whisper' | 'whisperModel'
@@ -277,6 +277,8 @@ export interface SettingsView extends AppSettings {
   hasSecret: Record<SecretId, boolean>
   /** Windows ile başlama bu çalıştırmada kullanılabilir mi (geliştirme modunda değil) */
   loginItemSupported: boolean
+  /** Canlı ses (Chatterbox) bu bilgisayarda kurulu mu */
+  chatterboxReady: boolean
   /** Global kısayol şu an gerçekten kayıtlı mı (başka uygulama almış olabilir) */
   shortcutActive: boolean
   /** Kaydı olan ama bu bilgisayarda çözülemeyen anahtarlar; kullanıcı yeniden girmeli */

@@ -164,7 +164,12 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
     }
     next.contextLength = value
   }
-  if (patch.ttsEngine === 'windows' || patch.ttsEngine === 'piper') next.ttsEngine = patch.ttsEngine
+  if (
+    patch.ttsEngine === 'windows' ||
+    patch.ttsEngine === 'piper' ||
+    patch.ttsEngine === 'chatterbox'
+  )
+    next.ttsEngine = patch.ttsEngine
   if (typeof patch.wakeWordEnabled === 'boolean') next.wakeWordEnabled = patch.wakeWordEnabled
   if (typeof patch.voiceBargeIn === 'boolean') next.voiceBargeIn = patch.voiceBargeIn
   if (patch.wakeWordThreshold !== undefined) {

@@ -2,6 +2,8 @@ import { ROBOT_PITCH } from '../../shared/api'
 import { app } from 'electron'
 import { join, sep } from 'node:path'
 import vadModelPath from '../../../resources/voice/silero_vad.onnx?asset'
+import chatterboxScript from '../../../resources/tts/chatterbox_server.py?asset'
+import { ChatterboxVoice, chatterboxPython } from './chatterbox'
 import { getSettings } from '../settings'
 import { resolveVoicePaths, type VoicePaths } from './pack'
 import { PiperVoice } from './piper'
@@ -23,6 +25,7 @@ const nativeReadablePath = (assetPath: string): string =>
 
 let whisper: WhisperServer | null = null
 let piper: PiperVoice | null = null
+let chatterbox: ChatterboxVoice | null = null
 let wakeWord: Promise<WakeWordDetector> | null = null
 let vad: Promise<SileroVad> | null = null
 
@@ -38,6 +41,38 @@ export function isLocalSttReady(): boolean {
 export function isPiperReady(): boolean {
   const paths = getVoicePaths()
   return paths.piper !== null && paths.piperVoice !== null
+}
+
+export function isChatterboxReady(): boolean {
+  return chatterboxPython() !== null
+}
+
+// Ollama'da yüklü modelleri ekran kartından çıkarır (bir sonraki mesajda kendisi yeniden yükler)
+async function unloadOllamaModels(): Promise<void> {
+  const base = getSettings().ollamaBaseUrl
+  const response = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3000) })
+  if (!response.ok) return
+  const { models = [] } = (await response.json()) as { models?: { name: string }[] }
+  await Promise.all(
+    models
+      .filter((model) => !model.name.startsWith('bge-m3'))
+      .map((model) =>
+        fetch(`${base}/api/generate`, {
+          method: 'POST',
+          body: JSON.stringify({ model: model.name, keep_alive: 0 }),
+          signal: AbortSignal.timeout(10_000)
+        })
+      )
+  )
+}
+
+/** Canlı ses (Chatterbox): sunucu ilk cümlede başlar, 10 dk boşta kalınca kendini kapatır */
+export function getChatterbox(): ChatterboxVoice {
+  if (chatterbox) return chatterbox
+  const python = chatterboxPython()
+  if (!python) throw new Error('Canlı ses bu bilgisayarda kurulu değil.')
+  chatterbox = new ChatterboxVoice(python, nativeReadablePath(chatterboxScript), unloadOllamaModels)
+  return chatterbox
 }
 
 export function getWhisper(): WhisperServer {
@@ -107,6 +142,8 @@ export function getVad(): Promise<SileroVad> {
 export function disposeVoiceEngines(): void {
   whisper?.stop()
   piper?.stop()
+  chatterbox?.stop()
   whisper = null
   piper = null
+  chatterbox = null
 }
