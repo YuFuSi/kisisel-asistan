@@ -34,8 +34,10 @@ function BubbleContent({
   const [visible, setVisible] = useState(true)
   const root = useRef<HTMLDivElement>(null)
   const done = useRef(false)
+  const approvalFocused = useRef(false)
   const callback = useRef(onDone)
   const complete = reduced || count >= letters.length
+  const awaitingApproval = tone === 'approval' && Boolean(actions)
 
   useEffect(() => {
     callback.current = onDone
@@ -59,16 +61,24 @@ function BubbleContent({
   }, [complete])
 
   useEffect(() => {
-    if (tone !== 'approval') return
-    root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    if (tone !== 'approval') {
+      approvalFocused.current = false
+      return
+    }
+    if (approvalFocused.current) return
+    const button = root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')
+    if (button) {
+      button.focus()
+      approvalFocused.current = true
+    }
   }, [tone, actions])
 
   useEffect(() => {
     if (!complete || autoHideMs === undefined || !Number.isFinite(autoHideMs)) return
-    if (tone === 'approval' && actions) return
+    if (awaitingApproval) return
     const timer = setTimeout(() => setVisible(false), Math.max(0, autoHideMs))
     return () => clearTimeout(timer)
-  }, [complete, autoHideMs, tone, actions])
+  }, [complete, autoHideMs, awaitingApproval])
 
   return (
     <AnimatePresence>

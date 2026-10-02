@@ -188,4 +188,20 @@ describe('ses yaşam döngüsü', () => {
     expect(audio.context.close).toHaveBeenCalledOnce()
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('resume hiç çözülmezse de beş saniyede kapanır', async () => {
+    vi.useFakeTimers()
+    const audio = mockAudio(true)
+    audio.context.resume.mockReturnValue(new Promise(() => {}))
+    const speech = speakBabble('Selam', { volume: 1 })
+    await vi.advanceTimersByTimeAsync(5000)
+    await speech.done
+    expect(audio.oscillators).toHaveLength(0)
+    expect(audio.context.close).toHaveBeenCalledOnce()
+  })
+
+  it('Web Audio bulunmadığında sessizce tamamlanır', async () => {
+    vi.stubGlobal('AudioContext', undefined)
+    await expect(speakBabble('Selam', { volume: 1 }).done).resolves.toBeUndefined()
+  })
 })
