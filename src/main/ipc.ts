@@ -10,7 +10,14 @@ import { getPersonalNote } from './ai/personalNote'
 import { getHomeWeather } from './system/homeWeather'
 import { getVoicePackStatus, installVoicePack } from './voice/packManager'
 import { resizeNotch } from './system/notch'
-import { currentActivity, setCompanionFocusable, setCompanionInteractive } from './system/companion'
+import {
+  currentActivity,
+  isAway,
+  noteChatSent,
+  rememberAsk,
+  setCompanionFocusable,
+  setCompanionInteractive
+} from './system/companion'
 import { getForegroundWindowId, moveWindow } from './lib/windows'
 import { sendAttachPaths, sendCommand, showMainWindow, sendAsk } from './system/window'
 import {
@@ -152,7 +159,16 @@ export function registerIpcHandlers(): void {
   ipcMain.on('companion:ask', (_event, text: unknown) => {
     if (typeof text !== 'string') return
     const clean = text.trim().slice(0, 4000)
-    if (clean) sendAsk(clean)
+    if (!clean) return
+    rememberAsk(clean)
+    sendAsk(clean)
+  })
+  ipcMain.handle('companion:presence-now', () => isAway())
+  // Robotun balonundaki "Sohbette aç": cevabın geldiği sohbeti açar
+  ipcMain.on('companion:open-conversation', (_event, id: unknown) => {
+    if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) return
+    showMainWindow()
+    sendCommand(`open-conversation:${id}`)
   })
   ipcMain.on('notch:resize', (_event, width: unknown, height: unknown) =>
     resizeNotch(Number(width), Number(height))
@@ -302,9 +318,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('conversations:search', (_event, query: string) => searchConversations(query))
   ipcMain.handle('conversations:export', (_event, id: number) => exportConversation(id))
 
-  ipcMain.handle('chat:send', (event, conversationId: number, text: string) =>
-    sendMessage(event.sender, conversationId, text)
-  )
+  ipcMain.handle('chat:send', (event, conversationId: number, text: string) => {
+    if (typeof text === 'string') noteChatSent(text, conversationId)
+    return sendMessage(event.sender, conversationId, text)
+  })
   ipcMain.handle('chat:stop', (_event, conversationId: number) => stopChat(conversationId))
   ipcMain.handle('chat:regenerate', (event, conversationId: number) =>
     regenerateReply(event.sender, conversationId)

@@ -183,7 +183,14 @@ const api: Api = {
       return () => ipcRenderer.removeListener('companion:presence', handler)
     },
     setFocusable: (focusable) => ipcRenderer.send('companion:focusable', focusable),
-    ask: (text) => ipcRenderer.send('companion:ask', text)
+    ask: (text) => ipcRenderer.send('companion:ask', text),
+    onAskStarted: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, id: number): void => listener(id)
+      ipcRenderer.on('companion:ask-started', handler)
+      return () => ipcRenderer.removeListener('companion:ask-started', handler)
+    },
+    presenceNow: () => ipcRenderer.invoke('companion:presence-now'),
+    openConversation: (id) => ipcRenderer.send('companion:open-conversation', id)
   },
   notch: {
     resize: (width, height) => ipcRenderer.send('notch:resize', width, height),

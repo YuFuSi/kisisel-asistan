@@ -105,14 +105,19 @@ function CompanionApp(): React.JSX.Element {
   // Kullanıcı uzun süre uzaktayken robot uyur, dönünce karşılar
   const [away, setAway] = useState(false)
   // Elle taşındı: bir süre olduğu yerde durur
-  const [resting, setResting] = useState(false)
+  const [restSince, setRestSince] = useState(0)
+  const resting = restSince > 0
   const [carrying, setCarrying] = useState(false)
   const carried = useRef(false)
   const dragControls = useDragControls()
   // Robota soru yazma ve cevabı
   const [asking, setAsking] = useState(false)
   const [question, setQuestion] = useState('')
-  const [reply, setReply] = useState<{ text: string; key: number } | null>(null)
+  const [reply, setReply] = useState<{
+    text: string
+    key: number
+    conversationId: number
+  } | null>(null)
   const awaitingReply = useRef(false)
   const replyConversation = useRef<number | null>(null)
   // En güncel say fonksiyonu (olay dinleyicileri ve zamanlayıcılar eski kopyayı tutmasın)
@@ -131,6 +136,10 @@ function CompanionApp(): React.JSX.Element {
     window.api.companion.currentActivity().then(setActivity, () => {})
     const offActivity = window.api.companion.onActivity(setActivity)
     const offVisible = window.api.companion.onVisible(setShown)
+    window.api.companion.presenceNow().then(setAway, () => {})
+    const offAskStarted = window.api.companion.onAskStarted((conversationId) => {
+      if (awaitingReply.current) replyConversation.current = conversationId
+    })
     const offPresence = window.api.companion.onPresence((presence) => {
       setAway(presence === 'away')
       if (presence === 'back') sayRef.current('welcomeBack', true)
@@ -139,6 +148,7 @@ function CompanionApp(): React.JSX.Element {
       offActivity()
       offVisible()
       offPresence()
+      offAskStarted()
     }
   }, [])
 
@@ -147,9 +157,7 @@ function CompanionApp(): React.JSX.Element {
   useEffect(
     () =>
       window.api.chat.onEvent((event) => {
-        if (awaitingReply.current && replyConversation.current === null) {
-          replyConversation.current = event.conversationId
-        }
+        if (replyConversation.current === null) return
         if (event.conversationId !== replyConversation.current) return
         if (event.type === 'done' || event.type === 'error' || event.type === 'stopped') {
           awaitingReply.current = false
@@ -160,7 +168,7 @@ function CompanionApp(): React.JSX.Element {
               : event.type === 'error'
                 ? `${pickLine('error') ?? ''} ${event.error}`
                 : 'Durdurdum.'
-          if (text) setReply({ text, key: Date.now() })
+          if (text) setReply({ text, key: Date.now(), conversationId: event.conversationId })
         }
       }),
     []
@@ -366,10 +374,10 @@ function CompanionApp(): React.JSX.Element {
   }, [free, reduced])
 
   useEffect(() => {
-    if (!resting) return
-    const timer = setTimeout(() => setResting(false), REST_AFTER_PLACE_MS)
+    if (!restSince) return
+    const timer = setTimeout(() => setRestSince(0), REST_AFTER_PLACE_MS)
     return () => clearTimeout(timer)
-  }, [resting])
+  }, [restSince])
 
   // --- Tıklama geçirgenliği: fare robotun/balonun üstündeyken pencere tıklamaları alır
   const setInteractive = (value: boolean): void => window.api.companion.setInteractive(value)
@@ -448,7 +456,7 @@ function CompanionApp(): React.JSX.Element {
             tone: 'normal',
             actions: (
               <button
-                onClick={() => void window.api.notch.navigate('chat')}
+                onClick={() => window.api.companion.openConversation(reply.conversationId)}
                 className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
@@ -523,7 +531,7 @@ function CompanionApp(): React.JSX.Element {
         }}
         onDragEnd={() => {
           setCarrying(false)
-          setResting(true)
+          setRestSince(Date.now())
         }}
         onPointerEnter={() => {
           hovering.current = true

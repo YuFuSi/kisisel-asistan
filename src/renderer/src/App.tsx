@@ -83,6 +83,11 @@ function App(): React.JSX.Element {
         navigate('automations')
         return
       }
+      if (command.startsWith('open-conversation:')) {
+        const id = Number(command.slice('open-conversation:'.length))
+        if (Number.isInteger(id) && id > 0) openConversation(id)
+        return
+      }
       if (command.startsWith('open-page:')) {
         const target = command.slice('open-page:'.length)
         // Bilinmeyen bir kimlik boş sayfa göstermesin
