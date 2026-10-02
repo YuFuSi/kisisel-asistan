@@ -1,3 +1,4 @@
+import type { Activity } from '../shared/activity'
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import type { Api, AppCommand, ChatEvent, DataScope, VoiceEvent } from '../shared/api'
 
@@ -153,6 +154,16 @@ const api: Api = {
       const handler = (_event: IpcRendererEvent, paths: string[]): void => listener(paths)
       ipcRenderer.on('app:attach-paths', handler)
       return () => ipcRenderer.removeListener('app:attach-paths', handler)
+    }
+  },
+  companion: {
+    setInteractive: (interactive) => ipcRenderer.send('companion:interactive', interactive),
+    currentActivity: () => ipcRenderer.invoke('companion:activity-now'),
+    onActivity: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, activity: Activity): void =>
+        listener(activity)
+      ipcRenderer.on('companion:activity', handler)
+      return () => ipcRenderer.removeListener('companion:activity', handler)
     }
   },
   notch: {
