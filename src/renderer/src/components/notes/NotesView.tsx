@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { FileText, Plus, Search } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { Note, SettingsView } from '@shared/api'
 import NoteEditor from './NoteEditor'
 import Skeleton from '../ui/Skeleton'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import { inputClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
+import { useReducedMotion } from '../../lib/useReducedMotion'
+import IconTile from '../ui/IconTile'
+import { inputClass, rowTransition } from './styles'
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadNotes = (): Promise<Note[]> => window.api.notes.list()
@@ -20,6 +23,7 @@ const SEARCH_DELAY_MS = 400
 const firstLine = (text: string): string => text.split('\n').find((line) => line.trim()) ?? ''
 
 function NotesView(): React.JSX.Element {
+  const reduced = useReducedMotion()
   const notes = useLiveData(loadNotes, 'notes')
   const settings = useLiveData(loadSettings, 'settings')
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -92,12 +96,16 @@ function NotesView(): React.JSX.Element {
   }
 
   return (
-    <div className="flex h-full">
-      <div className="flex w-72 shrink-0 flex-col border-r border-line">
-        <div className="space-y-2 p-3">
+    <div className="mx-auto flex h-full w-full max-w-6xl gap-4 px-8 py-6">
+      <div className="glass flex min-h-0 w-56 shrink-0 flex-col lg:w-64 xl:w-72">
+        <div className="space-y-3 p-4">
+          <h2 className="flex items-center gap-3 text-sm font-semibold text-ink">
+            <IconTile icon={FileText} tone="pink" size={28} />
+            Notlarım
+          </h2>
           <button
             onClick={() => void createNote()}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-line-strong px-3 py-2 text-sm text-ink transition-colors hover:bg-elevated"
+            className="glass-soft flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm text-ink transition-colors hover:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <Plus className="h-4 w-4" />
             Yeni not
@@ -105,6 +113,7 @@ function NotesView(): React.JSX.Element {
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
             <input
+              aria-label="Notlarda ara"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={semanticSearchEnabled ? 'Anlamıyla ara...' : 'Notlarda ara...'}
@@ -115,7 +124,7 @@ function NotesView(): React.JSX.Element {
           {searching && <p className="px-1 text-xs text-faint">Aranıyor...</p>}
         </div>
 
-        <ul className="flex-1 overflow-y-auto px-2 pb-3">
+        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4">
           {notes.data && filtered.length === 0 && (
             <li className="px-3 py-2 text-xs text-faint">
               {q ? 'Eşleşen not yok.' : 'Henüz not yok.'}
@@ -130,21 +139,20 @@ function NotesView(): React.JSX.Element {
           {filtered.map((note) => {
             const isSelected = note.id === selectedId
             return (
-              <li key={note.id}>
+              <motion.li key={note.id} layout={!reduced} initial={false} transition={rowTransition}>
                 <button
                   onClick={() => setSelectedId(note.id)}
-                  className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${
-                    isSelected ? 'bg-elevated' : 'hover:bg-elevated/60'
+                  aria-pressed={isSelected}
+                  className={`glass-soft w-full min-w-0 px-3 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                    isSelected ? 'ring-1 ring-accent/60' : 'hover:bg-white/[0.06]'
                   }`}
                 >
-                  <div className={`truncate text-sm ${isSelected ? 'text-ink' : 'text-ink'}`}>
-                    {note.title || 'Başlıksız not'}
-                  </div>
+                  <div className="truncate text-sm text-ink">{note.title || 'Başlıksız not'}</div>
                   <div className="truncate text-xs text-faint">
                     {firstLine(note.content) || 'Boş not'}
                   </div>
                 </button>
-              </li>
+              </motion.li>
             )
           })}
         </ul>
@@ -152,7 +160,7 @@ function NotesView(): React.JSX.Element {
         {error && <p className="border-t border-line p-3 text-xs text-negative">{error}</p>}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="glass min-w-0 flex-1 overflow-hidden">
         {selected ? (
           <NoteEditor
             key={selected.id}
@@ -160,10 +168,13 @@ function NotesView(): React.JSX.Element {
             onDelete={() => setPendingDeleteId(selected.id)}
           />
         ) : (
-          <div className="flex h-full items-center justify-center p-8 text-sm text-faint">
-            {all.length > 0
-              ? 'Soldan bir not seç.'
-              : 'İlk notunu oluşturmak için "Yeni not" butonuna tıkla.'}
+          <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-faint">
+            <IconTile icon={FileText} tone="pink" size={38} />
+            <p>
+              {all.length > 0
+                ? 'Soldan bir not seç.'
+                : 'İlk notunu oluşturmak için "Yeni not" butonuna tıkla.'}
+            </p>
           </div>
         )}
       </div>

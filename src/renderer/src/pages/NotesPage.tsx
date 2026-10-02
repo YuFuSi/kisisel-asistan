@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { MotionConfig } from 'motion/react'
 import NotesView from '../components/notes/NotesView'
 import MemoriesView from '../components/notes/MemoriesView'
 import MemoryGraph from '../components/notes/MemoryGraph'
 import PageLayout from '../components/ui/PageLayout'
 import Tabs, { type TabItem } from '../components/ui/Tabs'
+import { useReducedMotion } from '../lib/useReducedMotion'
 
 // Hafıza: tek sekme sırası (tasarım turu). Eskiden Liste/Harita ve Notlarım/Asistanın hafızası
 // diye iki kat sekme vardı. İlk açılışta Jarvis'in bildikleri gelir: sayfanın asıl işi bu.
@@ -22,17 +24,25 @@ interface NotesPageProps {
 
 function NotesPage({ onOpenSettings, onOpenConversation }: NotesPageProps): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('memories')
+  const reduced = useReducedMotion()
 
   return (
-    <PageLayout title="Hafıza" fill tabs={<Tabs items={TABS} value={tab} onChange={setTab} />}>
-      {tab === 'graph' ? (
-        <MemoryGraph onOpenSettings={onOpenSettings} />
-      ) : tab === 'notes' ? (
-        <NotesView />
-      ) : (
-        <MemoriesView onOpenConversation={onOpenConversation} />
-      )}
-    </PageLayout>
+    <MotionConfig reducedMotion={reduced ? 'always' : 'never'}>
+      <PageLayout
+        title="Hafıza"
+        fill
+        reduceMotion={reduced}
+        tabs={<Tabs items={TABS} value={tab} onChange={setTab} />}
+      >
+        {tab === 'graph' ? (
+          <MemoryGraph onOpenSettings={onOpenSettings} />
+        ) : tab === 'notes' ? (
+          <NotesView />
+        ) : (
+          <MemoriesView onOpenConversation={onOpenConversation} />
+        )}
+      </PageLayout>
+    </MotionConfig>
   )
 }
 

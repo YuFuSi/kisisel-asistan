@@ -1,5 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Brain, Check, MessageSquare, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react'
+import {
+  Brain,
+  CalendarClock,
+  Check,
+  Heart,
+  Lightbulb,
+  MessageSquare,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  User,
+  Users
+} from 'lucide-react'
+import { motion } from 'motion/react'
 import {
   MEMORY_KIND_LABELS,
   MEMORY_KINDS,
@@ -10,8 +25,20 @@ import {
 import Button from '../ui/Button'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import { iconButtonClass, inputClass, primaryButtonClass } from '../../lib/styles'
+import { iconButtonClass, primaryButtonClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
+import { useReducedMotion } from '../../lib/useReducedMotion'
+import IconTile, { type IconTone } from '../ui/IconTile'
+import { inputClass, rowTransition } from './styles'
+
+const kindTiles = {
+  profil: { icon: User, tone: 'pink' },
+  tercih: { icon: Heart, tone: 'pink' },
+  plan: { icon: CalendarClock, tone: 'blue' },
+  kisi: { icon: Users, tone: 'pink' },
+  olay: { icon: CalendarClock, tone: 'blue' },
+  bilgi: { icon: Lightbulb, tone: 'teal' }
+} satisfies Record<MemoryKind, { icon: typeof User; tone: IconTone }>
 
 // Bileşen dışında tanımlı olmalı (bkz. useLiveData)
 const loadMemories = (): Promise<Memory[]> => window.api.memories.list()
@@ -26,6 +53,7 @@ interface MemoriesViewProps {
 }
 
 function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Element {
+  const reduced = useReducedMotion()
   const memories = useLiveData(loadMemories, 'memories')
   const [processing, setProcessing] = useState(false)
   const settings = useLiveData(loadSettings, 'settings')
@@ -138,35 +166,41 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
   return (
     <div className="h-full overflow-y-auto">
       {/* PageLayout'un başlık çerçevesiyle aynı genişlik ve kenar boşluğu (başlıkla hizalı) */}
-      <div className="mx-auto w-full max-w-4xl space-y-4 px-8 py-6">
-        <p className="text-sm text-muted">
-          Jarvis buradaki bilgileri hangi model seçili olursa olsun her sohbette hatırlar.
-          Konuşmalarından önemli bilgileri kendisi de çıkarır (bilgisayarında, yerel modelle); çok
-          benzer bir bilgi zaten varsa yenisiyle güncellenir. Bir bilgiye tıklayarak düzeltebilir,
-          türünü değiştirebilir veya silebilirsin. &quot;Profil&quot; türündekiler her sohbette
-          mutlaka hatırlanır.
-        </p>
-
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2.5">
-          <p className="text-sm text-muted">
-            Konuşmalar, bilgisayarı birkaç dakika kullanmadığında kendiliğinden işlenir.
+      <div className="mx-auto w-full max-w-4xl space-y-5 px-8 py-6">
+        <section className="glass min-w-0 space-y-4 p-5">
+          <h2 className="flex items-center gap-3 text-sm font-semibold text-ink">
+            <IconTile icon={Brain} tone="lilac" size={30} />
+            Jarvis&apos;in bildikleri
+          </h2>
+          <p className="text-sm leading-relaxed text-muted">
+            Jarvis buradaki bilgileri hangi model seçili olursa olsun her sohbette hatırlar.
+            Konuşmalarından önemli bilgileri kendisi de çıkarır (bilgisayarında, yerel modelle); çok
+            benzer bir bilgi zaten varsa yenisiyle güncellenir. Bir bilgiye tıklayarak düzeltebilir,
+            türünü değiştirebilir veya silebilirsin. &quot;Profil&quot; türündekiler her sohbette
+            mutlaka hatırlanır.
           </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Sparkles}
-            loading={processing}
-            onClick={() => void processNow()}
-          >
-            Şimdi işle
-          </Button>
-        </div>
+
+          <div className="glass-soft flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <p className="min-w-0 flex-1 text-sm text-muted">
+              Konuşmalar, bilgisayarı birkaç dakika kullanmadığında kendiliğinden işlenir.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Sparkles}
+              loading={processing}
+              onClick={() => void processNow()}
+            >
+              Şimdi işle
+            </Button>
+          </div>
+        </section>
 
         {unreviewed.length > 0 && !isSearching && (
-          <section className="space-y-2 rounded-lg border border-accent/40 bg-accent/5 p-3">
-            <div className="flex items-center justify-between gap-3">
+          <section className="glass min-w-0 space-y-3 p-5 ring-1 ring-accent/30">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="flex items-center gap-2 text-sm font-medium text-ink">
-                <Sparkles className="h-4 w-4 text-accent" />
+                <IconTile icon={Sparkles} tone="lilac" size={28} />
                 Yeni öğrendiklerim ({unreviewed.length})
               </h3>
               <Button
@@ -181,10 +215,18 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
             <p className="text-xs text-muted">
               Konuşmalarından çıkardığım bilgiler. Yanlış olanı düzelt veya sil; doğruysa onayla.
             </p>
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               {unreviewed.map((memory) => (
-                <li key={memory.id} className="flex items-center gap-2 text-sm text-ink">
-                  <span className="min-w-0 flex-1">{memory.content}</span>
+                <motion.li
+                  key={memory.id}
+                  layout={!reduced}
+                  initial={false}
+                  transition={rowTransition}
+                  className="glass-soft flex items-center gap-2 px-3 py-2 text-sm text-ink"
+                >
+                  <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+                    {memory.content}
+                  </span>
                   <button
                     onClick={() => setEditing({ id: memory.id, text: memory.content })}
                     className="min-h-8 rounded-control px-2 text-xs text-muted hover:bg-elevated"
@@ -199,57 +241,72 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
                   >
                     <Check className="h-4 w-4" />
                   </button>
-                </li>
+                </motion.li>
               ))}
             </ul>
           </section>
         )}
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
-          <input
-            aria-label="Hafızada ara"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              settings.data?.semanticSearchEnabled ? 'Anlamıyla ara...' : 'Hafızada ara...'
-            }
-            style={{ paddingLeft: '2.25rem' }}
-            className={inputClass}
-          />
-        </div>
-        {searching && <p className="px-1 text-xs text-faint">Aranıyor...</p>}
+        <div className="glass min-w-0 space-y-3 p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
+            <input
+              aria-label="Hafızada ara"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                settings.data?.semanticSearchEnabled ? 'Anlamıyla ara...' : 'Hafızada ara...'
+              }
+              style={{ paddingLeft: '2.25rem' }}
+              className={inputClass}
+            />
+          </div>
+          {searching && <p className="px-1 text-xs text-faint">Aranıyor...</p>}
 
-        <form onSubmit={(e) => void add(e)} className="flex gap-2">
-          <input
-            aria-label="Yeni bilgi"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Ör. Kahvemi şekersiz içerim"
-            maxLength={300}
-            className={inputClass}
-          />
-          <button type="submit" disabled={!draft.trim()} className={primaryButtonClass}>
-            <Plus className="h-4 w-4" />
-            Ekle
-          </button>
-        </form>
+          <form onSubmit={(e) => void add(e)} className="flex flex-wrap gap-2">
+            <div className="min-w-0 flex-1 basis-48">
+              <input
+                aria-label="Yeni bilgi"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="Ör. Kahvemi şekersiz içerim"
+                maxLength={300}
+                className={inputClass}
+              />
+            </div>
+            <button type="submit" disabled={!draft.trim()} className={primaryButtonClass}>
+              <Plus className="h-4 w-4" />
+              Ekle
+            </button>
+          </form>
+        </div>
 
         {memories.data && displayedMemories.length === 0 && (
           <p className="px-1 py-2 text-sm text-faint">
             {isSearching ? 'Eşleşen kayıt yok.' : 'Henüz kayıtlı bilgi yok.'}
           </p>
         )}
-        <ul className="space-y-1">
+        <ul className="space-y-5">
           {groups.map((group) => (
-            <li key={group.kind} className="pt-3">
-              <h2 className="mb-2 text-sm font-medium text-muted">
+            <li key={group.kind} className="glass min-w-0 p-5">
+              <h2 className="mb-4 flex items-center gap-3 text-sm font-semibold text-ink">
+                <IconTile
+                  icon={kindTiles[group.kind].icon}
+                  tone={kindTiles[group.kind].tone}
+                  size={28}
+                />
                 {MEMORY_KIND_LABELS[group.kind]} · {group.items.length}
               </h2>
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {group.items.map((memory) =>
                   editing?.id === memory.id ? (
-                    <li key={memory.id} className="px-1 py-1">
+                    <motion.li
+                      key={memory.id}
+                      layout={!reduced}
+                      initial={false}
+                      transition={rowTransition}
+                      className="glass-soft min-w-0 p-3"
+                    >
                       <input
                         autoFocus
                         value={editing.text}
@@ -270,11 +327,14 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
                           Vazgeç
                         </Button>
                       </div>
-                    </li>
+                    </motion.li>
                   ) : (
-                    <li
+                    <motion.li
                       key={memory.id}
-                      className="group flex flex-wrap items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface"
+                      layout={!reduced}
+                      initial={false}
+                      transition={rowTransition}
+                      className="glass-soft group flex flex-wrap items-center gap-3 px-3 py-3 transition-colors hover:bg-white/[0.06]"
                     >
                       <Brain className="h-4 w-4 shrink-0 text-accent" />
                       <select
@@ -286,7 +346,7 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
                         }
                         aria-label="Bilginin türü"
                         title="Tür"
-                        className="shrink-0 rounded-md border border-line bg-transparent px-1.5 py-0.5 text-xs text-muted outline-none hover:border-line-strong focus:border-accent/70"
+                        className="min-w-0 shrink-0 rounded-lg border border-line bg-white/5 px-2 py-1 text-xs text-muted outline-none hover:border-line-strong focus:border-accent"
                       >
                         {MEMORY_KINDS.map((kind) => (
                           <option key={kind} value={kind}>
@@ -299,7 +359,9 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
                         title="Düzenlemek için tıkla"
                         className="min-w-0 flex-1 text-left text-sm text-ink"
                       >
-                        <span className="block break-words">{memory.content}</span>
+                        <span className="block break-words [overflow-wrap:anywhere]">
+                          {memory.content}
+                        </span>
                         <span className="mt-1 block text-xs text-faint">
                           {sourceLabels[memory.source]}
                           {memory.sourceConversationId !== null
@@ -334,7 +396,7 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
-                    </li>
+                    </motion.li>
                   )
                 )}
               </ul>

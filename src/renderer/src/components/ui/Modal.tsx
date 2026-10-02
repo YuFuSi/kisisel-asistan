@@ -8,11 +8,19 @@ interface ModalProps {
   onClose: () => void
   children: ReactNode
   title: string
+  /** Hafıza gibi cam sayfalarda panel yüzeyi; diğer modallar mevcut kartı korur. */
+  glass?: boolean
 }
 
 // Genel modal kabuğu: karartılmış arka plan + ortalanmış düz panel. Escape veya dışına
 // tıklayınca kapanır. document.body'ye portal ile taşınır, sayfadaki konumu önemli değil.
-function Modal({ open, onClose, children, title }: ModalProps): React.JSX.Element | null {
+function Modal({
+  open,
+  onClose,
+  children,
+  title,
+  glass = false
+}: ModalProps): React.JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   useDismissLayer(open, 50, onClose)
@@ -33,7 +41,7 @@ function Modal({ open, onClose, children, title }: ModalProps): React.JSX.Elemen
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="card animate-enter max-h-[calc(100vh-32px)] w-full max-w-sm overflow-y-auto p-5 shadow-float"
+        className={`${glass ? 'glass' : 'card'} animate-enter max-h-[calc(100vh-32px)] w-full max-w-sm overflow-y-auto p-5 shadow-float`}
       >
         <h2 id={titleId} className="sr-only">
           {title}
