@@ -1,8 +1,10 @@
 import 'highlight.js/styles/github-dark-dimmed.css'
+import '@fontsource-variable/inter/wght.css'
 import './assets/main.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { MotionConfig } from 'motion/react'
 import App from './App'
 import NotchApp from './NotchApp'
 import ToastProvider from './components/ui/ToastProvider'
@@ -27,12 +29,14 @@ window.addEventListener('unhandledrejection', (event) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isNotch ? (
-      <NotchApp />
-    ) : (
-      <ToastProvider>
-        <App />
-      </ToastProvider>
-    )}
+    <MotionConfig reducedMotion="user">
+      {isNotch ? (
+        <NotchApp />
+      ) : (
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      )}
+    </MotionConfig>
   </StrictMode>
 )

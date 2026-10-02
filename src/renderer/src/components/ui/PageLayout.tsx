@@ -1,4 +1,12 @@
+import { motion } from 'motion/react'
 import PageHeader from './PageHeader'
+
+// Sayfa açılınca içerik hafif bulanıklıktan netleşerek, çok az yükselerek belirir (Jarvis Cam)
+const enter = {
+  initial: { opacity: 0, y: 10, filter: 'blur(4px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  transition: { type: 'spring', stiffness: 140, damping: 22 }
+} as const
 
 // Bütün sayfaların ortak iskeleti (tasarım turu 3. aşama): aynı başlık, genişlik ve boşluklar.
 // - width: 'default' okunabilir sayfalar (Planlama, Analizler, Ayarlar), 'wide' ızgaralı
@@ -33,22 +41,22 @@ function PageLayout({
 
   if (fill) {
     return (
-      <div className="flex h-full flex-col">
+      <motion.div {...enter} className="flex h-full flex-col">
         <div className={`${frame} shrink-0 pt-8`}>
           <PageHeader title={title} description={description} actions={actions} />
           {tabs}
         </div>
         <div className="min-h-0 flex-1">{children}</div>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className={`${frame} py-8`}>
+    <motion.div {...enter} className={`${frame} py-8`}>
       <PageHeader title={title} description={description} actions={actions} />
       {tabs && <div className="mb-6">{tabs}</div>}
       {children}
-    </div>
+    </motion.div>
   )
 }
 

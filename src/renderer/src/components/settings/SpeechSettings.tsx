@@ -309,6 +309,32 @@ function SpeechSettings({
         />
       </Field>
 
+      <Field
+        label="Ses tonu"
+        hint="Robot: cam robota uygun, daha ince ve hafif metalik bir ses. Konuşma hızı değişmez."
+      >
+        <div className="flex gap-2">
+          {(
+            [
+              ['robot', 'Robot'],
+              ['natural', 'Doğal']
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => void onUpdate({ voiceStyle: id })}
+              className={`rounded-[10px] border px-3 py-1.5 text-sm transition-colors ${
+                settings.voiceStyle === id
+                  ? 'border-accent bg-accent/15 text-ink'
+                  : 'border-line text-muted hover:border-line-strong hover:text-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Field>
+
       <Toggle
         label="Yazışmada cevapları da sesli oku"
         description="Sohbette yazarak sorduğun sorulara gelen cevaplar da okunur. Sesli sohbette cevaplar her zaman okunur."

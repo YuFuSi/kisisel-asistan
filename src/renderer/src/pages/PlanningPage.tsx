@@ -1,4 +1,6 @@
-import { CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle2, Inbox, Sun } from 'lucide-react'
+import { AnimatePresence, LayoutGroup } from 'motion/react'
+import IconTile, { type IconTone } from '../components/ui/IconTile'
 import type { Automation, Reminder, Task } from '@shared/api'
 import NewTaskForm from '../components/tasks/NewTaskForm'
 import TaskItem from '../components/tasks/TaskItem'
@@ -55,14 +57,28 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
   const groups = [
     {
       label: 'Gecikmiş',
+      icon: AlertTriangle,
+      tone: 'amber' as IconTone,
       tasks: pending.filter((task) => task.dueDate !== null && task.dueDate < today)
     },
-    { label: 'Bugün', tasks: pending.filter((task) => task.dueDate === today) },
+    {
+      label: 'Bugün',
+      icon: Sun,
+      tone: 'lilac' as IconTone,
+      tasks: pending.filter((task) => task.dueDate === today)
+    },
     {
       label: 'Yaklaşan',
+      icon: CalendarClock,
+      tone: 'blue' as IconTone,
       tasks: pending.filter((task) => task.dueDate !== null && task.dueDate > today)
     },
-    { label: 'Tarihsiz', tasks: pending.filter((task) => task.dueDate === null) }
+    {
+      label: 'Tarihsiz',
+      icon: Inbox,
+      tone: 'teal' as IconTone,
+      tasks: pending.filter((task) => task.dueDate === null)
+    }
   ]
   function taskRow(task: Task): React.JSX.Element {
     return (
@@ -114,26 +130,37 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
               <Skeleton className="h-9 w-2/3" />
             </div>
           )}
-          {groups
-            .filter((group) => group.tasks.length > 0)
-            .map((group) => (
-              <section key={group.label} aria-label={group.label} className="space-y-2 pt-3">
-                <h2 className="text-sm font-medium text-muted">
-                  {group.label} · {group.tasks.length}
-                </h2>
-                <ul className="space-y-1">{group.tasks.map(taskRow)}</ul>
-              </section>
-            ))}
-          <details className="rounded-control border border-line">
-            <summary className="min-h-10 cursor-pointer px-3 py-2 text-sm text-muted">
-              Tamamlanan · {done.length}
-            </summary>
-            {done.length ? (
-              <ul className="space-y-1 px-2 pb-2">{done.map(taskRow)}</ul>
-            ) : (
-              <p className="px-3 pb-3 text-sm text-faint">Henüz tamamlanan görev yok.</p>
-            )}
-          </details>
+          {/* Görev bir gruptan ötekine (ör. Tamamlanan'a) akarak geçer */}
+          <LayoutGroup>
+            {groups
+              .filter((group) => group.tasks.length > 0)
+              .map((group) => (
+                <section key={group.label} aria-label={group.label} className="space-y-2 pt-4">
+                  <h2 className="flex items-center gap-2.5 text-sm font-medium text-ink">
+                    <IconTile icon={group.icon} tone={group.tone} size={24} />
+                    {group.label}
+                    <span className="text-muted">{group.tasks.length}</span>
+                  </h2>
+                  <ul className="space-y-1.5">
+                    <AnimatePresence initial={false}>{group.tasks.map(taskRow)}</AnimatePresence>
+                  </ul>
+                </section>
+              ))}
+            <details className="glass-soft mt-4 !rounded-[20px]">
+              <summary className="flex min-h-12 cursor-pointer items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-ink">
+                <IconTile icon={CheckCircle2} tone="green" size={24} />
+                Tamamlanan
+                <span>{done.length}</span>
+              </summary>
+              {done.length ? (
+                <ul className="space-y-1.5 px-2 pb-2">
+                  <AnimatePresence initial={false}>{done.map(taskRow)}</AnimatePresence>
+                </ul>
+              ) : (
+                <p className="px-3 pb-3 text-sm text-faint">Henüz tamamlanan görev yok.</p>
+              )}
+            </details>
+          </LayoutGroup>
           <InlineError message={tasks.error} />
         </section>
       )}

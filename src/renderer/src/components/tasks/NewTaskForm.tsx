@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { TaskInput } from '@shared/api'
-import { compactInputClass, inputClass, primaryButtonClass } from '../../lib/styles'
+import { compactInputClass, primaryButtonClass } from '../../lib/styles'
 
 interface NewTaskFormProps {
   /** Başarılı olursa true döner; o zaman form temizlenir */
@@ -37,13 +37,16 @@ function NewTaskForm({ onCreate }: NewTaskFormProps): React.JSX.Element {
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="flex flex-wrap gap-2">
+    <form
+      onSubmit={(e) => void submit(e)}
+      className="glass flex flex-wrap items-center gap-2 !rounded-[22px] p-2"
+    >
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         aria-label="Yeni görev"
         placeholder="Yeni görev ekle..."
-        className={`${inputClass} min-w-40 flex-1`}
+        className="min-h-10 min-w-40 flex-1 rounded-[14px] bg-transparent px-3 text-[15px] text-ink outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent/60"
       />
       <input
         type="date"

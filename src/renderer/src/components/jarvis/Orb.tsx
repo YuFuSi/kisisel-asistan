@@ -34,6 +34,8 @@ interface OrbProps {
   steps?: WorkStep[]
   /** Her bildirimde artan sayaç: küre iki kez nabız atar */
   notice?: number
+  /** Cam görünüm (Jarvis Cam): yüzey noktaları ve yere düşen ışık yok; arkadaki halka OrbHalo'da */
+  glass?: boolean
 }
 
 // Hızlı ince ayar için tüm sayılar burada
@@ -127,7 +129,8 @@ function Orb({
   excite = 0,
   emotion = null,
   steps = NO_STEPS,
-  notice = 0
+  notice = 0,
+  glass = false
 }: OrbProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
@@ -162,9 +165,8 @@ function Orb({
     const cy = size / 2
     // Küçük kürede (çentik, başlık çubuğu) noktalar seyrek olsun: yoğunluk yüzey alanıyla orantılı kalır
     const dotScale = Math.min(1, (size / 300) ** 2)
-    const surface = small
-      ? []
-      : buildDots(Math.max(120, Math.round(SURFACE_DOTS * dotScale)), false)
+    const surface =
+      small || glass ? [] : buildDots(Math.max(120, Math.round(SURFACE_DOTS * dotScale)), false)
     // Gövde için WebGL (küçük küre ve WebGL'siz ortam 2D gövdeyle çizer)
     const sphere = small ? null : createSphereRenderer(size, dpr)
     // Ses çubuklarının yumuşatılmış değerleri (aynalı: BAND_COUNT * 2 çubuk)
@@ -365,7 +367,7 @@ function Orb({
       ctx.clearRect(0, 0, size, size)
       ctx.save()
 
-      if (!small) {
+      if (!small && !glass) {
         // Yere düşen yumuşak ışıma: küre havada asılı gibi dursun
         ctx.save()
         ctx.translate(cx, cy + r * (0.35 + 1.2 * shape.sy))
@@ -696,7 +698,7 @@ function Orb({
       stopLoop()
       sphere?.dispose()
     }
-  }, [size])
+  }, [size, glass])
 
   return (
     <canvas

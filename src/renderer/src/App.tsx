@@ -112,12 +112,12 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <div className="flex h-full flex-col bg-app">
+    <div className="ambient-light flex h-full flex-col bg-app">
       <TitleBar page={PAGE_LABELS[page]} showOrb={page !== 'home'} />
 
       <div className="flex min-h-0 flex-1">
         {!handControlOn && <Sidebar active={page} onSelect={navigate} />}
-        <main className="relative min-w-0 flex-1 bg-surface">
+        <main className="relative min-w-0 flex-1">
           {page !== 'home' && (
             <>
               <VoiceEscapeBoundary />

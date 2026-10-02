@@ -1,5 +1,10 @@
 // Ana süreç (main), preload ve arayüz (renderer) arasında paylaşılan tipler ve sabitler
 
+export type VoiceStyle = 'natural' | 'robot'
+
+/** Robot tonunda sesin ne kadar inceltileceği (Piper'da konuşma hızı bu oranda telafi edilir) */
+export const ROBOT_PITCH = 1.2
+
 export type ProviderId = 'ollama' | 'openai' | 'google' | 'anthropic'
 export type CloudProviderId = Exclude<ProviderId, 'ollama'>
 
@@ -121,6 +126,8 @@ export type VoiceEvent =
       voiceUri: string
       rate: number
       volume: number
+      /** Ses perdesi çarpanı (robot tonu); 1 doğal ses */
+      pitch: number
     }
   | { type: 'stop-playback' }
   | { type: 'error'; message: string }
@@ -220,6 +227,8 @@ export interface AppSettings {
   voiceBargeIn: boolean
   /** Konuşma hızı çarpanı (ör. 1,3 = %30 hızlı). Piper'da length_scale'e, Windows sesinde rate'e çevrilir */
   speechRate: number
+  /** Ses tonu: doğal ya da robot karaktere uygun ince, hafif metalik ses */
+  voiceStyle: VoiceStyle
   /** Ses seviyesi (0-1) */
   speechVolume: number
   /** Hafıza ve notlarda anahtar kelime yerine anlamsal (embedding) arama kullanılsın mı.
@@ -256,6 +265,7 @@ export interface SettingsPatch {
   wakeWordThreshold?: number
   voiceBargeIn?: boolean
   speechRate?: number
+  voiceStyle?: VoiceStyle
   speechVolume?: number
   semanticSearchEnabled?: boolean
   notchEnabled?: boolean

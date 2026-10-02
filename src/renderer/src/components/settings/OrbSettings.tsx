@@ -1,6 +1,13 @@
 import Orb from '../jarvis/Orb'
-import { ORB_INTENSITIES, ORB_THEMES, setOrbPrefs, useOrbPrefs } from '../../lib/orbPrefs'
+import {
+  CHARACTERS,
+  ORB_INTENSITIES,
+  ORB_THEMES,
+  setOrbPrefs,
+  useOrbPrefs
+} from '../../lib/orbPrefs'
 import { playSfx, setSfxEnabled, useSfxEnabled } from '../../lib/soundEffects'
+import { BOND_STAGE_LABELS, bondStage, useBond } from '../../lib/petBond'
 import Field from './Field'
 
 const chip = (active: boolean): string =>
@@ -14,6 +21,7 @@ const chip = (active: boolean): string =>
 function OrbSettings(): React.JSX.Element {
   const prefs = useOrbPrefs()
   const sfx = useSfxEnabled()
+  const bond = useBond()
   return (
     <div className="flex flex-wrap items-center gap-8">
       <div className="shrink-0">
@@ -38,6 +46,40 @@ function OrbSettings(): React.JSX.Element {
             ))}
           </div>
         </Field>
+        <Field
+          label="Karakter"
+          hint="Ana Sayfa'da Jarvis'i temsil eden karakter. Pet karakterler imleci takip eder, sevinir, üzülür, boşta kalınca uyur."
+        >
+          <div className="flex flex-wrap gap-2">
+            {CHARACTERS.map((character) => (
+              <button
+                key={character.id}
+                onClick={() => setOrbPrefs({ character: character.id })}
+                className={chip(prefs.character === character.id)}
+              >
+                {character.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        {prefs.character !== 'orb' && (
+          <Field
+            label="Aranız"
+            hint="Okşadıkça, övdükçe ve birlikte iş bitirdikçe Jarvis mutlu olur; uzun süre ilgilenmezsen surat asar. Zamanla utangaçlıktan kankalığa geçer."
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-40 overflow-hidden rounded-full bg-elevated">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#ff9ec7] to-[#8b9bff]"
+                  style={{ width: `${Math.round(bond.happiness)}%` }}
+                />
+              </div>
+              <span className="text-sm text-muted">
+                Mutluluk {Math.round(bond.happiness)} · {BOND_STAGE_LABELS[bondStage(bond)]}
+              </span>
+            </div>
+          </Field>
+        )}
         <Field
           label="Kürenin yüzü"
           hint="Işıktan gözler Jarvis'in ne yaptığını gösterir: dinlerken büyür, düşünürken yana bakar, iş bitince gülümser."

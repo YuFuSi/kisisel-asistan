@@ -149,6 +149,7 @@ interface PlayItem {
   voiceUri: string
   rate: number
   volume: number
+  pitch: number
 }
 
 const playQueue: PlayItem[] = []
@@ -198,11 +199,35 @@ function playNext(): void {
         if (token !== playToken || playing?.id !== item.id) return
         const source = context.createBufferSource()
         source.buffer = buffer
-        // Hız Piper'da üretim sırasında ayarlandı (length_scale); burada sadece ses seviyesi uygulanır
+        // Hız Piper'da üretim sırasında ayarlandı (length_scale); burada ses seviyesi uygulanır.
+        // Robot tonu: ses hızlandırılarak inceltilir (Piper bu oranda yavaş üretti, hız aynı kalır)
+        // ve kısa, geri beslemeli bir yankıyla hafif metalik bir cam robot tınısı eklenir.
         const gain = context.createGain()
         gain.gain.value = item.volume
         source.connect(gain).connect(analyser)
-        source.onended = finish
+        const effectNodes: AudioNode[] = []
+        // Yankının kısa kuyruğu sönsün diye biraz bekleyip bağlantılar kesilir
+        const release = (): void => {
+          if (effectNodes.length === 0) return
+          setTimeout(() => effectNodes.forEach((node) => node.disconnect()), 400)
+        }
+        if (item.pitch !== 1) {
+          source.playbackRate.value = item.pitch
+          const delay = context.createDelay(0.05)
+          delay.delayTime.value = 0.011
+          const feedback = context.createGain()
+          feedback.gain.value = 0.35
+          const wet = context.createGain()
+          wet.gain.value = 0.28
+          source.connect(delay)
+          delay.connect(feedback).connect(delay)
+          delay.connect(wet).connect(gain)
+          effectNodes.push(delay, feedback, wet)
+        }
+        source.onended = () => {
+          release()
+          finish()
+        }
         playing = {
           id: item.id,
           stop: () => {
@@ -212,6 +237,7 @@ function playNext(): void {
             } catch {
               // Zaten bitmiş
             }
+            release()
           }
         }
         source.start()
@@ -233,6 +259,8 @@ function playNext(): void {
   const utterance = new SpeechSynthesisUtterance(item.text)
   utterance.rate = item.rate
   utterance.volume = item.volume
+  // Windows sesinde robot tonu: ses perdesi yükseltilir
+  if (item.pitch !== 1) utterance.pitch = 1.5
   const voice = pickVoice(synth.getVoices(), item.voiceUri)
   if (voice) {
     utterance.voice = voice
@@ -325,7 +353,8 @@ function handleEvent(event: VoiceEvent): void {
         text: event.text,
         voiceUri: event.voiceUri,
         rate: event.rate,
-        volume: event.volume
+        volume: event.volume,
+        pitch: event.pitch ?? 1
       })
       playNext()
       break

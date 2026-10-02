@@ -59,7 +59,7 @@ function TitleBar({ page, showOrb }: TitleBarProps): React.JSX.Element {
 
   return (
     <header
-      className="drag-region flex h-[var(--titlebar-height)] shrink-0 items-center gap-2.5 border-b border-line bg-app px-3"
+      className="drag-region flex h-[var(--titlebar-height)] shrink-0 items-center gap-2.5 border-b border-white/5 bg-black/10 px-3"
       style={{ paddingRight: 150 }}
     >
       {showOrb ? <CornerOrb /> : <Logo className="h-5 w-5" />}
