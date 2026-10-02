@@ -14,7 +14,7 @@ import { logDirectory } from './logger'
 import { markQuitting } from './window'
 import type { BackupInfo } from '../../shared/api'
 
-const TITLE = 'Jarvis'
+const TITLE = 'Pıtır'
 
 export const databasePath = (): string => join(app.getPath('userData'), 'asistan.db')
 export const backupDirectory = (): string => join(app.getPath('userData'), 'backups')

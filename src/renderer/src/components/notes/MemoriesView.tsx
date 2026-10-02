@@ -108,7 +108,7 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
   const sourceLabels = {
     otomatik: 'Konuşmadan öğrenildi',
     kullanici: 'Sen ekledin',
-    arac: 'Jarvis kaydetti'
+    arac: 'Pıtır kaydetti'
   }
 
   // Otomatik öğrenilip henüz bakılmamış kayıtlar ("yeni öğrendiklerim")
@@ -170,10 +170,10 @@ function MemoriesView({ onOpenConversation }: MemoriesViewProps): React.JSX.Elem
         <section className="glass min-w-0 space-y-4 p-5">
           <h2 className="flex items-center gap-3 text-sm font-semibold text-ink">
             <IconTile icon={Brain} tone="lilac" size={30} />
-            Jarvis&apos;in bildikleri
+            Pıtır&apos;in bildikleri
           </h2>
           <p className="text-sm leading-relaxed text-muted">
-            Jarvis buradaki bilgileri hangi model seçili olursa olsun her sohbette hatırlar.
+            Pıtır buradaki bilgileri hangi model seçili olursa olsun her sohbette hatırlar.
             Konuşmalarından önemli bilgileri kendisi de çıkarır (bilgisayarında, yerel modelle); çok
             benzer bir bilgi zaten varsa yenisiyle güncellenir. Bir bilgiye tıklayarak düzeltebilir,
             türünü değiştirebilir veya silebilirsin. &quot;Profil&quot; türündekiler her sohbette

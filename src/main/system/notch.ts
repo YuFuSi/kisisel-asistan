@@ -3,7 +3,7 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { daemonForegroundIsFullscreen } from '../lib/windowDaemon'
 
-// Jarvis Çentiği: ana ekranın üst ortasında duran, saydam, her zaman üstte küçük pencere.
+// Pıtır Çentiği: ana ekranın üst ortasında duran, saydam, her zaman üstte küçük pencere.
 // İçinde gözlü damla durur; onay beklenince, iş bitince veya araç çalışırken aşağı doğru açılır.
 // Pencere her zaman içeriği kadardır (arayüz boyunu bildirir); böylece boş alan ekranı kaplamaz ve
 // belgeler çentiğe sürüklenip bırakılabilir (tıklamayı alta geçiren pencereye bırakma çalışmıyor).

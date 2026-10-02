@@ -22,7 +22,7 @@ describe('parseConfirmation', () => {
 describe('isStopRequest', () => {
   it('kısa bitirme komutlarını anlar', () => {
     // "Taman diyeterli." gerçek denemede whisper'ın "Tamam, yeter." için yazdığı metin
-    for (const text of ['Dur', 'Tamam yeter', 'Görüşürüz Jarvis', 'sus', 'Taman diyeterli.']) {
+    for (const text of ['Dur', 'Tamam yeter', 'Görüşürüz Pıtır', 'sus', 'Taman diyeterli.']) {
       expect(isStopRequest(text), text).toBe(true)
     }
   })

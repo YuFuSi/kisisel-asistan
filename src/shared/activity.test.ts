@@ -89,8 +89,8 @@ describe('classifyActivity', () => {
     expect(classify('eldenring', 'ELDEN RING', false)).toBe('other')
   })
 
-  it('Jarvis ve masaüstü ayrı tutulur', () => {
-    expect(classify('kisisel-asistan', 'Jarvis')).toBe('jarvis')
+  it('Pıtır ve masaüstü ayrı tutulur', () => {
+    expect(classify('kisisel-asistan', 'Pıtır')).toBe('jarvis')
     expect(classify('explorer', '')).toBe('desktop')
   })
 

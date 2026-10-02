@@ -1,5 +1,5 @@
 // Akış halinde gelen cevabı cümlelere böler; her cümle hazır olur olmaz seslendirilebilir.
-// Böylece Jarvis cevabın tamamı bitmeden konuşmaya başlar.
+// Böylece Pıtır cevabın tamamı bitmeden konuşmaya başlar.
 
 // Bundan kısa parçalar bir sonraki cümleyle birleştirilir ("Tamam." gibi tek kelimeler ayrı seslenmesin)
 const MIN_LENGTH = 24

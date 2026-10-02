@@ -41,7 +41,7 @@ function BriefSettings({ settings, onUpdate }: BriefSettingsProps): React.JSX.El
 
       <Toggle
         label="Sesli de okusun"
-        description="Bildirimle birlikte Jarvis özeti kendiliğinden sesli okur; tıklamana gerek kalmaz."
+        description="Bildirimle birlikte Pıtır özeti kendiliğinden sesli okur; tıklamana gerek kalmaz."
         checked={settings.briefSpoken}
         onChange={(checked) => void onUpdate({ briefSpoken: checked })}
       />

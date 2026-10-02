@@ -39,7 +39,7 @@ export async function showDailyBrief(): Promise<void> {
   notification.show()
   notifyPulse()
 
-  // Jarvis'in ilk gerçek otomasyonu: zamanı gelince kendiliğinden konuşur, tıklama beklemez
+  // Pıtır'ın ilk gerçek otomasyonu: zamanı gelince kendiliğinden konuşur, tıklama beklemez
   if (getSettings().briefSpoken) {
     try {
       speakWithVoice(briefSpokenText(brief), { interrupt: false })

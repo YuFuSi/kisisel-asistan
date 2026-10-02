@@ -41,7 +41,7 @@ import {
   type PetMood
 } from '../../lib/petLook'
 
-// Jarvis'in pet karakteri (prototip "Jarvis Cam"): cam robot ya da jöle küp. İki görünüm aynı
+// Pıtır'ın pet karakteri (prototip "Pıtır Cam"): cam robot ya da jöle küp. İki görünüm aynı
 // "beyni" paylaşır: duruma göre ruh hâli, imleci izleyen gözler, göz kırpma, boşta kalınca uyku.
 
 export type PetVariant = 'robot' | 'cube'
@@ -340,7 +340,7 @@ function Pet({
   emotion = null,
   size = 170,
   onClick,
-  label = 'Jarvis ile konuş',
+  label = 'Pıtır ile konuş',
   attention = 0,
   typed = 0,
   compact = false,

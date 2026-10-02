@@ -10,8 +10,8 @@ interface ApprovalDockProps {
   onOpenConversation: (conversationId: number) => void
 }
 
-// Jarvis bir işlem için onay beklerken, kullanıcı başka sayfada veya başka sohbetteyse kart
-// burada, içeriğin sağ altında durur. Böylece Jarvis "çalışıyor gibi görünüp" sessizce beklemez.
+// Pıtır bir işlem için onay beklerken, kullanıcı başka sayfada veya başka sohbetteyse kart
+// burada, içeriğin sağ altında durur. Böylece Pıtır "çalışıyor gibi görünüp" sessizce beklemez.
 // Ekrandaki sohbetin onayı zaten sohbetin içinde gösterildiği için burada tekrar çıkmaz.
 function ApprovalDock({ onOpenConversation }: ApprovalDockProps): React.JSX.Element | null {
   const approvals = usePendingApprovals()
@@ -28,7 +28,7 @@ function ApprovalDock({ onOpenConversation }: ApprovalDockProps): React.JSX.Elem
     >
       <div className="flex items-center justify-between gap-2 px-1 text-xs text-muted">
         <span>
-          Jarvis onayını bekliyor
+          Pıtır onayını bekliyor
           {waiting.length > 1 && ` · ${waiting.length} işlem`}
         </span>
         <button

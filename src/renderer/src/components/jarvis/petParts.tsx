@@ -2,7 +2,7 @@ import { motion, type TargetAndTransition } from 'motion/react'
 import { Heart, type LucideIcon } from 'lucide-react'
 import type { HandGesture } from '../../lib/petLook'
 
-// Pet'in yardımcı parçaları: ekran simgeleri, anten rengi ve yüzen eller (prototip "Jarvis Cam")
+// Pet'in yardımcı parçaları: ekran simgeleri, anten rengi ve yüzen eller (prototip "Pıtır Cam")
 
 /** Ekranın alt kısmında beliren araç simgesi */
 export function ScreenIcon({

@@ -34,7 +34,7 @@ interface OrbProps {
   steps?: WorkStep[]
   /** Her bildirimde artan sayaç: küre iki kez nabız atar */
   notice?: number
-  /** Cam görünüm (Jarvis Cam): yüzey noktaları ve yere düşen ışık yok; arkadaki halka OrbHalo'da */
+  /** Cam görünüm (Pıtır Cam): yüzey noktaları ve yere düşen ışık yok; arkadaki halka OrbHalo'da */
   glass?: boolean
 }
 
@@ -121,7 +121,7 @@ const NO_STEPS: WorkStep[] = []
 const STEP_SPACING = TAU / 14
 const STEP_RING = 1.26
 
-// Jarvis küresi: cam gibi yarı saydam gövde, iç sis, yüzey parçacıkları; dinlerken ve konuşurken
+// Pıtır küresi: cam gibi yarı saydam gövde, iç sis, yüzey parçacıkları; dinlerken ve konuşurken
 // çevresinde ses çubuğu halkası, düşünürken dönen yaylar
 function Orb({
   state,
@@ -704,7 +704,7 @@ function Orb({
     <canvas
       ref={canvasRef}
       role="img"
-      aria-label={`Jarvis: ${STATE_LABELS[state]}`}
+      aria-label={`Pıtır: ${STATE_LABELS[state]}`}
       style={{ width: size, height: size, maxWidth: '100%' }}
       onPointerEnter={() => {
         hoverRef.current = true

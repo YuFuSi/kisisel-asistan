@@ -35,7 +35,7 @@ export function pickVoice(
   return voices.find((voice) => isTurkish(voice.lang)) ?? voices[0]
 }
 
-/** Metni Ayarlar'da seçili sesle okur (Jarvis sesi veya Windows sesi) */
+/** Metni Ayarlar'da seçili sesle okur (Pıtır sesi veya Windows sesi) */
 export function speakText(text: string): void {
   if (text.trim()) void window.api.voice.speak(text)
 }

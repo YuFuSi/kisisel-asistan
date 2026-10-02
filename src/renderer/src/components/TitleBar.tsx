@@ -14,7 +14,7 @@ import { toggleVoiceSession, useVoice } from '../lib/voiceClient'
 interface TitleBarProps {
   /** O an açık olan sayfanın adı */
   page: string
-  /** Ana Sayfa dışında logonun yerinde küçük, canlı küre durur (Jarvis her sayfada yanında) */
+  /** Ana Sayfa dışında logonun yerinde küçük, canlı küre durur (Pıtır her sayfada yanında) */
   showOrb: boolean
 }
 
@@ -25,7 +25,7 @@ function CornerOrb(): React.JSX.Element {
   const steps = useWorkSteps()
   const notice = useNoticeSeq()
   const voice = useVoice()
-  const label = voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'
+  const label = voice.sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'
   return (
     <button
       onClick={toggleVoiceSession}
@@ -63,7 +63,7 @@ function TitleBar({ page, showOrb }: TitleBarProps): React.JSX.Element {
       style={{ paddingRight: 150 }}
     >
       {showOrb ? <CornerOrb /> : <Logo className="h-5 w-5" />}
-      <span className="text-sm font-semibold tracking-tight text-ink">Jarvis</span>
+      <span className="text-sm font-semibold tracking-tight text-ink">Pıtır</span>
       <span className="text-line-strong">/</span>
       <span className="min-w-0 truncate text-sm text-muted">{page}</span>
 

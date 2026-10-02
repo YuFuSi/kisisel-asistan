@@ -56,7 +56,7 @@ function quitApp(): void {
   app.quit()
 }
 
-// Jarvis Çentiği kısayolu şimdilik sabit; ana pencerenin kısayolu gibi Ayarlar'dan değiştirilemez
+// Pıtır Çentiği kısayolu şimdilik sabit; ana pencerenin kısayolu gibi Ayarlar'dan değiştirilemez
 const NOTCH_SHORTCUT = 'CommandOrControl+Shift+J'
 
 // Masaüstü arkadaş açıksa kısayol robotu, değilse çentiği açıp kapatır
@@ -70,8 +70,8 @@ function toggleNotch(): void {
 }
 
 // Veri klasörü sabit: geliştirme (npm run dev / npm start) ve kurulu uygulama aynı veritabanını ve
-// şifreleme anahtarını kullansın. Kurulu uygulamanın adı (productName, şu an "Jarvis") farklı olduğu için
-// aksi halde %APPDATA%\Jarvis klasörüne yazar ve orada kayıtlı API anahtarları geliştirmede çözülemez.
+// şifreleme anahtarını kullansın. Kurulu uygulamanın adı (productName, şu an "Pıtır") farklı olduğu için
+// aksi halde %APPDATA%\Pıtır klasörüne yazar ve orada kayıtlı API anahtarları geliştirmede çözülemez.
 // Uygulamanın adı değişse de eski veriler bu sayede kaybolmaz.
 // Tek kopya kilidi de bu klasöre bağlı olduğundan her şeyden önce ayarlanır.
 // 2026-09-30: geliştirme sırasında gerçek veritabanı iki kez karıştı/bozuldu. Bu yüzden geliştirme
@@ -94,8 +94,8 @@ if (!app.requestSingleInstanceLock()) {
   initLogging()
 
   app.on('second-instance', () => {
-    // Kullanıcı Jarvis zaten açıkken (ör. tepsideyken) yeniden açmaya çalıştı
-    console.info('Jarvis zaten açık; mevcut pencere öne getiriliyor')
+    // Kullanıcı Pıtır zaten açıkken (ör. tepsideyken) yeniden açmaya çalıştı
+    console.info('Pıtır zaten açık; mevcut pencere öne getiriliyor')
     showMainWindow()
   })
 
@@ -186,7 +186,7 @@ if (!app.requestSingleInstanceLock()) {
     if (quitting) return
     quitting = true
     event.preventDefault()
-    console.info('Jarvis kapanıyor')
+    console.info('Pıtır kapanıyor')
     // Kapanış adımlarından biri takılırsa uygulama penceresiz asılı kalmasın
     setTimeout(() => {
       console.warn('Kapanış 30 sn içinde bitmedi, zorla çıkılıyor')
@@ -212,7 +212,7 @@ if (!app.requestSingleInstanceLock()) {
       disposeVoiceSession()
       disposeWindowDaemon()
       closeDb()
-      // İndirilmiş güncelleme varsa kurulup Jarvis yeniden açılır; yoksa normal çıkış
+      // İndirilmiş güncelleme varsa kurulup Pıtır yeniden açılır; yoksa normal çıkış
       if (!installDownloadedUpdate()) app.quit()
     })().catch((err: unknown) => {
       console.error('Kapanış sırasında hata:', err)

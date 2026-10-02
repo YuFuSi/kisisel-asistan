@@ -102,7 +102,7 @@ export interface VoicePackStatus {
 /**
  * Sesli sohbetin aşaması.
  * off: dinlenmiyor, wake: "hey jarvis" bekleniyor, capturing: kullanıcı dinleniyor,
- * transcribing: konuşma yazıya çevriliyor, responding: Jarvis cevap veriyor/konuşuyor.
+ * transcribing: konuşma yazıya çevriliyor, responding: Pıtır cevap veriyor/konuşuyor.
  */
 export type VoicePhase = 'off' | 'wake' | 'capturing' | 'transcribing' | 'responding'
 
@@ -150,7 +150,7 @@ export const TONE_LABELS: Record<AssistantTone, string> = {
 export const CONTEXT_LENGTHS = [4096, 8192, 16384, 32768]
 
 /**
- * Ayar boşken Ollama'ya gönderilen bağlam uzunluğu. Ollama'nın kendi varsayılanı (4096) Jarvis'in
+ * Ayar boşken Ollama'ya gönderilen bağlam uzunluğu. Ollama'nın kendi varsayılanı (4096) Pıtır'ın
  * talimat + araç tanımlarına (~7000 token) yetmiyor; fazlası sessizce kesilip hafıza ve araçlar
  * modele hiç ulaşmıyordu (2026-09-28'de bulundu).
  */
@@ -167,7 +167,7 @@ export interface SpeechProviderInfo {
 export const SPEECH_PROVIDERS: Record<SpeechProvider, SpeechProviderInfo> = {
   local: {
     label: 'Bilgisayarında',
-    description: 'İnternetsiz ve ücretsiz (Jarvis ses paketi gerekir)'
+    description: 'İnternetsiz ve ücretsiz (Pıtır ses paketi gerekir)'
   },
   groq: {
     label: 'Groq',
@@ -207,9 +207,9 @@ export interface AppSettings {
   briefTime: string
   /** Özetteki hava durumu için şehir; boşsa hava durumu eklenmez */
   briefCity: string
-  /** Sabah özeti gösterilince ayrıca sesli de okunsun mu (Jarvis'in ilk gerçek otomasyonu) */
+  /** Sabah özeti gösterilince ayrıca sesli de okunsun mu (Pıtır'ın ilk gerçek otomasyonu) */
   briefSpoken: boolean
-  /** Hatırlatma, proaktif uyarı, pil ve rutin bildirimlerini Jarvis sesli de söylesin */
+  /** Hatırlatma, proaktif uyarı, pil ve rutin bildirimlerini Pıtır sesli de söylesin */
   noticesSpoken: boolean
   /** Sessiz saatler (SS:DD); bu aralıkta uyarılar sadece yazılı gelir. Gece yarısını aşabilir */
   quietStart: string
@@ -227,7 +227,7 @@ export interface AppSettings {
   wakeWordEnabled: boolean
   /** Uyandırma eşiği (0,2-0,9): düşük değer daha kolay uyanır ama yanlış uyanma artar */
   wakeWordThreshold: number
-  /** Jarvis konuşurken kullanıcı konuşmaya başlarsa susup dinlesin (kulaklıkla önerilir) */
+  /** Pıtır konuşurken kullanıcı konuşmaya başlarsa susup dinlesin (kulaklıkla önerilir) */
   voiceBargeIn: boolean
   /** Konuşma hızı çarpanı (ör. 1,3 = %30 hızlı). Piper'da length_scale'e, Windows sesinde rate'e çevrilir */
   speechRate: number
@@ -238,7 +238,7 @@ export interface AppSettings {
   /** Hafıza ve notlarda anahtar kelime yerine anlamsal (embedding) arama kullanılsın mı.
    * Açmadan önce Ollama'da "bge-m3" modelinin indirilmiş olması gerekir. */
   semanticSearchEnabled: boolean
-  /** Ekranın üst ortasındaki Jarvis Çentiği (onay, iş bitti, çalışan adım) */
+  /** Ekranın üst ortasındaki Pıtır Çentiği (onay, iş bitti, çalışan adım) */
   notchEnabled: boolean
   /** Masaüstü arkadaş: robot görev çubuğunun üstünde yaşar (açıkken çentik kapalıdır) */
   companionEnabled: boolean
@@ -943,13 +943,13 @@ export interface Api {
     currentActivity(): Promise<Activity>
     /** Kullanıcının aktivitesi değişince (video, oyun, kod...) */
     onActivity(listener: (activity: Activity) => void): () => void
-    /** Robot gizlenince/görününce (tam ekran oyun, Jarvis penceresi önde) */
+    /** Robot gizlenince/görününce (tam ekran oyun, Pıtır penceresi önde) */
     onVisible(listener: (visible: boolean) => void): () => void
     /** Kullanıcı uzun süre uzaklaşınca 'away', dönünce 'back' */
     onPresence(listener: (presence: 'away' | 'back') => void): () => void
     /** Soru yazarken robotun penceresi klavye odağı alsın mı */
     setFocusable(focusable: boolean): void
-    /** Robota yazılan soruyu Jarvis'e gönderir (yeni sohbet, ana pencere açılmaz) */
+    /** Robota yazılan soruyu Pıtır'a gönderir (yeni sohbet, ana pencere açılmaz) */
     ask(text: string): void
     /** Robotun sorusu hangi sohbette gönderildi (cevabı doğru sohbetten almak için) */
     onAskStarted(listener: (conversationId: number) => void): () => void

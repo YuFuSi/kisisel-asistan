@@ -3,7 +3,7 @@ import { bubbleText, inQuietHours } from './companionText'
 
 describe('bubbleText', () => {
   it('Markdown metnini düz metne çevirir', () => {
-    expect(bubbleText('# Merhaba **Jarvis**')).toBe('Merhaba Jarvis')
+    expect(bubbleText('# Merhaba **Pıtır**')).toBe('Merhaba Pıtır')
   })
 
   it('kod bloğunu "(kod)" ile değiştirir', () => {

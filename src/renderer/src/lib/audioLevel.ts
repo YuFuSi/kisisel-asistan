@@ -1,4 +1,4 @@
-// Mikrofon (giriş) ve Jarvis'in sesi (çıkış) için anlık ses seviyesi. Jarvis küresi buna göre titreşir.
+// Mikrofon (giriş) ve Pıtır'ın sesi (çıkış) için anlık ses seviyesi. Pıtır küresi buna göre titreşir.
 
 export const BAND_COUNT = 40
 

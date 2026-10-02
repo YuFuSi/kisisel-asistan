@@ -91,7 +91,7 @@ function ReminderSection({
           compact
           icon={Bell}
           title="Bekleyen hatırlatman yok"
-          description={'Yukarıdan kurabilir ya da Jarvis’e "yarın 10’da hatırlat" diyebilirsin.'}
+          description={'Yukarıdan kurabilir ya da Pıtır’a "yarın 10’da hatırlat" diyebilirsin.'}
         />
       )}
       <ul className="space-y-1">

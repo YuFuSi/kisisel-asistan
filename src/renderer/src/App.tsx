@@ -29,7 +29,7 @@ function App(): React.JSX.Element {
   // Ctrl+K (veya Cmd+K) her yerden komut paletini açar
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
-      // Ctrl+Space: hangi sayfada olursa olsun Jarvis'le konuşmayı başlatır/bitirir
+      // Ctrl+Space: hangi sayfada olursa olsun Pıtır'la konuşmayı başlatır/bitirir
       if (e.ctrlKey && !e.shiftKey && e.code === 'Space') {
         e.preventDefault()
         toggleVoiceSession()
@@ -44,7 +44,7 @@ function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  // Jarvis sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
+  // Pıtır sesi: sesli sohbet olaylarını dinle, gerekirse mikrofonu aç
   useEffect(() => initVoiceClient(), [])
 
   // Çentiğe bırakılan belgeler: Asistan sayfasında yeni sohbete eklenir

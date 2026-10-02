@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 describe('isPraise', () => {
-  it.each(['Teşekkür ederim', 'Sağ ol', 'Aferin Jarvis', 'Seni seviyorum'])(
+  it.each(['Teşekkür ederim', 'Sağ ol', 'Aferin Pıtır', 'Seni seviyorum'])(
     'övücü ifadeyi tanır: %s',
     (text) => {
       expect(isPraise(text)).toBe(true)

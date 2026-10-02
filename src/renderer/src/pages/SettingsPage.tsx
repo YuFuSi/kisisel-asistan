@@ -234,7 +234,7 @@ function SettingsPage(): React.JSX.Element {
               <Section title="Kıyafet dolabı" icon={Shirt} tone="pink">
                 <WardrobeSettings />
               </Section>
-              <Section title="Jarvis'in uyarıları" icon={Bell} tone="amber">
+              <Section title="Pıtır'ın uyarıları" icon={Bell} tone="amber">
                 <NoticeSettings settings={settings} onUpdate={update} />
               </Section>
               <Section title="Sabah özeti" icon={Clock} tone="blue">

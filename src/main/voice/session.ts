@@ -33,7 +33,7 @@ import { requestMemoryProcessing } from '../scheduler/memory'
 const MAX_QUEUED_CHUNKS = 25
 // Sohbet bittikten hemen sonra aynı cümlenin kuyruğu yeniden uyandırmasın
 const WAKE_COOLDOWN_MS = 1500
-// Söz kesme: Jarvis konuşurken bu olasılığın üstünde bu kadar süre konuşma duyulursa susulur
+// Söz kesme: Pıtır konuşurken bu olasılığın üstünde bu kadar süre konuşma duyulursa susulur
 const BARGE_IN_PROBABILITY = 0.9
 const BARGE_IN_MS = 500
 // Söz kesilince konuşmanın başı kaybolmasın diye son ~0,5 sn saklanır
@@ -411,7 +411,7 @@ async function handleChunk(chunk: Float32Array): Promise<void> {
     }
     bargeRun = probability >= BARGE_IN_PROBABILITY ? bargeRun + 1 : 0
     if (bargeRun * FRAME_MS >= BARGE_IN_MS) {
-      console.info("Kullanıcı Jarvis'in sözünü kesti")
+      console.info("Kullanıcı Pıtır'ın sözünü kesti")
       const primed = recentFrames
       cancelSpeech()
       startCapture()
@@ -460,7 +460,7 @@ export function pushVoiceAudio(chunk: unknown): void {
     }
     return
   }
-  if (receivedChunks++ === 0) console.info('Jarvis mikrofonu dinliyor')
+  if (receivedChunks++ === 0) console.info('Pıtır mikrofonu dinliyor')
   queue.push(chunk)
   if (queue.length > MAX_QUEUED_CHUNKS) queue.splice(0, queue.length - MAX_QUEUED_CHUNKS)
   if (!draining) void drain()
@@ -504,7 +504,7 @@ export function stopVoiceSession(): void {
 
 /**
  * Metni cümlelere bölüp seçili motorla seslendirir. Sohbetteki "sesli oku" önceki konuşmayı keser;
- * Jarvis'in uyarıları `{ interrupt: false }` ile sıraya eklenir (aynı anda gelen iki uyarı
+ * Pıtır'ın uyarıları `{ interrupt: false }` ile sıraya eklenir (aynı anda gelen iki uyarı
  * birbirinin sözünü kesmesin).
  */
 export function speakWithVoice(text: string, options: { interrupt?: boolean } = {}): void {

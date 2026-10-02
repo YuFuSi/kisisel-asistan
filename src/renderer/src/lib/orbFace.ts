@@ -1,6 +1,6 @@
 import type { AssistantState, Emotion } from './assistantState'
 
-// Jarvis'in yüzü: kürenin içinden yanan ışıktan iki göz. Durumu renk değil gözler anlatır;
+// Pıtır'ın yüzü: kürenin içinden yanan ışıktan iki göz. Durumu renk değil gözler anlatır;
 // küre hep aynı lila kalır. Büyük kürede ve küçük "damla"da aynı yüz kullanılır.
 
 export interface FaceParams {

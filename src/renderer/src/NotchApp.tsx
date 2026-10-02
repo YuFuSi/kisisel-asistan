@@ -36,7 +36,7 @@ function worthShowing(outcome: Outcome | null): boolean {
   return outcome.kind !== 'completed' || outcome.toolCount > 0
 }
 
-// Jarvis Çentiği: ekranın üst ortasında gözlü damla. Boştayken küçücük; bir iş sürerken ne
+// Pıtır Çentiği: ekranın üst ortasında gözlü damla. Boştayken küçücük; bir iş sürerken ne
 // yaptığını yazar, onay gerekince aşağı açılıp düğmeleri gösterir, iş bitince kısa bir sonuç verir.
 function NotchApp(): React.JSX.Element {
   const { state, sessionActive, notice } = useRemoteAssistant()
@@ -126,14 +126,14 @@ function NotchApp(): React.JSX.Element {
                 hungry={dragging}
                 activity={running?.name ?? null}
                 onClick={() => toggleRemoteVoice(sessionActive)}
-                label={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+                label={sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'}
               />
             </span>
           ) : (
             <button
               onClick={() => toggleRemoteVoice(sessionActive)}
-              aria-label={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-              title={sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+              aria-label={sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'}
+              title={sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'}
               className="relative -my-2 h-11 w-11 shrink-0 cursor-pointer rounded-full"
             >
               <span
@@ -146,7 +146,7 @@ function NotchApp(): React.JSX.Element {
           )}
           {(busy || expanded) && (
             <span role="status" aria-live="polite" className="min-w-0 truncate text-xs text-muted">
-              {busy ? status : 'Jarvis hazır · konuşmak için tıkla'}
+              {busy ? status : 'Pıtır hazır · konuşmak için tıkla'}
             </span>
           )}
         </div>
@@ -154,14 +154,14 @@ function NotchApp(): React.JSX.Element {
         {dragging && (
           <div className="flex items-center gap-2 border-t border-line px-4 py-3 text-sm text-ink">
             <FileText className="h-4 w-4 text-accent" aria-hidden />
-            Bırak: Jarvis belgeyi yeni sohbete eklesin
+            Bırak: Pıtır belgeyi yeni sohbete eklesin
           </div>
         )}
 
         {approval && (
           <div className="animate-fade space-y-2 border-t border-line px-4 py-3">
             <div className="text-xs text-caution">
-              Jarvis onayını bekliyor
+              Pıtır onayını bekliyor
               {approvals.length > 1 && ` · ${approvals.length} işlem`}
             </div>
             <div className="text-sm font-medium text-ink">{approval.approval.label}</div>

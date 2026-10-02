@@ -5,9 +5,9 @@ import SpeechBubble from './SpeechBubble'
 
 describe('SpeechBubble erişilebilir sunum', () => {
   it('tam mesajı tek canlı bölgede sunar; görünür daktilo aria-hidden olur', () => {
-    const html = renderToStaticMarkup(createElement(SpeechBubble, { text: 'Merhaba <Jarvis>' }))
+    const html = renderToStaticMarkup(createElement(SpeechBubble, { text: 'Merhaba <Pıtır>' }))
     expect(html).toContain('role="status" aria-live="polite" aria-atomic="true"')
-    expect(html).toContain('Merhaba &lt;Jarvis&gt;')
+    expect(html).toContain('Merhaba &lt;Pıtır&gt;')
     expect(html).toContain('<p aria-hidden="true"')
     expect(html).not.toContain('scale(0.92)')
   })

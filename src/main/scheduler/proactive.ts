@@ -31,7 +31,7 @@ const STALE_REMINDER_KEY = 'proactiveStaleReminderLastShown'
 const BACKLOG_GROWTH_KEY = 'proactiveBacklogGrowthLastShown'
 
 function showProactiveNudge(notification: ProactiveNotification, onClick: () => void): void {
-  // Jarvis'in kendi fark ettiği şeyler: sesli söylenirken başlık yerine doğrudan içerik
+  // Pıtır'ın kendi fark ettiği şeyler: sesli söylenirken başlık yerine doğrudan içerik
   showJarvisNotice({ ...notification, spoken: notification.body, onClick })
 }
 
@@ -78,7 +78,7 @@ function checkBacklogGrowth(now: Date): void {
   }
 }
 
-// İndekslenmemiş kayıtlar: kullanıcıya "İndeksle" diye bildirim göstermek yerine Jarvis kendisi
+// İndekslenmemiş kayıtlar: kullanıcıya "İndeksle" diye bildirim göstermek yerine Pıtır kendisi
 // sessizce indeksler (teknik bir iş, kullanıcıya düşmemeli). Ollama kapalıysa bir sonraki denemede.
 const BACKFILL_INTERVAL_MS = 10 * 60_000
 let backfilling = false

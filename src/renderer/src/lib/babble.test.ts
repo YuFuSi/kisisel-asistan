@@ -24,7 +24,7 @@ describe('robot dili planı', () => {
   })
 
   it('aynı metin aynı melodidir, değişen metnin melodisi değişir', () => {
-    expect(planBabble('Merhaba Jarvis')).toEqual(planBabble('Merhaba Jarvis'))
+    expect(planBabble('Merhaba Pıtır')).toEqual(planBabble('Merhaba Pıtır'))
     expect(babbleFrequency('Merhaba', 0)).not.toBe(babbleFrequency('Günaydın', 0))
     expect(babbleFrequency('ş', 0)).toBe(babbleFrequency('s\u0327', 0))
   })
@@ -32,7 +32,7 @@ describe('robot dili planı', () => {
   it('perde ve hız geçersiz ya da uç değerlerde de sınırda kalır', () => {
     for (const pitch of [0, 100, -1, NaN, Infinity]) {
       for (let index = 0; index < 20; index++) {
-        const frequency = babbleFrequency('Jarvis!', index, pitch)
+        const frequency = babbleFrequency('Pıtır!', index, pitch)
         expect(frequency).toBeGreaterThanOrEqual(180)
         expect(frequency).toBeLessThanOrEqual(600)
       }

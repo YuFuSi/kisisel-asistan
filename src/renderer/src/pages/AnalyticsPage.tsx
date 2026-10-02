@@ -112,7 +112,7 @@ function AnalyticsPage(): React.JSX.Element {
       <PageLayout
         reduceMotion={reduced}
         title="Analizler"
-        description="Jarvis'i nasıl kullandığın; tamamı bu bilgisayardaki verilerden hesaplanır."
+        description="Pıtır'ı nasıl kullandığın; tamamı bu bilgisayardaki verilerden hesaplanır."
       >
         <InlineError message={error} />
         {!stats ? (
@@ -128,7 +128,7 @@ function AnalyticsPage(): React.JSX.Element {
             <IconTile icon={Wrench} tone="teal" size={44} />
             <div className="text-sm font-medium text-ink">Henüz veri yok</div>
             <p className="max-w-sm text-sm text-muted">
-              Jarvis bir araç kullandığında (görev ekleme, hatırlatma kurma vb.) burada birikmeye
+              Pıtır bir araç kullandığında (görev ekleme, hatırlatma kurma vb.) burada birikmeye
               başlar.
             </p>
           </div>

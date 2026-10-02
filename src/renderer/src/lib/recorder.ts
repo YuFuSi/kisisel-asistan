@@ -64,7 +64,7 @@ export async function startRecording(): Promise<Recording> {
   })
   recorder.start()
 
-  // Kayıt sürerken ses seviyesi ölçülür (Jarvis küresi buna göre titreşir)
+  // Kayıt sürerken ses seviyesi ölçülür (Pıtır küresi buna göre titreşir)
   const audioContext = new AudioContext()
   const analyser = audioContext.createAnalyser()
   analyser.fftSize = 512

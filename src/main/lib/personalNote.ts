@@ -18,7 +18,7 @@ export interface PersonalContext {
 const NOTE_LIMIT = 280
 
 const KIND_INSTRUCTIONS: Record<PersonalNoteKind, string> = {
-  home: 'Bu not Jarvis uygulamasının ana ekranında, selamlamanın hemen altında gösterilecek. Selamlama zaten var ("Günaydın" gibi yazma).',
+  home: 'Bu not Pıtır uygulamasının ana ekranında, selamlamanın hemen altında gösterilecek. Selamlama zaten var ("Günaydın" gibi yazma).',
   brief:
     'Bu not sabah özetinin başında sesli okunacak. "Günaydın" zaten söylendi, tekrar yazma. Sayıları ayrıca okunacağı için saymaya gerek yok.'
 }
@@ -29,7 +29,7 @@ export function buildPersonalNotePrompt(
   now: Date
 ): { instructions: string; prompt: string } {
   const instructions = [
-    'Sen Jarvis adlı kişisel asistansın. Kullanıcıya 1 ya da 2 kısa cümlelik, sıcak ve doğal bir Türkçe not yaz.',
+    'Sen Pıtır adlı kişisel asistansın. Kullanıcıya 1 ya da 2 kısa cümlelik, sıcak ve doğal bir Türkçe not yaz.',
     KIND_INSTRUCTIONS[kind],
     'Kullanıcının adını biliyorsan (ör. "Yusuf") bir kez kullan. Bugün için en önemli veya en yakın şeyi öne çıkar (saatli etkinlik, geciken iş, yakın bir plan).',
     'SADECE verilen bilgileri kullan, hiçbir şey uydurma. Söylenecek önemli bir şey yoksa kısa ve rahatlatıcı bir cümle yaz.',

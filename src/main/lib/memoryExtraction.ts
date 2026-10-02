@@ -36,12 +36,12 @@ const KINDS: Record<string, MemoryKind> = {
   plan: 'plan'
 }
 
-/** Mesajları "Kullanıcı: ... / Jarvis: ..." metnine çevirir; eklenen belge içerikleri atılır */
+/** Mesajları "Kullanıcı: ... / Pıtır: ..." metnine çevirir; eklenen belge içerikleri atılır */
 export function formatTranscript(messages: TranscriptMessage[]): string {
   const lines = messages.map((message) => {
     const { text, documents } = splitAttachments(message.content)
     const note = documents.length > 0 ? ` [${documents.length} belge eklendi]` : ''
-    const who = message.role === 'user' ? 'Kullanıcı' : 'Jarvis'
+    const who = message.role === 'user' ? 'Kullanıcı' : 'Pıtır'
     return `${who}: ${text.trim()}${note}`
   })
   const full = lines.join('\n')
@@ -50,9 +50,9 @@ export function formatTranscript(messages: TranscriptMessage[]): string {
 }
 
 export const EXTRACTION_INSTRUCTIONS = [
-  'Sen Jarvis adlı kişisel asistanın hafıza bölümüsün. Sana kullanıcı ile Jarvis arasındaki bir konuşma verilecek.',
+  'Sen Pıtır adlı kişisel asistanın hafıza bölümüsün. Sana kullanıcı ile Pıtır arasındaki bir konuşma verilecek.',
   'Görevin: (1) konuşmanın 1-3 cümlelik Türkçe özetini yazmak, (2) kullanıcı hakkında ileride işe yarayacak kalıcı bilgileri çıkarmak.',
-  "Sadece KULLANICININ söylediği veya açıkça onayladığı bilgileri çıkar; Jarvis'in önerilerini veya genel bilgileri çıkarma.",
+  "Sadece KULLANICININ söylediği veya açıkça onayladığı bilgileri çıkar; Pıtır'ın önerilerini veya genel bilgileri çıkarma.",
   'Her bilgi kısa, tek başına anlaşılır bir cümle olsun ve "Kullanıcı ..." diye başlasın (ör. "Kullanıcının kızının adı Elif.").',
   'Türler: profil (adı, işi, yaşadığı yer gibi temel kimlik), tercih (sevdiği/sevmediği, nasıl çalıştığı), kisi (hayatındaki insanlar), olay (yaşanan önemli şey, tarihiyle), plan (niyet, hedef, yapılacak büyük iş), bilgi (diğer).',
   'Göreli zamanları (yarın, Cuma, gelecek hafta) konuşmanın tarihine göre gerçek tarihe çevir (ör. "2 Ekim 2026 Cuma").',

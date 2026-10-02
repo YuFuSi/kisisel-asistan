@@ -107,7 +107,7 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
     <PageLayout
       title="Planlama"
       description={
-        'Görevlerin, hatırlatmaların ve Jarvis\'in kendiliğinden yaptığı rutinler. Sohbette "listeme ekle", "yarın 10\'da hatırlat" veya "her sabah özetle" diyerek de ekleyebilirsin.'
+        'Görevlerin, hatırlatmaların ve Pıtır\'in kendiliğinden yaptığı rutinler. Sohbette "listeme ekle", "yarın 10\'da hatırlat" veya "her sabah özetle" diyerek de ekleyebilirsin.'
       }
       tabs={<Tabs items={tabs} value={tab} onChange={onTabChange} />}
     >
@@ -120,7 +120,7 @@ function PlanningPage({ tab, onTabChange }: PlanningPageProps): React.JSX.Elemen
               compact
               icon={CheckCircle2}
               title="Bekleyen görevin yok"
-              description="Hızlı ekleme kutusunu kullanabilir veya Jarvis’e söyleyebilirsin."
+              description="Hızlı ekleme kutusunu kullanabilir veya Pıtır’a söyleyebilirsin."
             />
           )}
           {!tasks.data && (

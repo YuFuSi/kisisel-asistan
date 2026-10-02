@@ -23,7 +23,7 @@ import { useVoice } from '../../lib/voiceClient'
 const STT_IDS: SpeechProvider[] = ['local', 'groq', 'openai']
 
 const TTS_OPTIONS: { id: TtsEngine; label: string; description: string }[] = [
-  { id: 'piper', label: 'Jarvis sesi', description: 'Doğal Türkçe ses, internetsiz' },
+  { id: 'piper', label: 'Pıtır sesi', description: 'Doğal Türkçe ses, internetsiz' },
   { id: 'windows', label: 'Windows sesi', description: "Windows'ta yüklü sesler" }
 ]
 
@@ -35,7 +35,7 @@ interface SpeechSettingsProps {
   onUpdate: (patch: SettingsPatch) => Promise<void>
 }
 
-// Jarvis sesi: yerel ses paketi, "hey jarvis", konuşmayı yazıya çevirme ve cevapları okuma
+// Pıtır sesi: yerel ses paketi, "hey jarvis", konuşmayı yazıya çevirme ve cevapları okuma
 function SpeechSettings({
   settings,
   onSettings,
@@ -90,7 +90,7 @@ function SpeechSettings({
     setInstalling(true)
     try {
       const status = await window.api.voice.installPack()
-      if (status.installed) toast.success('Jarvis ses paketi kuruldu.')
+      if (status.installed) toast.success('Pıtır ses paketi kuruldu.')
     } catch (err) {
       toast.error(errorMessage(err))
     } finally {
@@ -119,7 +119,7 @@ function SpeechSettings({
   return (
     <div className="space-y-6">
       <Field
-        label="Jarvis ses paketi"
+        label="Pıtır ses paketi"
         hint="İnternetsiz konuşma tanıma, doğal Türkçe ses ve “Hey Jarvis” ile uyandırma için gerekir. Dosyalar bilgisayarında kalır, ses hiçbir yere gönderilmez."
       >
         <div className="space-y-2">
@@ -193,7 +193,7 @@ function SpeechSettings({
         description={
           wakeReady
             ? 'Mikrofon açık kalır ama ses sadece bu bilgisayarda işlenir. İngilizce söyleyişle, “hey carvis” gibi söylemek en iyi sonucu verir. Küreye dokunarak da konuşabilirsin.'
-            : 'Önce Jarvis ses paketini kur. Paket olmadan da Ana Sayfa’daki küreye dokunarak konuşabilirsin.'
+            : 'Önce Pıtır ses paketini kur. Paket olmadan da Ana Sayfa’daki küreye dokunarak konuşabilirsin.'
         }
         checked={settings.wakeWordEnabled}
         disabled={!wakeReady}
@@ -203,7 +203,7 @@ function SpeechSettings({
       {settings.wakeWordEnabled && wakeReady && (
         <Field
           label={`Uyandırma eşiği: ${threshold.toFixed(2).replace('.', ',')}`}
-          hint="Jarvis seni duymuyorsa düşür, kendiliğinden uyanıyorsa yükselt."
+          hint="Pıtır seni duymuyorsa düşür, kendiliğinden uyanıyorsa yükselt."
         >
           <input
             type="range"
@@ -222,7 +222,7 @@ function SpeechSettings({
 
       <Toggle
         label="Konuşurken sözünü kesebileyim"
-        description="Jarvis konuşurken sen konuşmaya başlarsan susup seni dinler. Hoparlörle kullanırken Jarvis kendi sesini duyup susabilir; kulaklıkla açman önerilir."
+        description="Pıtır konuşurken sen konuşmaya başlarsan susup seni dinler. Hoparlörle kullanırken Pıtır kendi sesini duyup susabilir; kulaklıkla açman önerilir."
         checked={settings.voiceBargeIn}
         onChange={(checked) => void onUpdate({ voiceBargeIn: checked })}
       />
@@ -285,7 +285,7 @@ function SpeechSettings({
 
       <Field
         label={`Konuşma hızı: ${rate.toFixed(2).replace('.', ',')}x`}
-        hint="Jarvis sesi bu hızla üretilir, Windows sesi de aynı çarpanla okur."
+        hint="Pıtır sesi bu hızla üretilir, Windows sesi de aynı çarpanla okur."
       >
         <input
           type="range"
@@ -371,7 +371,7 @@ function SpeechSettings({
       )}
 
       <button
-        onClick={() => speakText('Merhaba, ben Jarvis. Sana nasıl yardımcı olabilirim?')}
+        onClick={() => speakText('Merhaba, ben Pıtır. Sana nasıl yardımcı olabilirim?')}
         className={secondaryButtonClass}
       >
         <Volume2 className="h-4 w-4" />
