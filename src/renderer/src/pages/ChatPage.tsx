@@ -1,3 +1,5 @@
+import { motion, MotionConfig } from 'motion/react'
+import IconTile from '../components/ui/IconTile'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowDown, Download, FileUp, Settings, History } from 'lucide-react'
 import { composeMessage } from '@shared/attachments'
@@ -533,11 +535,39 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
     tasks && reminders ? buildHomeSummary({ tasks, reminders, now: new Date() }) : null
 
   return (
-    <div className="flex h-full">
-      {narrow ? (
-        <HistoryDrawer open={active && historyOpen} onClose={() => setHistoryOpen(false)}>
+    <MotionConfig reducedMotion={reducedMotion ? 'always' : 'never'}>
+      <motion.div
+        className="flex h-full min-w-0"
+        initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={
+          reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 180, damping: 24 }
+        }
+      >
+        {narrow ? (
+          <HistoryDrawer open={active && historyOpen} onClose={() => setHistoryOpen(false)}>
+            <ConversationList
+              drawer
+              results={results}
+              activeId={activeId}
+              query={query}
+              onQueryChange={setQuery}
+              onSelect={(id) => {
+                setHistoryOpen(false)
+                void selectConversation(id)
+              }}
+              onNew={() => {
+                setHistoryOpen(false)
+                openConversation(null)
+              }}
+              onDelete={(id) => setPendingDeleteId(id)}
+              onRename={(id, title) => void renameConversation(id, title)}
+              onPin={(id, pinned) => void pinConversation(id, pinned)}
+              onExport={(id) => void exportConversation(id)}
+            />
+          </HistoryDrawer>
+        ) : (
           <ConversationList
-            drawer
             results={results}
             activeId={activeId}
             query={query}
@@ -555,245 +585,226 @@ function ChatPage({ active, onOpenSettings }: ChatPageProps): React.JSX.Element 
             onPin={(id, pinned) => void pinConversation(id, pinned)}
             onExport={(id) => void exportConversation(id)}
           />
-        </HistoryDrawer>
-      ) : (
-        <ConversationList
-          results={results}
-          activeId={activeId}
-          query={query}
-          onQueryChange={setQuery}
-          onSelect={(id) => {
-            setHistoryOpen(false)
-            void selectConversation(id)
-          }}
-          onNew={() => {
-            setHistoryOpen(false)
-            openConversation(null)
-          }}
-          onDelete={(id) => setPendingDeleteId(id)}
-          onRename={(id, title) => void renameConversation(id, title)}
-          onPin={(id, pinned) => void pinConversation(id, pinned)}
-          onExport={(id) => void exportConversation(id)}
-        />
-      )}
-
-      <div
-        className="relative flex min-w-0 flex-1 flex-col"
-        onDragOver={(e) => {
-          if (!e.dataTransfer.types.includes('Files')) return
-          e.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
-        }}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragging(false)
-          if (modelReady) void attachFiles(Array.from(e.dataTransfer.files))
-        }}
-      >
-        {dragging && (
-          <div className="animate-fade pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-card border-2 border-dashed border-accent/60 bg-app/85">
-            <div className="text-center">
-              <FileUp className="mx-auto h-8 w-8 text-accent" />
-              <p className="mt-2 text-sm font-medium text-ink">
-                {modelReady ? 'Belgeyi buraya bırak' : "Önce Ayarlar'dan bir model seç"}
-              </p>
-              <p className="mt-0.5 text-xs text-muted">PDF, Word veya metin dosyası</p>
-            </div>
-          </div>
         )}
 
-        <header className="flex h-11 shrink-0 items-center justify-between gap-4 border-b border-line px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            {narrow && (
-              <button
-                onClick={() => setHistoryOpen(true)}
-                aria-label="Sohbet geçmişini aç"
-                className="min-h-8 min-w-8 rounded-control text-muted hover:bg-surface"
-              >
-                <History className="mx-auto h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-            <Orb state={assistantState} size={28} />
-            <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {activeConversation && (
-              <button
-                onClick={() => void exportConversation(activeConversation.id)}
-                aria-label="Sohbeti dışa aktar"
-                title="Markdown olarak kaydet"
-                className={quietIconButtonClass}
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            )}
-            {settings &&
-              (modelReady ? (
-                <span className="rounded-full border border-line px-2.5 py-1 text-xs text-muted">
-                  {PROVIDERS[settings.provider].label} · {modelName}
-                </span>
-              ) : (
-                <button
-                  onClick={onOpenSettings}
-                  className="flex items-center gap-1.5 rounded-full bg-caution/10 px-3 py-1 text-xs text-caution transition-colors hover:bg-caution/20"
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  Model seçilmedi, Ayarlar&apos;a git
-                </button>
-              ))}
-          </div>
-        </header>
-
         <div
-          ref={scrollRef}
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto"
-          onWheel={() => {
-            scrollingToLatestRef.current = false
+          className="relative flex min-w-0 flex-1 flex-col"
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return
+            e.preventDefault()
+            setDragging(true)
           }}
-          onTouchStart={() => {
-            scrollingToLatestRef.current = false
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
           }}
-          onScroll={(event) => {
-            if (scrollingToLatestRef.current) return
-            const nearEnd = isNearScrollEnd(event.currentTarget)
-            followReplyRef.current = nearEnd
-            if (nearEnd) setHasNewReply(false)
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            if (modelReady) void attachFiles(Array.from(e.dataTransfer.files))
           }}
         >
-          {showEmptyState ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-              <Orb state={assistantState} size={120} />
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {greeting(new Date().getHours())}
-              </h2>
-              <p className="max-w-md text-sm text-muted">
-                {modelReady
-                  ? (summary ??
-                    'Sohbet edebilir, görev ve hatırlatma ekletebilir, not tutturabilirsin.')
-                  : "Başlamak için Ayarlar'dan bir yapay zeka modeli seç."}
-              </p>
-              {modelReady && (
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {SUGGESTIONS.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => void send(suggestion)}
-                      disabled={streaming !== null}
-                      className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition-colors hover:border-line-strong hover:text-ink disabled:opacity-40"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-5 py-6">
-              {messages.map((message, index) => (
-                <MessageBubble
-                  key={message.id}
-                  role={message.role}
-                  content={message.content}
-                  tools={message.tools}
-                  outcome={message.outcome ?? activityOutcomes[activityRecordKey(message)]}
-                  onEdit={
-                    message.role === 'user' && !streamingView
-                      ? (text) => void editMessage(message.id, text)
-                      : undefined
-                  }
-                  onRegenerate={
-                    canRegenerate && index === messages.length - 1
-                      ? () => void regenerate()
-                      : undefined
-                  }
-                />
-              ))}
-              {streamingView && (
-                <MessageBubble
-                  role="assistant"
-                  content={streamingView.text}
-                  tools={streamingView.tools}
-                  pending
-                  approval={approvalView}
-                  onRespond={
-                    approvalView
-                      ? (approved) => respondToApproval(approvalView.id, approved)
-                      : undefined
-                  }
-                  onStop={() => window.api.chat.stop(streamingView.conversationId)}
-                />
-              )}
-              {!streamingView && approvalView && (
-                <ActivitySurface
-                  tools={[]}
-                  pending
-                  approval={approvalView}
-                  onRespond={(approved) => respondToApproval(approvalView.id, approved)}
-                  onStop={activeId !== null ? () => window.api.chat.stop(activeId) : undefined}
-                />
-              )}
-              {!streamingView &&
-                !approvalView &&
-                finishedReply?.message === null &&
-                lastOutcome?.conversationId === activeId && (
-                  <ActivitySurface tools={[]} outcome={lastOutcome.kind} />
-                )}
-            </div>
-          )}
-
-          {(error || listError) && (
-            <div className="mx-auto w-full max-w-3xl px-5 pb-4">
-              <div className="rounded-lg border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative select-text">
-                {error ?? listError}
+          {dragging && (
+            <div className="animate-fade pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-card border-2 border-dashed border-accent/60 bg-app/85">
+              <div className="text-center">
+                <IconTile icon={FileUp} tone="lilac" size={40} />
+                <p className="mt-2 text-sm font-medium text-ink">
+                  {modelReady ? 'Belgeyi buraya bırak' : "Önce Ayarlar'dan bir model seç"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">PDF, Word veya metin dosyası</p>
               </div>
             </div>
           )}
+
+          <header className="glass-soft mx-4 mt-3 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {narrow && (
+                <button
+                  onClick={() => setHistoryOpen(true)}
+                  aria-label="Sohbet geçmişini aç"
+                  className="min-h-8 min-w-8 rounded-control text-muted hover:bg-surface"
+                >
+                  <History className="mx-auto h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
+              <Orb state={assistantState} size={28} />
+              <h1 className="truncate text-sm font-medium text-ink">{activeTitle}</h1>
+            </div>
+            <div className="flex min-w-0 max-w-full items-center gap-2">
+              {activeConversation && (
+                <button
+                  onClick={() => void exportConversation(activeConversation.id)}
+                  aria-label="Sohbeti dışa aktar"
+                  title="Markdown olarak kaydet"
+                  className={quietIconButtonClass}
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+              )}
+              {settings &&
+                (modelReady ? (
+                  <span className="glass-soft min-w-0 truncate px-2.5 py-1 text-xs text-muted">
+                    {PROVIDERS[settings.provider].label} · {modelName}
+                  </span>
+                ) : (
+                  <button
+                    onClick={onOpenSettings}
+                    className="flex min-w-0 items-center gap-1.5 rounded-xl bg-caution/10 px-3 py-1 text-left text-xs text-caution transition-colors hover:bg-caution/20"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    Model seçilmedi, Ayarlar&apos;a git
+                  </button>
+                ))}
+            </div>
+          </header>
+
+          <div
+            ref={scrollRef}
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+            onWheel={() => {
+              scrollingToLatestRef.current = false
+            }}
+            onTouchStart={() => {
+              scrollingToLatestRef.current = false
+            }}
+            onScroll={(event) => {
+              if (scrollingToLatestRef.current) return
+              const nearEnd = isNearScrollEnd(event.currentTarget)
+              followReplyRef.current = nearEnd
+              if (nearEnd) setHasNewReply(false)
+            }}
+          >
+            {showEmptyState ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                <Orb state={assistantState} size={120} />
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  {greeting(new Date().getHours())}
+                </h2>
+                <p className="max-w-md text-sm text-muted">
+                  {modelReady
+                    ? (summary ??
+                      'Sohbet edebilir, görev ve hatırlatma ekletebilir, not tutturabilirsin.')
+                    : "Başlamak için Ayarlar'dan bir yapay zeka modeli seç."}
+                </p>
+                {modelReady && (
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {SUGGESTIONS.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => void send(suggestion)}
+                        disabled={streaming !== null}
+                        className="glass-soft px-3 py-2 text-xs text-muted transition-colors hover:bg-white/[0.06] hover:text-ink disabled:opacity-40"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mx-auto flex w-full min-w-0 max-w-3xl flex-col gap-5 px-5 py-6">
+                {messages.map((message, index) => (
+                  <MessageBubble
+                    key={message.id}
+                    role={message.role}
+                    content={message.content}
+                    tools={message.tools}
+                    outcome={message.outcome ?? activityOutcomes[activityRecordKey(message)]}
+                    onEdit={
+                      message.role === 'user' && !streamingView
+                        ? (text) => void editMessage(message.id, text)
+                        : undefined
+                    }
+                    onRegenerate={
+                      canRegenerate && index === messages.length - 1
+                        ? () => void regenerate()
+                        : undefined
+                    }
+                  />
+                ))}
+                {streamingView && (
+                  <MessageBubble
+                    role="assistant"
+                    content={streamingView.text}
+                    tools={streamingView.tools}
+                    pending
+                    approval={approvalView}
+                    onRespond={
+                      approvalView
+                        ? (approved) => respondToApproval(approvalView.id, approved)
+                        : undefined
+                    }
+                    onStop={() => window.api.chat.stop(streamingView.conversationId)}
+                  />
+                )}
+                {!streamingView && approvalView && (
+                  <ActivitySurface
+                    tools={[]}
+                    pending
+                    approval={approvalView}
+                    onRespond={(approved) => respondToApproval(approvalView.id, approved)}
+                    onStop={activeId !== null ? () => window.api.chat.stop(activeId) : undefined}
+                  />
+                )}
+                {!streamingView &&
+                  !approvalView &&
+                  finishedReply?.message === null &&
+                  lastOutcome?.conversationId === activeId && (
+                    <ActivitySurface tools={[]} outcome={lastOutcome.kind} />
+                  )}
+              </div>
+            )}
+
+            {(error || listError) && (
+              <div className="mx-auto w-full max-w-3xl px-5 pb-4">
+                <div className="glass-soft break-words px-4 py-3 text-sm text-negative ring-1 ring-negative/30 select-text">
+                  {error ?? listError}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {hasNewReply && (
+            <div className="pointer-events-none relative z-10 h-0">
+              <button
+                onClick={followLatestReply}
+                className="pointer-events-auto absolute bottom-3 left-1/2 flex min-h-8 -translate-x-1/2 items-center gap-2 glass-soft px-3 py-1.5 text-xs text-ink shadow-float"
+              >
+                <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                Yeni yanıt
+              </button>
+            </div>
+          )}
+
+          <Composer
+            busy={streaming !== null}
+            disabled={!modelReady}
+            attachments={attachments}
+            attaching={attaching}
+            onAttachFiles={(files) => void attachFiles(files)}
+            onRemoveAttachment={(path) =>
+              setAttachments((list) => list.filter((doc) => doc.path !== path))
+            }
+            onSend={(text) => void send(text)}
+            onStop={() => {
+              if (streaming) void window.api.chat.stop(streaming.conversationId)
+            }}
+          />
         </div>
 
-        {hasNewReply && (
-          <div className="pointer-events-none relative z-10 h-0">
-            <button
-              onClick={followLatestReply}
-              className="pointer-events-auto absolute bottom-3 left-1/2 flex min-h-8 -translate-x-1/2 items-center gap-2 rounded-control border border-line-strong bg-elevated px-3 py-1.5 text-xs text-ink shadow-float"
-            >
-              <ArrowDown className="h-4 w-4" aria-hidden="true" />
-              Yeni yanıt
-            </button>
-          </div>
-        )}
-
-        <Composer
-          busy={streaming !== null}
-          disabled={!modelReady}
-          attachments={attachments}
-          attaching={attaching}
-          onAttachFiles={(files) => void attachFiles(files)}
-          onRemoveAttachment={(path) =>
-            setAttachments((list) => list.filter((doc) => doc.path !== path))
-          }
-          onSend={(text) => void send(text)}
-          onStop={() => {
-            if (streaming) void window.api.chat.stop(streaming.conversationId)
+        <ConfirmDialog
+          open={pendingDeleteId !== null}
+          title="Bu sohbet silinsin mi?"
+          tone="danger"
+          confirmLabel="Sil"
+          onCancel={() => setPendingDeleteId(null)}
+          onConfirm={() => {
+            const id = pendingDeleteId
+            setPendingDeleteId(null)
+            if (id !== null) void deleteConversation(id)
           }}
         />
-      </div>
-
-      <ConfirmDialog
-        open={pendingDeleteId !== null}
-        title="Bu sohbet silinsin mi?"
-        tone="danger"
-        confirmLabel="Sil"
-        onCancel={() => setPendingDeleteId(null)}
-        onConfirm={() => {
-          const id = pendingDeleteId
-          setPendingDeleteId(null)
-          if (id !== null) void deleteConversation(id)
-        }}
-      />
-    </div>
+      </motion.div>
+    </MotionConfig>
   )
 }
 

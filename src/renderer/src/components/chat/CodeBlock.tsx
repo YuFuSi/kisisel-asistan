@@ -23,10 +23,10 @@ function CodeBlock({ children }: CodeBlockProps): React.JSX.Element {
   }
 
   return (
-    <div className="group/code relative my-3">
+    <div className="group/code relative my-3 min-w-0 max-w-full">
       <pre
         ref={preRef}
-        className="overflow-x-auto rounded-lg border border-line bg-app p-3 text-[13px] leading-relaxed"
+        className="glass-soft max-w-full overflow-x-auto p-3 text-[13px] leading-relaxed"
       >
         {children}
       </pre>
@@ -34,7 +34,7 @@ function CodeBlock({ children }: CodeBlockProps): React.JSX.Element {
         onClick={() => void copy()}
         aria-label="Kodu kopyala"
         title="Kodu kopyala"
-        className="absolute top-2 right-2 inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border border-line bg-surface/90 p-1.5 text-faint opacity-0 transition group-hover/code:opacity-100 hover:text-ink focus:opacity-100"
+        className="absolute top-2 right-2 inline-flex min-h-8 min-w-8 items-center justify-center rounded-lg border border-line bg-app/90 p-1.5 text-faint opacity-0 transition group-hover/code:opacity-100 hover:text-ink focus:opacity-100"
       >
         {copied ? (
           <Check className="h-3.5 w-3.5 text-positive" />

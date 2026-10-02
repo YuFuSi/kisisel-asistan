@@ -1,6 +1,7 @@
+import IconTile from '../ui/IconTile'
 import { useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { History, X } from 'lucide-react'
 import { useDismissLayer } from '../../lib/useDismissLayer'
 import { useDialogFocus } from '../../lib/useDialogFocus'
 
@@ -30,10 +31,14 @@ export default function HistoryDrawer({
         aria-modal="true"
         aria-label="Sohbet geçmişi"
         tabIndex={-1}
-        className="flex h-full w-72 max-w-[calc(100vw-32px)] flex-col border-r border-line bg-app shadow-float"
+        className="glass flex h-full w-72 max-w-[calc(100vw-32px)] flex-col shadow-float"
+        style={{ backgroundColor: 'var(--color-app)' }}
       >
         <div className="flex items-center justify-between px-4 py-2">
-          <h2 className="text-sm text-ink">Sohbet geçmişi</h2>
+          <div className="flex items-center gap-2">
+            <IconTile icon={History} tone="blue" />
+            <h2 className="text-sm font-medium text-ink">Sohbet geçmişi</h2>
+          </div>
           <button
             onClick={onClose}
             aria-label="Geçmişi kapat"

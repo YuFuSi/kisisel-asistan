@@ -70,7 +70,7 @@ function MessageBubble({
     if (draft !== null) {
       return (
         <div className="animate-enter flex justify-end">
-          <div className="w-full max-w-[80%] rounded-2xl border border-accent/40 bg-accent/10 p-3">
+          <div className="glass-soft w-full min-w-0 max-w-[80%] p-3 ring-1 ring-accent/30">
             <textarea
               autoFocus
               rows={Math.min(10, draft.split('\n').length + 1)}
@@ -111,7 +111,7 @@ function MessageBubble({
             <Pencil className="h-3.5 w-3.5" />
           </button>
         )}
-        <div className="max-w-[80%] rounded-2xl rounded-br-md border border-accent/30 bg-accent/15 px-4 py-2.5 text-sm whitespace-pre-wrap text-ink select-text">
+        <div className="glass-soft min-w-0 max-w-[80%] px-4 py-3 text-sm whitespace-pre-wrap text-ink ring-1 ring-accent/20 select-text [overflow-wrap:anywhere]">
           {documents.length > 0 && (
             <div className={`flex flex-wrap gap-1.5 ${userText ? 'mb-2' : ''}`}>
               {documents.map((doc, index) => (
@@ -136,7 +136,7 @@ function MessageBubble({
 
   return (
     <div className="group/message animate-enter flex justify-start">
-      <div className="w-full min-w-0">
+      <div className="glass-soft w-full min-w-0 p-4">
         {(tools.length > 0 || pending || approval || (outcome && outcome !== 'completed')) && (
           <ActivitySurface
             tools={tools}
@@ -149,7 +149,7 @@ function MessageBubble({
         )}
 
         {content ? (
-          <div className="prose prose-sm max-w-none prose-invert select-text prose-p:leading-7 prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none">
+          <div className="prose prose-sm max-w-none prose-invert select-text prose-p:leading-7 prose-pre:m-0 prose-pre:bg-transparent prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none [overflow-wrap:anywhere]">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
@@ -159,7 +159,12 @@ function MessageBubble({
                     {children}
                   </a>
                 ),
-                pre: ({ children }) => <CodeBlock>{children}</CodeBlock>
+                pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+                table: ({ children }) => (
+                  <div className="max-w-full overflow-x-auto">
+                    <table>{children}</table>
+                  </div>
+                )
               }}
             >
               {content}
