@@ -147,6 +147,17 @@ export function sendAttachPaths(paths: string[]): void {
   else send()
 }
 
+/** Masaüstü arkadaştan yazılan soru: ana penceredeki sohbet sayfası yeni sohbette gönderir */
+export function sendAsk(text: string): void {
+  // Ana pencere kapanmışsa (tepsiye gizlemek kapalıyken) gizli olarak yeniden oluşturulur;
+  // soru yine arka planda gönderilir, cevabı robot söyler
+  const window =
+    mainWindow && !mainWindow.isDestroyed() ? mainWindow : createMainWindow({ startHidden: true })
+  const send = (): void => window.webContents.send('app:ask', text)
+  if (window.webContents.isLoading()) window.webContents.once('did-finish-load', send)
+  else send()
+}
+
 // Bir bildirim gösterildi: Ana Sayfa'daki küre kısa süre nabız atsın
 export function notifyPulse(): void {
   // Ana pencere ve (açıksa) çentik: ikisinin küresi de nabız atar

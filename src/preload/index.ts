@@ -154,6 +154,11 @@ const api: Api = {
       const handler = (_event: IpcRendererEvent, paths: string[]): void => listener(paths)
       ipcRenderer.on('app:attach-paths', handler)
       return () => ipcRenderer.removeListener('app:attach-paths', handler)
+    },
+    onAsk: (listener) => {
+      const handler = (_event: IpcRendererEvent, text: string): void => listener(text)
+      ipcRenderer.on('app:ask', handler)
+      return () => ipcRenderer.removeListener('app:ask', handler)
     }
   },
   companion: {
@@ -170,7 +175,15 @@ const api: Api = {
         listener(visible)
       ipcRenderer.on('companion:visible', handler)
       return () => ipcRenderer.removeListener('companion:visible', handler)
-    }
+    },
+    onPresence: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, presence: 'away' | 'back'): void =>
+        listener(presence)
+      ipcRenderer.on('companion:presence', handler)
+      return () => ipcRenderer.removeListener('companion:presence', handler)
+    },
+    setFocusable: (focusable) => ipcRenderer.send('companion:focusable', focusable),
+    ask: (text) => ipcRenderer.send('companion:ask', text)
   },
   notch: {
     resize: (width, height) => ipcRenderer.send('notch:resize', width, height),

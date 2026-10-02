@@ -932,6 +932,8 @@ export interface Api {
     onCommand(listener: (command: AppCommand) => void): () => void
     /** Çentiğe bırakılan belgelerin yolları: ana pencere bunları yeni sohbete ekler */
     onAttachPaths(listener: (paths: string[]) => void): () => void
+    /** Masaüstü arkadaştan gelen soru: yeni sohbette gönderilir */
+    onAsk(listener: (text: string) => void): () => void
   }
   companion: {
     /** Fare robotun ya da balonun üstündeyken pencere tıklamaları alsın mı */
@@ -942,6 +944,12 @@ export interface Api {
     onActivity(listener: (activity: Activity) => void): () => void
     /** Robot gizlenince/görününce (tam ekran oyun, Jarvis penceresi önde) */
     onVisible(listener: (visible: boolean) => void): () => void
+    /** Kullanıcı uzun süre uzaklaşınca 'away', dönünce 'back' */
+    onPresence(listener: (presence: 'away' | 'back') => void): () => void
+    /** Soru yazarken robotun penceresi klavye odağı alsın mı */
+    setFocusable(focusable: boolean): void
+    /** Robota yazılan soruyu Jarvis'e gönderir (yeni sohbet, ana pencere açılmaz) */
+    ask(text: string): void
   }
   notch: {
     /** Çentik penceresini içeriğinin boyuna getirir (ekranın üst ortasında kalır) */

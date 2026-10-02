@@ -57,6 +57,16 @@ function App(): React.JSX.Element {
     []
   )
 
+  // Masaüstü arkadaşa yazılan soru: pencere açılmadan yeni sohbette gönderilir, cevabı robot söyler
+  useEffect(
+    () =>
+      window.api.events.onAsk((text) => {
+        setPage('chat')
+        requestNewChat(text)
+      }),
+    []
+  )
+
   // Global kısayol, tepsi menüsü veya bir bildirime tıklanınca gelen komutlar
   useEffect(() => {
     return window.api.events.onCommand((command) => {
