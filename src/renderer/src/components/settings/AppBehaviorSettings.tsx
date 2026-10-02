@@ -38,6 +38,14 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         onChange={(checked) => void onUpdate({ companionEnabled: checked })}
       />
       {settings.companionEnabled && (
+        <Toggle
+          label="Akıllı göz"
+          description="Pıtır arada bir (en az 20 dakikada bir) ekrana bakıp gördüğüne kısa bir yorum yapar. Görüntü sadece bu bilgisayardaki görüntü modeline gider, kaydedilmez, internete gönderilmez. Sohbet ve mesajlaşma uygulamalarına, toplantılara, gizli sekmelere, şifre/banka/ödeme sayfalarına asla bakmaz. Bakarken Qwen kısa süre ekran kartından çıkar; sonraki mesaj birkaç saniye geç başlayabilir."
+          checked={settings.smartEyeEnabled}
+          onChange={(checked) => void onUpdate({ smartEyeEnabled: checked })}
+        />
+      )}
+      {settings.companionEnabled && (
         <Field
           label="Konuşkanlık"
           hint="Robotun kendiliğinden ne sıklıkla yorum yapacağı. Onaylar ve iş bitti haberleri her zaman gelir; sessiz saatlerde, toplantıda ve tam ekran oyunda susar."

@@ -10,11 +10,11 @@ import type { ToolModule } from './types'
 // (qwen3:14b gibi metin modelleri görüntü kabul etmiyor). Kullanıcı onayıyla indirildi (2026-09-16,
 // Apache 2.0, ~6 GB). qwen3:14b zaten VRAM'de olduğu için Ollama bu modeli gerektiğinde yükleyip
 // işi bitince eski modeli geri yükler; ilk kullanımda birkaç saniyelik bir model değişimi olur.
-const VISION_MODEL = 'qwen2.5vl:7b'
+export const VISION_MODEL = 'qwen2.5vl:7b'
 // Ekranın tamamı yerine makul bir üst sınır: hem istek boyutu hem model için yeterli çözünürlük
 const MAX_DIMENSION = 1600
 
-async function captureScreen(): Promise<Buffer> {
+export async function captureScreen(): Promise<Buffer> {
   const display = screen.getPrimaryDisplay()
   const scale = Math.min(1, MAX_DIMENSION / Math.max(display.size.width, display.size.height))
   const sources = await desktopCapturer.getSources({

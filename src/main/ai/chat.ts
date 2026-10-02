@@ -239,6 +239,11 @@ function startReply(sender: WebContents, conversationId: number, options: ReplyO
   setImmediate(() => void streamReply(sender, conversationId, controller, options))
 }
 
+/** Herhangi bir sohbette şu an cevap yazılıyor mu (akıllı göz o sırada bakmaz) */
+export function isAnyReplying(): boolean {
+  return activeChats.size > 0
+}
+
 /** Bu sohbette şu an cevap yazılıyor mu */
 export function isReplying(conversationId: number): boolean {
   return activeChats.has(conversationId)

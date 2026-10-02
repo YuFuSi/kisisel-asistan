@@ -190,6 +190,11 @@ const api: Api = {
       return () => ipcRenderer.removeListener('companion:ask-started', handler)
     },
     presenceNow: () => ipcRenderer.invoke('companion:presence-now'),
+    onRemark: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, text: string): void => listener(text)
+      ipcRenderer.on('companion:remark', handler)
+      return () => ipcRenderer.removeListener('companion:remark', handler)
+    },
     openConversation: (id) => ipcRenderer.send('companion:open-conversation', id)
   },
   notch: {

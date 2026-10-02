@@ -54,7 +54,8 @@ const defaults: AppSettings = {
   semanticSearchEnabled: false,
   notchEnabled: true,
   companionEnabled: true,
-  companionChattiness: 'sometimes'
+  companionChattiness: 'sometimes',
+  smartEyeEnabled: false
 }
 
 function readValue(key: string): string | undefined {
@@ -134,6 +135,7 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.noticesSpoken === 'boolean') next.noticesSpoken = patch.noticesSpoken
   if (typeof patch.notchEnabled === 'boolean') next.notchEnabled = patch.notchEnabled
   if (typeof patch.companionEnabled === 'boolean') next.companionEnabled = patch.companionEnabled
+  if (typeof patch.smartEyeEnabled === 'boolean') next.smartEyeEnabled = patch.smartEyeEnabled
   if (
     patch.companionChattiness === 'quiet' ||
     patch.companionChattiness === 'sometimes' ||
