@@ -1,3 +1,5 @@
+import type { Activity } from './activity'
+
 // Ana süreç (main), preload ve arayüz (renderer) arasında paylaşılan tipler ve sabitler
 
 export type VoiceStyle = 'natural' | 'robot'
@@ -71,6 +73,8 @@ export const SECRET_IDS: SecretId[] = [
 export type SpeechProvider = 'local' | 'groq' | 'openai'
 
 /** Cevapları seslendiren motor */
+export type CompanionChattiness = 'quiet' | 'sometimes' | 'chatty'
+
 export type TtsEngine = 'windows' | 'piper'
 
 /** Yerel ses paketinin parçaları */
@@ -236,6 +240,10 @@ export interface AppSettings {
   semanticSearchEnabled: boolean
   /** Ekranın üst ortasındaki Jarvis Çentiği (onay, iş bitti, çalışan adım) */
   notchEnabled: boolean
+  /** Masaüstü arkadaş: robot görev çubuğunun üstünde yaşar (açıkken çentik kapalıdır) */
+  companionEnabled: boolean
+  /** Robotun kendiliğinden ne sıklıkla yorum yapacağı */
+  companionChattiness: CompanionChattiness
 }
 
 export interface SettingsPatch {
@@ -269,6 +277,8 @@ export interface SettingsPatch {
   speechVolume?: number
   semanticSearchEnabled?: boolean
   notchEnabled?: boolean
+  companionEnabled?: boolean
+  companionChattiness?: CompanionChattiness
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -922,6 +932,16 @@ export interface Api {
     onCommand(listener: (command: AppCommand) => void): () => void
     /** Çentiğe bırakılan belgelerin yolları: ana pencere bunları yeni sohbete ekler */
     onAttachPaths(listener: (paths: string[]) => void): () => void
+  }
+  companion: {
+    /** Fare robotun ya da balonun üstündeyken pencere tıklamaları alsın mı */
+    setInteractive(interactive: boolean): void
+    /** Son bilinen aktivite (pencere açılınca) */
+    currentActivity(): Promise<Activity>
+    /** Kullanıcının aktivitesi değişince (video, oyun, kod...) */
+    onActivity(listener: (activity: Activity) => void): () => void
+    /** Robot gizlenince/görününce (tam ekran oyun, Jarvis penceresi önde) */
+    onVisible(listener: (visible: boolean) => void): () => void
   }
   notch: {
     /** Çentik penceresini içeriğinin boyuna getirir (ekranın üst ortasında kalır) */

@@ -15,6 +15,7 @@ import { getSettings } from './settings'
 import { applySettingsPatch } from './system/appSettings'
 import { openDatabaseSafely } from './system/database'
 import { applyNotch, disposeNotch } from './system/notch'
+import { applyCompanion, disposeCompanion } from './system/companion'
 import { installDownloadedUpdate, startUpdater } from './system/updater'
 import { initLogging } from './system/logger'
 import { disposeGlobalShortcut, initGlobalShortcut } from './system/shortcut'
@@ -58,8 +59,14 @@ function quitApp(): void {
 // Jarvis Çentiği kısayolu şimdilik sabit; ana pencerenin kısayolu gibi Ayarlar'dan değiştirilemez
 const NOTCH_SHORTCUT = 'CommandOrControl+Shift+J'
 
+// Masaüstü arkadaş açıksa kısayol robotu, değilse çentiği açıp kapatır
 function toggleNotch(): void {
-  applySettingsPatch({ notchEnabled: !getSettings().notchEnabled })
+  const settings = getSettings()
+  if (settings.companionEnabled || !settings.notchEnabled) {
+    applySettingsPatch({ companionEnabled: !settings.companionEnabled })
+  } else {
+    applySettingsPatch({ notchEnabled: false })
+  }
 }
 
 // Veri klasörü sabit: geliştirme (npm run dev / npm start) ve kurulu uygulama aynı veritabanını ve
@@ -134,7 +141,8 @@ if (!app.requestSingleInstanceLock()) {
       console.warn(`Çentik kısayolu kaydedilemedi: ${NOTCH_SHORTCUT}`)
     }
     applyOpenAtLogin(settings.openAtLogin)
-    applyNotch(settings.notchEnabled)
+    applyNotch(settings.notchEnabled && !settings.companionEnabled)
+    applyCompanion(settings.companionEnabled)
     stopReminderScheduler = startReminderScheduler()
     stopBriefScheduler = startBriefScheduler()
     stopMaintenance = startMaintenance()
@@ -187,6 +195,7 @@ if (!app.requestSingleInstanceLock()) {
     ;(async () => {
       disposeGlobalShortcut()
       disposeNotch()
+      disposeCompanion()
       destroyTray()
       stopReminderScheduler?.()
       stopBriefScheduler?.()

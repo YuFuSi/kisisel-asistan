@@ -52,7 +52,9 @@ const defaults: AppSettings = {
   voiceStyle: 'robot',
   speechVolume: 1,
   semanticSearchEnabled: false,
-  notchEnabled: true
+  notchEnabled: true,
+  companionEnabled: true,
+  companionChattiness: 'sometimes'
 }
 
 function readValue(key: string): string | undefined {
@@ -131,6 +133,13 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
   if (typeof patch.briefSpoken === 'boolean') next.briefSpoken = patch.briefSpoken
   if (typeof patch.noticesSpoken === 'boolean') next.noticesSpoken = patch.noticesSpoken
   if (typeof patch.notchEnabled === 'boolean') next.notchEnabled = patch.notchEnabled
+  if (typeof patch.companionEnabled === 'boolean') next.companionEnabled = patch.companionEnabled
+  if (
+    patch.companionChattiness === 'quiet' ||
+    patch.companionChattiness === 'sometimes' ||
+    patch.companionChattiness === 'chatty'
+  )
+    next.companionChattiness = patch.companionChattiness
   for (const key of ['quietStart', 'quietEnd'] as const) {
     const value = patch[key]
     if (typeof value !== 'string') continue

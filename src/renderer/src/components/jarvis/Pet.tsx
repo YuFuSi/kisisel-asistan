@@ -58,6 +58,12 @@ interface PetProps {
   attention?: number
   /** Küçük hâli (çentik): sürükleme ve büyük efektler kapalı */
   compact?: boolean
+  /** Ruh hâli değişince haber verir (masaüstü arkadaş uyurken yürümesin) */
+  onMoodChange?: (mood: PetMood) => void
+  /** Boştayken ruh hâlini dışarıdan belirler (ör. video izlerken dikkatle bakar, sonra uyur) */
+  forceMood?: PetMood | null
+  /** Pencere gizliyken (masaüstü arkadaş) tüm sürekli animasyonlar durur */
+  paused?: boolean
   /** Üstüne belge sürükleniyor: ağzını açıp bekler */
   hungry?: boolean
   /** Komut kutusunda yazılan metnin uzunluğu; gözler harfleri takip eder */
@@ -335,12 +341,15 @@ function Pet({
   typed = 0,
   compact = false,
   hungry = false,
+  paused = false,
+  onMoodChange,
+  forceMood = null,
   activity = null
 }: PetProps): React.JSX.Element {
   const reducedPreference = useReducedMotion()
   const visible = usePageVisible()
   // Hareket azaltma tercihinde ya da pencere gizliyken (tam ekranda çentik) sürekli animasyonlar durur
-  const reduced = reducedPreference || !visible
+  const reduced = reducedPreference || !visible || paused
   const statusId = useId()
   const rootRef = useRef<HTMLButtonElement>(null)
   const [activeEmotion, setActiveEmotion] = useState<'success' | 'error' | null>(null)
@@ -502,9 +511,14 @@ function Pet({
   const mood: Mood =
     reaction && (calm || reaction.kind === 'shy')
       ? reaction.kind
-      : baseMood === 'idle' && (bored || bond.happiness < 25)
-        ? 'bored'
-        : baseMood
+      : calm && forceMood
+        ? forceMood
+        : baseMood === 'idle' && (bored || bond.happiness < 25)
+          ? 'bored'
+          : baseMood
+  useEffect(() => {
+    onMoodChange?.(mood)
+  }, [mood, onMoodChange])
   const height = size * 0.84
   const glowing = mood === 'work' || mood === 'listen' || mood === 'speak'
 

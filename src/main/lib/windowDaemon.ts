@@ -20,6 +20,7 @@ Add-Type -Namespace JarvisWin -Name Native -MemberDefinition '
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr h, System.Text.StringBuilder s, int n);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, System.Text.StringBuilder s, int n);
   public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
 '
 Add-Type -AssemblyName System.Windows.Forms
@@ -61,6 +62,30 @@ while ($true) {
           }
         }
         Write-Output (@{ ok = $true; id = $reqId; full = $full } | ConvertTo-Json -Compress)
+      }
+      'info' {
+        # Öndeki pencerenin başlığı, program adı ve tam ekran olup olmadığı (masaüstü arkadaş için)
+        $h = [JarvisWin.Native]::GetForegroundWindow()
+        $title = ''; $proc = ''; $full = $false
+        if ($h -ne [IntPtr]::Zero) {
+          $sb = New-Object System.Text.StringBuilder 512
+          [JarvisWin.Native]::GetWindowText($h, $sb, 512) | Out-Null
+          $title = $sb.ToString()
+          $procId = 0
+          [JarvisWin.Native]::GetWindowThreadProcessId($h, [ref]$procId) | Out-Null
+          try { $proc = (Get-Process -Id $procId -ErrorAction Stop).ProcessName } catch { $proc = '' }
+          $cb = New-Object System.Text.StringBuilder 64
+          [JarvisWin.Native]::GetClassName($h, $cb, 64) | Out-Null
+          $cls = $cb.ToString()
+          if ($cls -ne 'Progman' -and $cls -ne 'WorkerW' -and $cls -ne 'Shell_TrayWnd') {
+            $r = New-Object JarvisWin.Native+RECT
+            if ([JarvisWin.Native]::GetWindowRect($h, [ref]$r)) {
+              $b = [System.Windows.Forms.Screen]::FromHandle($h).Bounds
+              $full = ($r.Left -le $b.Left -and $r.Top -le $b.Top -and $r.Right -ge $b.Right -and $r.Bottom -ge $b.Bottom)
+            }
+          }
+        }
+        Write-Output (@{ ok = $true; id = $reqId; title = $title; proc = $proc; full = $full } | ConvertTo-Json -Compress)
       }
       default {
         Write-Output (@{ ok = $false; id = $reqId; error = 'Bilinmeyen komut.' } | ConvertTo-Json -Compress)
@@ -146,6 +171,22 @@ export async function daemonForegroundWindowId(): Promise<number | null> {
 export async function daemonForegroundIsFullscreen(): Promise<boolean> {
   const result = await sendCommand({ op: 'fullscreen' })
   return result.full === true
+}
+
+export interface ForegroundInfo {
+  title: string
+  process: string
+  fullscreen: boolean
+}
+
+/** Öndeki pencerenin başlığı, program adı ve tam ekran olup olmadığı (tek çağrıda) */
+export async function daemonForegroundInfo(): Promise<ForegroundInfo> {
+  const result = await sendCommand({ op: 'info' })
+  return {
+    title: typeof result.title === 'string' ? result.title : '',
+    process: typeof result.proc === 'string' ? result.proc : '',
+    fullscreen: result.full === true
+  }
 }
 
 /** Uygulama kapanırken çağrılır; kalıcı süreç açık kalmasın */

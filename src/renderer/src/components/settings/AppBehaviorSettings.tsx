@@ -32,6 +32,41 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         onChange={(checked) => void onUpdate({ openAtLogin: checked })}
       />
       <Toggle
+        label="Masaüstü arkadaş"
+        description="Jarvis robotu görev çubuğunun üstünde yaşar: onay ister, iş bitince haber verir, ne yaptığına göre arada yorum yapar (video izlerken yanına gelir). Sadece pencere başlığına bakar, ekran görüntüsü almaz. Açıkken çentik gösterilmez. Kısayol: Ctrl+Shift+J."
+        checked={settings.companionEnabled}
+        onChange={(checked) => void onUpdate({ companionEnabled: checked })}
+      />
+      {settings.companionEnabled && (
+        <Field
+          label="Konuşkanlık"
+          hint="Robotun kendiliğinden ne sıklıkla yorum yapacağı. Onaylar ve iş bitti haberleri her zaman gelir; sessiz saatlerde, toplantıda ve tam ekran oyunda susar."
+        >
+          <div className="flex gap-2">
+            {(
+              [
+                ['quiet', 'Sessiz'],
+                ['sometimes', 'Ara sıra'],
+                ['chatty', 'Geveze']
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => void onUpdate({ companionChattiness: id })}
+                aria-pressed={settings.companionChattiness === id}
+                className={`rounded-[10px] border px-3 py-1.5 text-sm transition-colors ${
+                  settings.companionChattiness === id
+                    ? 'border-accent bg-accent/15 text-ink'
+                    : 'border-line text-muted hover:border-line-strong hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
+      <Toggle
         label="Jarvis Çentiği"
         description="Ekranın üst ortasında küçük gözlü damla: Jarvis çalışırken ne yaptığını yazar, onay gerekince başka programdayken bile oradan onaylarsın. Tam ekran oyun ve videoda gizlenir."
         checked={settings.notchEnabled}

@@ -1,3 +1,4 @@
+import { applyCompanion } from './companion'
 import { applyNotch } from './notch'
 import { getSecretStatus, getSettings, getUnreadableSecrets, updateSettings } from '../settings'
 import { notifyDataChanged } from '../events'
@@ -40,7 +41,11 @@ export function applySettingsPatch(patch: SettingsPatch): SettingsView {
 
   // "Hey Jarvis" açılıp kapanınca dinleme durumu hemen değişsin
   if (typeof patch.wakeWordEnabled === 'boolean') refreshVoiceSession()
-  if (typeof patch.notchEnabled === 'boolean') applyNotch(next.notchEnabled)
+  // Masaüstü arkadaş açıkken çentik gösterilmez (aynı işi robot yapar)
+  if (typeof patch.notchEnabled === 'boolean' || typeof patch.companionEnabled === 'boolean') {
+    applyCompanion(next.companionEnabled)
+    applyNotch(next.notchEnabled && !next.companionEnabled)
+  }
 
   notifyDataChanged('settings')
   return getSettingsView()
