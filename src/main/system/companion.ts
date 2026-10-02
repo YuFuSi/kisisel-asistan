@@ -13,7 +13,7 @@ import { getMainWindow } from './window'
 // Ana pencereyle aynı renderer bundle'ı #companion işaretiyle açılır.
 
 // Robot + üstündeki konuşma balonu (onay düğmeleri dahil) sığacak yükseklik
-const HEIGHT = 380
+const HEIGHT = 460
 const POLL_MS = 2500
 
 let companionWindow: BrowserWindow | null = null
@@ -59,7 +59,8 @@ function createCompanionWindow(): BrowserWindow {
     if (!hidden) window.showInactive()
   })
   window.on('closed', () => {
-    if (companionWindow === window) companionWindow = null
+    // Beklenmedik kapanışta da zamanlayıcı ve ekran dinleyicisi kalmasın
+    if (companionWindow === window) releaseResources()
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -96,6 +97,8 @@ async function poll(): Promise<void> {
     }
     lastActivity = activity
     companionWindow.webContents.send('companion:activity', activity)
+    // Toplantıda (ekran paylaşımı olabilir) robot ve balonları paylaşılan görüntüye girmesin
+    companionWindow.setContentProtection(activity.kind === 'meeting')
   }
 
   const main = getMainWindow()
@@ -103,8 +106,13 @@ async function poll(): Promise<void> {
   const shouldHide = mainFocused || (activity.fullscreen && activity.kind !== 'video')
   if (shouldHide === hidden) return
   hidden = shouldHide
-  if (shouldHide) companionWindow.hide()
-  else companionWindow.showInactive()
+  // Gizliyken arayüz dolaşmayı, yorumları ve sesi durdursun (backgroundThrottling kapalı olduğu
+  // için sayfa kendini hep "görünür" sanıyor); tıklama geçirgenliği de geri açılsın
+  companionWindow.webContents.send('companion:visible', !shouldHide)
+  if (shouldHide) {
+    companionWindow.setIgnoreMouseEvents(true, { forward: true })
+    companionWindow.hide()
+  } else companionWindow.showInactive()
 }
 
 function onDisplayChanged(): void {
@@ -114,6 +122,7 @@ function onDisplayChanged(): void {
 /** Ayara göre masaüstü arkadaşı açar ya da kapatır */
 export function applyCompanion(enabled: boolean): void {
   if (enabled && !companionWindow) {
+    releaseResources()
     companionWindow = createCompanionWindow()
     pollTimer = setInterval(() => void poll(), POLL_MS)
     screen.on('display-metrics-changed', onDisplayChanged)
@@ -133,11 +142,17 @@ export function currentActivity(): Activity {
   return lastActivity
 }
 
-export function disposeCompanion(): void {
+// Pencereden bağımsız, tekrar çağrılabilir temizlik
+function releaseResources(): void {
   clearInterval(pollTimer)
   pollTimer = undefined
   screen.removeListener('display-metrics-changed', onDisplayChanged)
-  companionWindow?.destroy()
   companionWindow = null
   hidden = false
+}
+
+export function disposeCompanion(): void {
+  const window = companionWindow
+  releaseResources()
+  if (window && !window.isDestroyed()) window.destroy()
 }

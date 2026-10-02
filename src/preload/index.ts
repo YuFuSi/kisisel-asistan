@@ -164,6 +164,12 @@ const api: Api = {
         listener(activity)
       ipcRenderer.on('companion:activity', handler)
       return () => ipcRenderer.removeListener('companion:activity', handler)
+    },
+    onVisible: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, visible: boolean): void =>
+        listener(visible)
+      ipcRenderer.on('companion:visible', handler)
+      return () => ipcRenderer.removeListener('companion:visible', handler)
     }
   },
   notch: {

@@ -62,6 +62,8 @@ interface PetProps {
   onMoodChange?: (mood: PetMood) => void
   /** Boştayken ruh hâlini dışarıdan belirler (ör. video izlerken dikkatle bakar, sonra uyur) */
   forceMood?: PetMood | null
+  /** Pencere gizliyken (masaüstü arkadaş) tüm sürekli animasyonlar durur */
+  paused?: boolean
   /** Üstüne belge sürükleniyor: ağzını açıp bekler */
   hungry?: boolean
   /** Komut kutusunda yazılan metnin uzunluğu; gözler harfleri takip eder */
@@ -339,6 +341,7 @@ function Pet({
   typed = 0,
   compact = false,
   hungry = false,
+  paused = false,
   onMoodChange,
   forceMood = null,
   activity = null
@@ -346,7 +349,7 @@ function Pet({
   const reducedPreference = useReducedMotion()
   const visible = usePageVisible()
   // Hareket azaltma tercihinde ya da pencere gizliyken (tam ekranda çentik) sürekli animasyonlar durur
-  const reduced = reducedPreference || !visible
+  const reduced = reducedPreference || !visible || paused
   const statusId = useId()
   const rootRef = useRef<HTMLButtonElement>(null)
   const [activeEmotion, setActiveEmotion] = useState<'success' | 'error' | null>(null)

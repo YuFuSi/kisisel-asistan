@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { animate, motion, useMotionValue } from 'motion/react'
+import { animate, motion, useMotionValue, useTransform } from 'motion/react'
 import { Check, MessageSquare, X } from 'lucide-react'
 import type { Activity } from '@shared/activity'
 import type { SettingsView } from '@shared/api'
@@ -35,6 +35,7 @@ const SIZE = 104
 const BOX = SIZE * 1.8
 const SPEED = 90 // px/sn
 const OUTCOME_MS = 7000
+const BUBBLE_W = 300
 const LINE_MS = 5500
 // Video bu kadar sürerse robot uyuyakalır
 const VIDEO_SLEEP_MS = 10 * 60_000
@@ -106,6 +107,8 @@ function CompanionApp(): React.JSX.Element {
   const [shownOutcome, setShownOutcome] = useState<Outcome | null>(null)
   const [dragging, setDragging] = useState(false)
   const [videoSleepy, setVideoSleepy] = useState(false)
+  // Pencere gizliyken (tam ekran oyun, Jarvis önde) dolaşma, yorum ve ses durur
+  const [shown, setShown] = useState(true)
   const lastLineAt = useRef(0)
   const pointerX = useRef<number | null>(null)
   const hovering = useRef(false)
@@ -118,19 +121,29 @@ function CompanionApp(): React.JSX.Element {
   // --- Aktivite: ana süreç öndeki pencereye bakıp bildirir
   useEffect(() => {
     window.api.companion.currentActivity().then(setActivity, () => {})
-    return window.api.companion.onActivity(setActivity)
+    const offActivity = window.api.companion.onActivity(setActivity)
+    const offVisible = window.api.companion.onVisible(setShown)
+    return () => {
+      offActivity()
+      offVisible()
+    }
   }, [])
+  const meeting = activity?.kind === 'meeting'
+  const quietHours = inQuietHours(settings ?? null)
 
-  // --- Konuşma balonu: kendiliğinden yorumlar konuşkanlık ayarına, sessiz saatlere ve
-  // rahatsız edilmemesi gereken durumlara (toplantı, tam ekran oyun) uyar
-  const say = (key: LineKey, force = false): void => {
+  // --- Konuşma balonu: kendiliğinden yorumlar konuşkanlık ayarına ve rahatsız edilmemesi gereken
+  // durumlara (toplantı, tam ekran oyun, gizli pencere) uyar. "Sessiz" ayarında hiç konuşmaz.
+  // skipGap sadece aralık sınırını atlar (ilk selam, toplantı öncesi hatırlatma); sessizlik
+  // tercihini atlamaz. Sessiz saatlerde balon gösterilir ama ses çıkmaz.
+  const say = (key: LineKey, skipGap = false, test = false): void => {
     const now = Date.now()
     const chattiness = settings?.companionChattiness ?? 'sometimes'
     const gap = key === 'idle' ? IDLE_GAP_MS[chattiness] : REACT_GAP_MS[chattiness]
-    if (!force) {
-      if (now - lastLineAt.current < gap) return
-      if (inQuietHours(settings ?? null)) return
-      if (activity?.kind === 'meeting' || (activity?.fullscreen && activity.kind === 'game')) return
+    if (!test) {
+      if (chattiness === 'quiet' || !shown) return
+      if (!skipGap && now - lastLineAt.current < gap) return
+      if (activity?.fullscreen && activity.kind === 'game') return
+      if (activity?.kind === 'meeting' && key !== 'meeting') return
     }
     const text = pickLine(key)
     if (!text) return
@@ -146,7 +159,7 @@ function CompanionApp(): React.JSX.Element {
   useEffect(() => {
     if (!import.meta.env.DEV) return
     const debug = window as unknown as { __companionSay?: (key: LineKey) => void }
-    debug.__companionSay = (key) => sayRef.current(key, true)
+    debug.__companionSay = (key) => sayRef.current(key, true, true)
     return () => {
       delete debug.__companionSay
     }
@@ -241,7 +254,8 @@ function CompanionApp(): React.JSX.Element {
     return () => walk?.stop()
   }, [activityKind])
 
-  const free = !busy && !approval && mood === 'idle' && activityKind !== 'video' && !dragging
+  const free =
+    shown && !busy && !approval && mood === 'idle' && activityKind !== 'video' && !dragging
 
   // Boştayken arada kendi kendine konuşur (konuşkanlık sınırına uyar)
   useEffect(() => {
@@ -289,9 +303,27 @@ function CompanionApp(): React.JSX.Element {
       pressed.current = false
       if (!hovering.current) setInteractive(false)
     }
+    // Basma iptal olursa ya da pencere odağı kaybolursa geçirgenlik takılı kalmasın
+    const onCancel = (): void => {
+      pressed.current = false
+      hovering.current = false
+      setInteractive(false)
+    }
     window.addEventListener('pointerup', onUp)
-    return () => window.removeEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    window.addEventListener('blur', onCancel)
+    return () => {
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener('blur', onCancel)
+    }
   }, [])
+  useEffect(() => {
+    if (shown) return
+    pressed.current = false
+    hovering.current = false
+    setTimeout(() => setDragging(false), 0)
+  }, [shown])
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>): void {
     event.preventDefault()
@@ -311,7 +343,10 @@ function CompanionApp(): React.JSX.Element {
     ? { text: 'Bırak, yeni sohbete ekleyeyim!', tone: 'normal' }
     : approval
       ? {
-          text: `${pickLine('approval', approval.approval.id)} ${approval.approval.label}: ${approval.approval.summary}${approvals.length > 1 ? ` (${approvals.length} işlem)` : ''}`,
+          // Toplantıda ekran paylaşılıyor olabilir: işlemin ayrıntısı balonda yazılmaz
+          text: meeting
+            ? `${pickLine('approval', approval.approval.id)} Ayrıntısı Jarvis penceresinde.`
+            : `${pickLine('approval', approval.approval.id)} ${approval.approval.label}: ${approval.approval.summary}${approvals.length > 1 ? ` (${approvals.length} işlem)` : ''}`,
           tone: 'approval',
           actions: (
             <>
@@ -348,7 +383,7 @@ function CompanionApp(): React.JSX.Element {
                   : 'normal',
             actions: (
               <div className="w-full space-y-2">
-                {cards.length > 0 && <ResultCard card={cards[cards.length - 1]} />}
+                {cards.length > 0 && !meeting && <ResultCard card={cards[cards.length - 1]} />}
                 <button
                   onClick={() => void window.api.notch.navigate('chat')}
                   className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
@@ -369,13 +404,18 @@ function CompanionApp(): React.JSX.Element {
   const talkText = talk?.text
   const speechVolume = settings?.speechVolume ?? 1
   useEffect(() => {
-    if (!talkText || !sfx) return
+    if (!talkText || !sfx || !shown || quietHours) return
     const babble = speakBabble(talkText, { volume: speechVolume * 0.6 })
     return () => babble.stop()
-  }, [talkText, sfx, speechVolume])
+  }, [talkText, sfx, speechVolume, shown, quietHours])
 
-  // Balon robotun üstünde; ekran kenarına yakınken içeride kalsın diye kaydırılır
-  const BUBBLE_W = 300
+  // Balon robotun üstünde; ekran kenarına yakınken içeride kalsın diye kaydırılır (yürürken de)
+  const bubbleLeft = useTransform(x, (value) =>
+    Math.min(Math.max(-value, BOX / 2 - BUBBLE_W / 2), window.innerWidth - BUBBLE_W - value)
+  )
+  const bubbleSide = useTransform(x, (value) => (value > window.innerWidth / 2 ? 'right' : 'left'))
+  const [side, setSide] = useState<'left' | 'right'>(bubbleSide.get())
+  useEffect(() => bubbleSide.on('change', setSide), [bubbleSide])
 
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -402,16 +442,15 @@ function CompanionApp(): React.JSX.Element {
         onDrop={handleDrop}
       >
         {talk && (
-          <div
-            className="absolute"
+          <motion.div
+            className="absolute overflow-y-auto pb-3 [scrollbar-width:thin]"
             style={{
-              // Robotun başının hemen üstü (anten dahil)
-              bottom: SIZE * 1.3,
+              // Robotun başının hemen üstü (anten dahil); uzun onaylar kesilmesin diye pencere
+              // yüksekliğini aşmaz, gerekirse kaydırılır
+              bottom: SIZE * 1.3 - 12,
+              maxHeight: window.innerHeight - SIZE * 1.3 - 8,
               width: BUBBLE_W,
-              left: Math.min(
-                Math.max(-x.get(), BOX / 2 - BUBBLE_W / 2),
-                window.innerWidth - BUBBLE_W - x.get()
-              )
+              left: bubbleLeft
             }}
           >
             <SpeechBubble
@@ -419,9 +458,9 @@ function CompanionApp(): React.JSX.Element {
               tone={talk.tone}
               actions={talk.actions}
               solid
-              side={x.get() > window.innerWidth / 2 ? 'right' : 'left'}
+              side={side}
             />
-          </div>
+          </motion.div>
         )}
 
         <div className="flex h-[200px] items-end justify-center">
@@ -447,6 +486,7 @@ function CompanionApp(): React.JSX.Element {
                 videoSleepy && !busy ? 'sleep' : activityKind === 'video' && !busy ? 'listen' : null
               }
               hungry={dragging}
+              paused={!shown}
               onMoodChange={setMood}
               onClick={() => void window.api.notch.navigate('home')}
               label="Jarvis’i aç"

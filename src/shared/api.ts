@@ -940,6 +940,8 @@ export interface Api {
     currentActivity(): Promise<Activity>
     /** Kullanıcının aktivitesi değişince (video, oyun, kod...) */
     onActivity(listener: (activity: Activity) => void): () => void
+    /** Robot gizlenince/görününce (tam ekran oyun, Jarvis penceresi önde) */
+    onVisible(listener: (visible: boolean) => void): () => void
   }
   notch: {
     /** Çentik penceresini içeriğinin boyuna getirir (ekranın üst ortasında kalır) */
