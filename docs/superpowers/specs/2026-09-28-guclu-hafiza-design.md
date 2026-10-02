@@ -1,4 +1,4 @@
-# Güçlü hafıza (tek Jarvis zihninin temeli)
+# Güçlü hafıza (tek Pıtır zihninin temeli)
 
 Tarih: 2026-09-28. Durum: kullanıcı onayladı.
 
@@ -8,7 +8,7 @@ Tarih: 2026-09-28. Durum: kullanıcı onayladı.
 - Her sohbet ayrı bir ada: yeni sohbette (hangi model olursa olsun) eski konuşmalar görünmüyor. Kullanıcı bunu "Gemini'den Qwen'e geçince hiçbir şey hatırlamıyor" diye yaşadı.
 - Hatırlama sabit "en fazla 30 kayıt" ile yapılıyor; konuyla alakalı geçmiş konuşma hiç gelmiyor.
 
-Hedef: kullanıcı unutsa bile Jarvis unutmasın; hangi model seçili olursa olsun aynı Jarvis.
+Hedef: kullanıcı unutsa bile Pıtır unutmasın; hangi model seçili olursa olsun aynı Pıtır.
 
 ## Kullanıcı kararları
 

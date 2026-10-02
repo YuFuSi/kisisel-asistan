@@ -1,6 +1,6 @@
-# Jarvis (Kişisel Asistan)
+# Pıtır (Kişisel Asistan)
 
-Windows için yapay zeka destekli, sesle konuşulabilen masaüstü kişisel asistanı. Sohbet eder; görev, hatırlatma, not, hafıza, Gmail, Google Takvim, otomasyon (rutin), pencere kontrolü ve internet gibi yetenekleri **araç** olarak kullanır. Uygulama içi kimliği **Jarvis**.
+Windows için yapay zeka destekli, sesle konuşulabilen masaüstü kişisel asistanı. Sohbet eder; görev, hatırlatma, not, hafıza, Gmail, Google Takvim, otomasyon (rutin), pencere kontrolü ve internet gibi yetenekleri **araç** olarak kullanır. Uygulama içi kimliği **Pıtır**.
 
 Sürüm: **1.1.0-beta**
 
@@ -13,7 +13,7 @@ Sürüm: **1.1.0-beta**
 - **Notlar ve Hafıza Merkezi:** Otomatik kaydedilen notlar, anlamsal (embedding tabanlı) arama. Asistan önemli bilgileri hafızasına kaydeder ve sonraki sohbetlerde hatırlar.
 - **Otomasyonlar (rutinler):** Kullanıcının kurduğu, belirli saatte kendiliğinden çalışan serbest metin talimatlı görevler; izin seviyesi (hiçbiri/yazma/tam) ve çalıştırma geçmişi.
 - **Analizler ve Başarımlar:** Araç kullanım istatistikleri ve rozetler; tamamı yerelde `activity_log`'dan hesaplanır, dışarı hiçbir şey gitmez.
-- **Sesli sohbet (yerel, internetsiz):** "Hey Jarvis" uyandırma kelimesi, whisper.cpp ile konuşma tanıma, Piper ile Türkçe seslendirme, söz kesme (barge-in). Ayrıca Groq/OpenAI ile mikrofonla yazma seçeneği.
+- **Sesli sohbet (yerel, internetsiz):** "Hey Jarvis" (yakında Hey Pıtır) uyandırma kelimesi, whisper.cpp ile konuşma tanıma, Piper ile Türkçe seslendirme, söz kesme (barge-in). Ayrıca Groq/OpenAI ile mikrofonla yazma seçeneği.
 - **Belge okuma:** PDF, Word ve metin dosyalarını sohbete ekleyip soru sorma; küreye dosya sürükleyip bırakma.
 - **İnternet:** Hava durumu (anahtarsız) ve web arama (Tavily).
 - **Bilgisayar kontrolü:** Uygulama ve dosya açma, dosya arama, pencere listeleme/öne getirme/küçültme/kapatma, sistem bilgisi, pano. Riskli işlemler önce onay ister.
@@ -82,7 +82,7 @@ src/
 ├─ shared/     Arka plan ve arayüzün ortak tipleri
 ├─ main/       Arka plan (Node): pencere, veritabanı, yapay zeka, araçlar, ses, zamanlayıcılar
 ├─ preload/    Arayüz ile arka plan arasındaki güvenli köprü
-└─ renderer/   Arayüz (React): sayfalar, bileşenler, küre (Jarvis)
+└─ renderer/   Arayüz (React): sayfalar, bileşenler, küre (Pıtır)
 ```
 
 Ayrıntılı mimari notlar ve geliştirme kuralları için [CLAUDE.md](CLAUDE.md) dosyasına bakın. Paketlenen model ve ikili dosyaların lisansları için [LICENSES.md](LICENSES.md) dosyasına bakın.
@@ -92,13 +92,13 @@ Ayrıntılı mimari notlar ve geliştirme kuralları için [CLAUDE.md](CLAUDE.md
 - [x] Aşama 0-6: Proje iskeleti, AI sohbet, görev/hatırlatma/not/hafıza, sistem tepsisi, internet ve bilgisayar kontrolü, Gmail/Takvim, sesli komut
 - [x] Bölüm 2, Tur A-F: Arayüz, sohbet deneyimi, yeni yetenekler, asistanın zekası, kurulum dosyası
 - [x] Bölüm 3, Tur G: Sağlam temel (yedekleme, günlük, araç izinleri, etkinlik kaydı)
-- [x] Tur H-I: Jarvis kimliği ve arayüzü, yerel sesli sohbet
+- [x] Tur H-I: Pıtır kimliği ve arayüzü, yerel sesli sohbet
 - [x] Tur J: Otomasyon motoru (rutinler)
 - [x] Tur K: Hafıza Merkezi 2.0 (anlamsal arama) ve proaktif bildirimler
 - [x] Sakin premium yeniden tasarım: küre (WebGL), Ana Sayfa, sidebar (gün çizelgesi, öneriler), komut paleti
 - [x] Analizler ve Başarımlar (gerçek veriden hesaplanan istatistik ve rozetler)
 - [ ] Tur L: Bilgisayarı yönetme (pencere kontrolünün ilk dilimi tamam; dosya işleri, tarayıcı otomasyonu, fare/klavye ajanı bekliyor)
-- [ ] Tur M: Her yerde Jarvis (MCP istemcisi, Telegram, Home Assistant, Spotify)
+- [ ] Tur M: Her yerde Pıtır (MCP istemcisi, Telegram, Home Assistant, Spotify)
 - [ ] Tur N: Genişletilmiş analizler ve başarımlar
 
 ## Bilinen sınırlamalar
