@@ -11,6 +11,8 @@ export interface SpeechBubbleProps {
   onDone?: () => void
   /** Tam metin göründükten sonra bekleme süresi. Onay düğmeleri varsa gizlenmez. */
   autoHideMs?: number
+  /** Dolu koyu zemin: masaüstünde açık renkli pencerelerin üstünde de okunsun */
+  solid?: boolean
 }
 
 const borders = {
@@ -26,7 +28,8 @@ function BubbleContent({
   actions,
   side = 'left',
   onDone,
-  autoHideMs
+  autoHideMs,
+  solid = false
 }: SpeechBubbleProps): React.JSX.Element {
   const reduced = useReducedMotion()
   const letters = Array.from(text)
@@ -88,6 +91,7 @@ function BubbleContent({
           className="glass relative min-w-0 max-w-sm px-5 py-4 text-sm leading-relaxed text-ink"
           style={{
             borderColor: borders[tone],
+            ...(solid && { background: 'rgb(20 21 30 / 0.96)' }),
             transformOrigin: side === 'left' ? 'bottom left' : 'bottom right'
           }}
           initial={reduced ? false : { opacity: 0, scale: 0.92, y: 6 }}

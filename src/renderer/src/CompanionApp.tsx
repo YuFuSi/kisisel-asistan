@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, animate, motion, useMotionValue } from 'motion/react'
-import { Check, FileText, MessageSquare, X } from 'lucide-react'
+import { animate, motion, useMotionValue } from 'motion/react'
+import { Check, MessageSquare, X } from 'lucide-react'
 import type { Activity } from '@shared/activity'
 import type { SettingsView } from '@shared/api'
 import Pet from './components/jarvis/Pet'
 import ResultCard from './components/jarvis/ResultCard'
+import SpeechBubble from './components/jarvis/SpeechBubble'
 import {
   respondToApproval,
   useAssistantEmotion,
@@ -20,6 +21,8 @@ import type { PetMood } from './lib/petLook'
 import { useRemoteAssistant } from './lib/remoteAssistant'
 import { useLiveData } from './lib/useLiveData'
 import { useReducedMotion } from './lib/useReducedMotion'
+import { speakBabble } from './lib/babble'
+import { useSfxEnabled } from './lib/soundEffects'
 import { currentStep } from './lib/workSteps'
 
 // Masaüstü arkadaş (#companion): görev çubuğunun üstündeki saydam şeritte yaşayan Jarvis robotu.
@@ -85,6 +88,7 @@ function CompanionApp(): React.JSX.Element {
   const { character } = useOrbPrefs()
   const variant = character === 'cube' ? 'cube' : 'robot'
   const reduced = useReducedMotion()
+  const sfx = useSfxEnabled()
   const { data: settings } = useLiveData(loadSettings, 'settings')
 
   const x = useMotionValue(Math.max(0, window.innerWidth - BOX - 60))
@@ -129,6 +133,16 @@ function CompanionApp(): React.JSX.Element {
   useEffect(() => {
     sayRef.current = say
   })
+
+  // Sadece geliştirmede: CDP testlerinin robota replik söyletebilmesi için
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const debug = window as unknown as { __companionSay?: (key: LineKey) => void }
+    debug.__companionSay = (key) => sayRef.current(key, true)
+    return () => {
+      delete debug.__companionSay
+    }
+  }, [])
 
   useEffect(() => {
     if (!line) return
@@ -280,70 +294,77 @@ function CompanionApp(): React.JSX.Element {
     if (paths.length > 0) window.api.notch.dropFiles(paths)
   }
 
-  // Balonda ne gösterilecek (öncelik sırasıyla)
-  const bubble: React.ReactNode = dragging ? (
-    <span className="flex items-center gap-2">
-      <FileText className="h-4 w-4 text-accent" aria-hidden />
-      Bırak, yeni sohbete ekleyeyim!
-    </span>
-  ) : approval ? (
-    <div className="space-y-2">
-      <div className="text-xs text-caution">
-        {pickLine('approval', approval.approval.id)}
-        {approvals.length > 1 && ` · ${approvals.length} işlem`}
-      </div>
-      <div className="font-medium text-ink">{approval.approval.label}</div>
-      <div className="text-muted">{approval.approval.summary}</div>
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={() => respondToApproval(approval.approval.id, true)}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-medium text-app hover:bg-accent-hover"
-        >
-          <Check className="h-4 w-4" />
-          Onayla
-        </button>
-        <button
-          onClick={() => respondToApproval(approval.approval.id, false)}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-sm text-ink hover:bg-elevated"
-        >
-          <X className="h-4 w-4" />
-          Reddet
-        </button>
-      </div>
-    </div>
-  ) : shownOutcome ? (
-    <div className="space-y-2">
-      {cards.length > 0 && <ResultCard card={cards[cards.length - 1]} />}
-      <div className="flex items-center gap-3">
-        <span
-          className={
-            shownOutcome.kind === 'completed'
-              ? 'text-positive'
-              : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
-                ? 'text-negative'
-                : 'text-muted'
+  // Balonda ne söylenecek (öncelik sırasıyla)
+  const talk: {
+    text: string
+    tone: 'normal' | 'approval' | 'success' | 'error'
+    actions?: React.ReactNode
+  } | null = dragging
+    ? { text: 'Bırak, yeni sohbete ekleyeyim!', tone: 'normal' }
+    : approval
+      ? {
+          text: `${pickLine('approval', approval.approval.id)} ${approval.approval.label}: ${approval.approval.summary}${approvals.length > 1 ? ` (${approvals.length} işlem)` : ''}`,
+          tone: 'approval',
+          actions: (
+            <>
+              <button
+                onClick={() => respondToApproval(approval.approval.id, true)}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-medium text-app hover:bg-accent-hover"
+              >
+                <Check className="h-4 w-4" />
+                Onayla
+              </button>
+              <button
+                onClick={() => respondToApproval(approval.approval.id, false)}
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-sm text-ink hover:bg-elevated"
+              >
+                <X className="h-4 w-4" />
+                Reddet
+              </button>
+            </>
+          )
+        }
+      : shownOutcome
+        ? {
+            text:
+              shownOutcome.kind === 'completed'
+                ? (pickLine('done', shownOutcome.seq) ?? OUTCOME_TEXT.completed)
+                : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
+                  ? `${pickLine('error', shownOutcome.seq) ?? ''} ${OUTCOME_TEXT[shownOutcome.kind]}`
+                  : OUTCOME_TEXT[shownOutcome.kind],
+            tone:
+              shownOutcome.kind === 'completed'
+                ? 'success'
+                : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
+                  ? 'error'
+                  : 'normal',
+            actions: (
+              <div className="w-full space-y-2">
+                {cards.length > 0 && <ResultCard card={cards[cards.length - 1]} />}
+                <button
+                  onClick={() => void window.api.notch.navigate('chat')}
+                  className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Sohbette aç
+                </button>
+              </div>
+            )
           }
-        >
-          {shownOutcome.kind === 'completed'
-            ? pickLine('done', shownOutcome.seq)
-            : shownOutcome.kind === 'error' || shownOutcome.kind === 'partial'
-              ? `${pickLine('error', shownOutcome.seq)} ${OUTCOME_TEXT[shownOutcome.kind]}`
-              : OUTCOME_TEXT[shownOutcome.kind]}
-        </span>
-        <button
-          onClick={() => void window.api.notch.navigate('chat')}
-          className="ml-auto inline-flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-          Sohbette aç
-        </button>
-      </div>
-    </div>
-  ) : running && state === 'working' ? (
-    `${running.label} çalışıyor...`
-  ) : line ? (
-    line.text
-  ) : null
+        : running && state === 'working'
+          ? { text: `${running.label} çalışıyor...`, tone: 'normal' }
+          : line
+            ? { text: line.text, tone: 'normal' }
+            : null
+
+  // Robot konuşurken "bip-bop" robot dilinde mırıldanır (ses efektleri açıksa)
+  const talkText = talk?.text
+  const speechVolume = settings?.speechVolume ?? 1
+  useEffect(() => {
+    if (!talkText || !sfx) return
+    const babble = speakBabble(talkText, { volume: speechVolume * 0.6 })
+    return () => babble.stop()
+  }, [talkText, sfx, speechVolume])
 
   // Balon robotun üstünde; ekran kenarına yakınken içeride kalsın diye kaydırılır
   const BUBBLE_W = 300
@@ -372,29 +393,28 @@ function CompanionApp(): React.JSX.Element {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
       >
-        <AnimatePresence>
-          {bubble && (
-            <motion.div
-              key={approval ? 'approval' : shownOutcome ? 'outcome' : (line?.key ?? 'step')}
-              role="status"
-              aria-live="polite"
-              className="glass absolute bottom-full mb-1 px-4 py-3 text-sm text-ink"
-              style={{
-                width: BUBBLE_W,
-                left: Math.min(
-                  Math.max(0, BOX / 2 - BUBBLE_W / 2),
-                  Math.max(0, window.innerWidth - BUBBLE_W - x.get())
-                )
-              }}
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 6, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-            >
-              {bubble}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {talk && (
+          <div
+            className="absolute"
+            style={{
+              // Robotun başının hemen üstü (anten dahil)
+              bottom: SIZE * 1.3,
+              width: BUBBLE_W,
+              left: Math.min(
+                Math.max(-x.get(), BOX / 2 - BUBBLE_W / 2),
+                window.innerWidth - BUBBLE_W - x.get()
+              )
+            }}
+          >
+            <SpeechBubble
+              text={talk.text}
+              tone={talk.tone}
+              actions={talk.actions}
+              solid
+              side={x.get() > window.innerWidth / 2 ? 'right' : 'left'}
+            />
+          </div>
+        )}
 
         <div className="flex h-[200px] items-end justify-center">
           {/* Yürürken adım adım sallanır ve gittiği yöne eğilir */}
