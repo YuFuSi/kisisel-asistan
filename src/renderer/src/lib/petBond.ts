@@ -83,7 +83,8 @@ export function openBond(): number {
 
 /** Etkileşim: mutluluğu değiştirir (eksi de olabilir) ve tanışıklığı artırır */
 export function bumpBond(amount: number): void {
-  const bond = current
+  // Diğer pencere (çentik) arada yazmış olabilir: eski kopyanın üstüne yazılmasın
+  const bond = read()
   save({
     ...bond,
     happiness: Math.min(100, Math.max(0, bond.happiness + amount)),
@@ -101,6 +102,12 @@ export function bondStage(bond: Bond): BondStage {
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener)
+  // Abone değilken diğer pencerenin yazdıkları kaçmış olabilir
+  const latest = read()
+  if (JSON.stringify(latest) !== JSON.stringify(current)) {
+    current = latest
+    queueMicrotask(listener)
+  }
   // Diğer pencere (çentik) değiştirirse burası da güncellensin
   const onStorage = (event: StorageEvent): void => {
     if (event.key !== KEY) return

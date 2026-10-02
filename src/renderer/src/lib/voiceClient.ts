@@ -205,6 +205,12 @@ function playNext(): void {
         const gain = context.createGain()
         gain.gain.value = item.volume
         source.connect(gain).connect(analyser)
+        const effectNodes: AudioNode[] = []
+        // Yankının kısa kuyruğu sönsün diye biraz bekleyip bağlantılar kesilir
+        const release = (): void => {
+          if (effectNodes.length === 0) return
+          setTimeout(() => effectNodes.forEach((node) => node.disconnect()), 400)
+        }
         if (item.pitch !== 1) {
           source.playbackRate.value = item.pitch
           const delay = context.createDelay(0.05)
@@ -216,8 +222,12 @@ function playNext(): void {
           source.connect(delay)
           delay.connect(feedback).connect(delay)
           delay.connect(wet).connect(gain)
+          effectNodes.push(delay, feedback, wet)
         }
-        source.onended = finish
+        source.onended = () => {
+          release()
+          finish()
+        }
         playing = {
           id: item.id,
           stop: () => {
@@ -227,6 +237,7 @@ function playNext(): void {
             } catch {
               // Zaten bitmiş
             }
+            release()
           }
         }
         source.start()

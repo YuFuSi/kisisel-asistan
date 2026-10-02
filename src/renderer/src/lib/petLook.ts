@@ -53,6 +53,25 @@ export const ANTENNA_COLOR: Record<PetMood, string> = {
   sulk: '#8a90a8'
 }
 
+/** Ekran okuyucu için ruh hâlinin adı */
+export const MOOD_LABELS: Record<PetMood, string> = {
+  idle: 'Jarvis boşta',
+  listen: 'Jarvis dinliyor',
+  think: 'Jarvis düşünüyor',
+  work: 'Jarvis çalışıyor',
+  speak: 'Jarvis konuşuyor',
+  approval: 'Jarvis onayını bekliyor',
+  happy: 'Jarvis sevinçli',
+  sad: 'Jarvis üzgün',
+  sleep: 'Jarvis uyuyor',
+  tickle: 'Jarvis gülüyor',
+  dizzy: "Jarvis'in başı dönüyor",
+  angry: 'Jarvis kızgın',
+  bored: "Jarvis'in canı sıkılıyor",
+  shy: 'Jarvis utanıyor',
+  sulk: 'Jarvis küs'
+}
+
 // Çalışan aracın adına göre ekranda gösterilecek simge (ilk eşleşen önek kazanır)
 const TOOL_ICONS: [string, LucideIcon][] = [
   ['hava', CloudSun],

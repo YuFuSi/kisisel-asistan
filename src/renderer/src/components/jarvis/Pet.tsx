@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   AnimatePresence,
   motion,
+  useAnimationControls,
   useMotionValue,
-  useReducedMotion,
   useSpring,
   type TargetAndTransition
 } from 'motion/react'
+import { useReducedMotion } from '../../lib/useReducedMotion'
+import { usePageVisible } from '../../lib/usePageVisible'
 import type { AssistantState, EmotionSignal } from '../../lib/assistantState'
 import { Cookie, Heart, Settings, Star } from 'lucide-react'
 import {
@@ -19,7 +21,23 @@ import {
 } from './petParts'
 import { onPetSignal } from '../../lib/petEvents'
 import { bondStage, bumpBond, openBond, useBond } from '../../lib/petBond'
-import { ANTENNA_COLOR, toolIcon, type HandGesture, type PetMood } from '../../lib/petLook'
+
+// Kendi hareketi bitince ya da iş başlayınca gövdenin döndüğü nötr hâl
+const NEUTRAL_BODY: TargetAndTransition = {
+  x: 0,
+  y: 0,
+  rotate: 0,
+  scaleX: 1,
+  scaleY: 1,
+  transition: { type: 'spring', stiffness: 220, damping: 20 }
+}
+import {
+  ANTENNA_COLOR,
+  MOOD_LABELS,
+  toolIcon,
+  type HandGesture,
+  type PetMood
+} from '../../lib/petLook'
 
 // Jarvis'in pet karakteri (prototip "Jarvis Cam"): cam robot ya da jöle küp. İki görünüm aynı
 // "beyni" paylaşır: duruma göre ruh hâli, imleci izleyen gözler, göz kırpma, boşta kalınca uyku.
@@ -250,7 +268,8 @@ const FIDGET_BODY: Record<Fidget, TargetAndTransition> = {
   spin: {
     rotate: [0, 360],
     y: [0, -24, 0],
-    transition: { duration: 0.8, ease: 'easeInOut' }
+    transition: { duration: 0.8, ease: 'easeInOut' },
+    transitionEnd: { rotate: 0 }
   },
   dance: {
     rotate: [0, -8, 8, -8, 8, 0],
@@ -318,7 +337,11 @@ function Pet({
   hungry = false,
   activity = null
 }: PetProps): React.JSX.Element {
-  const reduced = useReducedMotion()
+  const reducedPreference = useReducedMotion()
+  const visible = usePageVisible()
+  // Hareket azaltma tercihinde ya da pencere gizliyken (tam ekranda çentik) sürekli animasyonlar durur
+  const reduced = reducedPreference || !visible
+  const statusId = useId()
   const rootRef = useRef<HTMLButtonElement>(null)
   const [activeEmotion, setActiveEmotion] = useState<'success' | 'error' | null>(null)
   const [asleep, setAsleep] = useState(false)
@@ -329,7 +352,6 @@ function Pet({
   const emotionKind = emotion?.kind
   useEffect(() => {
     if (emotionKind !== 'success' && emotionKind !== 'error') return
-    if (emotionKind === 'success') bumpBond(4)
     const show = setTimeout(() => setActiveEmotion(emotionKind), 0)
     const hide = setTimeout(() => setActiveEmotion(null), EMOTION_MS[emotionKind])
     return () => {
@@ -503,7 +525,7 @@ function Pet({
   const [hovered, setHovered] = useState(false)
   const shyAt = useRef(0)
   useEffect(() => {
-    if (reduced || mood !== 'idle') return
+    if (reduced || compact || mood !== 'idle') return
     let timer: ReturnType<typeof setTimeout>
     const next = (): void => {
       timer = setTimeout(
@@ -524,7 +546,7 @@ function Pet({
     }
     next()
     return () => clearTimeout(timer)
-  }, [mood, reduced])
+  }, [mood, reduced, compact])
   // Anten zıplamalarda ve anten sallamada ekstra dalgalanır
   useEffect(() => {
     if (!fidget || reduced) return
@@ -559,6 +581,14 @@ function Pet({
   const fidgetHands = mood === 'idle' && fidget ? HAND_FIDGETS[fidget.kind] : undefined
   const gesture: HandGesture = dragging ? 'happy' : (fidgetHands ?? mood)
   const antenna = ANTENNA_COLOR[mood]
+  const fidgetControls = useAnimationControls()
+  useEffect(() => {
+    if (reduced || !fidget || mood !== 'idle') {
+      void fidgetControls.start(NEUTRAL_BODY)
+      return
+    }
+    void fidgetControls.start(FIDGET_BODY[fidget.kind])
+  }, [fidget, mood, reduced, fidgetControls])
 
   return (
     <motion.button
@@ -594,6 +624,7 @@ function Pet({
         } else if (dragPath.current > 1200) react('dizzy')
       }}
       aria-label={label}
+      aria-describedby={statusId}
       title={label}
       className="relative flex cursor-pointer flex-col items-center rounded-[32px] outline-offset-8"
       onHoverStart={() => {
@@ -610,16 +641,18 @@ function Pet({
       whileDrag={{ scale: 1.08, rotate: -6 }}
       transition={{ type: 'spring', stiffness: 300, damping: 18 }}
     >
+      <span id={statusId} className="sr-only">
+        {MOOD_LABELS[mood]}
+      </span>
       {/* Robotun üst boşluğu: anten gövdenin üstünde durur */}
       <div style={{ height: variant === 'robot' ? size * 0.18 : 0 }} />
       {/* Eğilme: imlecin olduğu tarafa döner ve kayar */}
-      <motion.div style={{ x: leanX, rotate: leanRotate, transformOrigin: '50% 100%' }}>
+      <motion.div aria-hidden style={{ x: leanX, rotate: leanRotate, transformOrigin: '50% 100%' }}>
         {/* Kendi kendine küçük hareketler (zıplama, baş eğme, sallanma) */}
         <motion.div
-          key={fidget?.key ?? 0}
           className="relative"
           style={{ transformOrigin: '50% 100%' }}
-          animate={reduced || !fidget ? undefined : FIDGET_BODY[fidget.kind]}
+          animate={fidgetControls}
         >
           {variant === 'robot' && !reduced && (
             <Hands gesture={gesture} width={size} height={height} gestureKey={handKey} />
@@ -666,7 +699,10 @@ function Pet({
                     backgroundColor: { duration: 0.4 },
                     default: {
                       duration: mood === 'approval' ? 1.4 : 0.9,
-                      repeat: mood === 'sleep' || mood === 'idle' || mood === 'think' ? 0 : Infinity
+                      repeat:
+                        reduced || mood === 'sleep' || mood === 'idle' || mood === 'think'
+                          ? 0
+                          : Infinity
                     }
                   }}
                 />
@@ -756,11 +792,16 @@ function Pet({
               </motion.div>
               <AnimatePresence>
                 {ActivityIcon && (
-                  <ScreenIcon key={activity ?? ''} icon={ActivityIcon} size={size} />
+                  <ScreenIcon
+                    key={activity ?? ''}
+                    icon={ActivityIcon}
+                    size={size}
+                    still={reduced}
+                  />
                 )}
               </AnimatePresence>
               {mood === 'think' && !reduced && <ThinkingDots size={size} />}
-              {mood === 'speak' && <SpeakingMouth size={size} />}
+              {mood === 'speak' && <SpeakingMouth size={size} still={reduced} />}
               {hungry && (
                 <motion.span
                   className="absolute left-1/2 block rounded-full bg-[#c9d0ff]"
@@ -815,7 +856,7 @@ function Pet({
               ))}
 
             <ReactionExtras mood={mood} size={size} reduced={!!reduced || compact} night={night} />
-            {night && !compact && variant === 'robot' && <NightCap size={size} />}
+            {night && !compact && variant === 'robot' && <NightCap size={size} still={reduced} />}
             {/* Onay bekliyor: amber ünlem balonu */}
             {mood === 'approval' && (
               <motion.div
@@ -1148,13 +1189,13 @@ function ReactionExtras({
 }
 
 // Pijama başlığı (gece yarısından sonra)
-function NightCap({ size }: { size: number }): React.JSX.Element {
+function NightCap({ size, still }: { size: number; still: boolean }): React.JSX.Element {
   return (
     <motion.span
       className="pointer-events-none absolute block"
       style={{ left: size * 0.02, top: -size * 0.2, width: size * 0.4, height: size * 0.34 }}
       initial={{ rotate: -24 }}
-      animate={{ rotate: [-24, -18, -24] }}
+      animate={{ rotate: still ? -24 : [-24, -18, -24] }}
       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
     >
       <span

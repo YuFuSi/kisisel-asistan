@@ -145,7 +145,7 @@ function NotchApp(): React.JSX.Element {
             </button>
           )}
           {(busy || expanded) && (
-            <span className="min-w-0 truncate text-xs text-muted">
+            <span role="status" aria-live="polite" className="min-w-0 truncate text-xs text-muted">
               {busy ? status : 'Jarvis hazır · konuşmak için tıkla'}
             </span>
           )}

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { ChatEvent, ToolApproval, ToolCard, VoicePhase } from '@shared/api'
 import type { ApprovalResult } from '@shared/api'
 import { finishedOutcome, shouldCelebrate, type OutcomeKind } from './outcome'
+import { bumpBond } from './petBond'
 import { playSfx } from './soundEffects'
 import { upsertStep, type WorkStep } from './workSteps'
 
@@ -97,6 +98,8 @@ function trackSteps(event: { type: string; activity?: Parameters<typeof upsertSt
 function setEmotion(kind: Emotion | null): void {
   emotion = kind ? { kind, seq: ++emotionSeq } : null
   emotionListeners.forEach((listener) => listener())
+  // Biten iş robotla bağı güçlendirir; çentik de aynı olayı aldığı için sadece ana pencere sayar
+  if (kind === 'success' && window.location.hash !== '#notch') bumpBond(4)
   // Sesli sohbette Jarvis zaten konuşuyor; sadece yazılı akışta efekt çal
   if (kind === 'error') playSfx('error')
   else if (kind === 'unsure') playSfx('approval')

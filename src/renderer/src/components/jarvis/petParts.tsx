@@ -7,10 +7,13 @@ import type { HandGesture } from '../../lib/petLook'
 /** Ekranın alt kısmında beliren araç simgesi */
 export function ScreenIcon({
   icon: Icon,
-  size
+  size,
+  still = false
 }: {
   icon: LucideIcon
   size: number
+  /** Hareket azaltma: nabız atmaz */
+  still?: boolean
 }): React.JSX.Element {
   return (
     <motion.span
@@ -22,7 +25,7 @@ export function ScreenIcon({
         height: size * 0.14
       }}
       initial={{ opacity: 0, scale: 0.4, y: 6 }}
-      animate={{ opacity: 1, scale: [1, 1.08, 1], y: 0 }}
+      animate={{ opacity: 1, scale: still ? 1 : [1, 1.08, 1], y: 0 }}
       exit={{ opacity: 0, scale: 0.4 }}
       transition={{
         scale: { duration: 1.2, repeat: Infinity },
@@ -62,7 +65,14 @@ export function ThinkingDots({ size }: { size: number }): React.JSX.Element {
 }
 
 /** Konuşurken gözlerin altında açılıp kapanan ışıktan ağız */
-export function SpeakingMouth({ size }: { size: number }): React.JSX.Element {
+export function SpeakingMouth({
+  size,
+  still = false
+}: {
+  size: number
+  /** Hareket azaltma: ağız açık durur, oynamaz */
+  still?: boolean
+}): React.JSX.Element {
   const h = size * 0.06
   return (
     <motion.span
@@ -76,11 +86,15 @@ export function SpeakingMouth({ size }: { size: number }): React.JSX.Element {
         boxShadow: '0 0 10px rgb(190 200 255 / 0.9)'
       }}
       initial={{ scaleY: 0.2, opacity: 0 }}
-      animate={{
-        opacity: 1,
-        scaleY: [0.25, 1, 0.45, 0.85, 0.2, 0.7, 0.35, 1, 0.25],
-        scaleX: [1, 0.8, 1, 0.85, 1.05, 0.9, 1, 0.8, 1]
-      }}
+      animate={
+        still
+          ? { opacity: 1, scaleY: 0.6, scaleX: 1 }
+          : {
+              opacity: 1,
+              scaleY: [0.25, 1, 0.45, 0.85, 0.2, 0.7, 0.35, 1, 0.25],
+              scaleX: [1, 0.8, 1, 0.85, 1.05, 0.9, 1, 0.8, 1]
+            }
+      }
       transition={{ duration: 1.3, repeat: Infinity, ease: 'easeInOut' }}
     />
   )
@@ -103,8 +117,16 @@ export function SnakeGame({ size }: { size: number }): React.JSX.Element {
       <motion.span
         className="absolute block rounded-full bg-[#ff7d9c]"
         style={{ width: cell, height: cell, boxShadow: '0 0 6px #ff7d9c' }}
-        animate={{ x: [size * 0.1, -size * 0.12, size * 0.05], y: [size * 0.04, -size * 0.05, 0] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'steps(1)' as never }}
+        animate={{
+          x: [0.1, 0.1, -0.12, -0.12, 0.05, 0.05].map((v) => v * size),
+          y: [0.04, 0.04, -0.05, -0.05, 0, 0].map((v) => v * size)
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: 'linear',
+          times: [0, 0.33, 0.34, 0.66, 0.67, 1]
+        }}
       />
       {[0, 1, 2, 3].map((i) => (
         <motion.span

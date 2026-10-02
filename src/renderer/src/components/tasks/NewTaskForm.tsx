@@ -46,7 +46,7 @@ function NewTaskForm({ onCreate }: NewTaskFormProps): React.JSX.Element {
         onChange={(e) => setTitle(e.target.value)}
         aria-label="Yeni görev"
         placeholder="Yeni görev ekle..."
-        className="min-h-10 min-w-40 flex-1 bg-transparent px-3 text-[15px] text-ink outline-none placeholder:text-faint"
+        className="min-h-10 min-w-40 flex-1 rounded-[14px] bg-transparent px-3 text-[15px] text-ink outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent/60"
       />
       <input
         type="date"
