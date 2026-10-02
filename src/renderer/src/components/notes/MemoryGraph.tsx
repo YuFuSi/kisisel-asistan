@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Info } from 'lucide-react'
+import { Brain, FileText, Info, Network } from 'lucide-react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import type { MemoryWithEmbedding, NoteWithEmbedding, SettingsView } from '@shared/api'
@@ -11,7 +11,10 @@ import {
   type Vec3
 } from '../../lib/graphLayout'
 import { useLiveData } from '../../lib/useLiveData'
-import { secondaryButtonClass, inputClass } from '../../lib/styles'
+import { secondaryButtonClass } from '../../lib/styles'
+import { inputClass } from './styles'
+import IconTile from '../ui/IconTile'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
 import Modal from '../ui/Modal'
@@ -148,40 +151,47 @@ function MemoryGraph({ onOpenSettings }: MemoryGraphProps): React.JSX.Element {
 
   if (!semanticSearchEnabled) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <Info className="text-faint" size={28} />
-        <p className="max-w-sm text-sm text-muted">
-          Haritayı görmek için önce Ayarlar &gt; Asistan&apos;dan &quot;Anlamsal arama&quot;yı aç.
-        </p>
-        <button className={secondaryButtonClass} onClick={onOpenSettings}>
-          Ayarlara git
-        </button>
+      <div className="flex h-full items-center justify-center px-8 py-6">
+        <div className="glass flex max-w-md flex-col items-center gap-4 p-8 text-center">
+          <IconTile icon={Info} tone="lilac" size={38} />
+          <p className="max-w-sm text-sm text-muted">
+            Haritayı görmek için önce Ayarlar &gt; Asistan&apos;dan &quot;Anlamsal arama&quot;yı aç.
+          </p>
+          <button className={secondaryButtonClass} onClick={onOpenSettings}>
+            Ayarlara git
+          </button>
+        </div>
       </div>
     )
   }
 
   if (items.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-faint">Henüz kayıt yok</p>
+      <div className="flex h-full items-center justify-center px-8 py-6">
+        <div className="glass flex flex-col items-center gap-4 p-8 text-center">
+          <IconTile icon={Network} tone="teal" size={38} />
+          <p className="text-sm text-faint">Henüz kayıt yok</p>
+        </div>
       </div>
     )
   }
 
   if (!hasAnyEmbedding) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <Info className="text-faint" size={28} />
-        <p className="max-w-sm text-sm text-muted">
-          Haritayı görmek için notların ve hafıza kayıtlarının indekslenmesi gerekiyor.
-        </p>
-        <button
-          className={secondaryButtonClass}
-          disabled={indexing}
-          onClick={() => void backfillEmbeddings()}
-        >
-          {indexing ? 'İndeksleniyor...' : 'İndeksle'}
-        </button>
+      <div className="flex h-full items-center justify-center px-8 py-6">
+        <div className="glass flex max-w-md flex-col items-center gap-4 p-8 text-center">
+          <IconTile icon={Info} tone="amber" size={38} />
+          <p className="max-w-sm text-sm text-muted">
+            Haritayı görmek için notların ve hafıza kayıtlarının indekslenmesi gerekiyor.
+          </p>
+          <button
+            className={secondaryButtonClass}
+            disabled={indexing}
+            onClick={() => void backfillEmbeddings()}
+          >
+            {indexing ? 'İndeksleniyor...' : 'İndeksle'}
+          </button>
+        </div>
       </div>
     )
   }
@@ -205,6 +215,8 @@ function MemoryGraphScene({
   positions: Map<string, { x: number; y: number; z: number }>
 }): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
+  const reduced = useReducedMotion()
+  const controlsRef = useRef<OrbitControls | null>(null)
   const [hoverTitle, setHoverTitle] = useState<string | null>(null)
   const [editing, setEditing] = useState<MapItem | null>(null)
   // Tooltip/tıklama işleyicileri sahneyi yeniden kurmadan güncel `items`i görsün diye — sahne
@@ -235,6 +247,7 @@ function MemoryGraphScene({
     container.appendChild(renderer.domElement)
 
     const controls = new OrbitControls(camera, renderer.domElement)
+    controlsRef.current = controls
     controls.enableDamping = true
     controls.dampingFactor = 0.08
     controls.minDistance = 1
@@ -361,6 +374,7 @@ function MemoryGraphScene({
       renderer.domElement.removeEventListener('pointermove', onPointerMove)
       renderer.domElement.removeEventListener('click', onClick)
       controls.dispose()
+      controlsRef.current = null
       renderer.dispose()
       sphereGeometry.dispose()
       glowGeometry.dispose()
@@ -381,31 +395,42 @@ function MemoryGraphScene({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edges, positions])
 
+  // Tercih değişince kamera ve yerleşim korunur; yalnızca yumuşak sürüklenme kapanır.
+  useEffect(() => {
+    if (controlsRef.current) controlsRef.current.enableDamping = !reduced
+  }, [reduced, edges, positions])
+
   return (
-    <div className="relative h-full w-full">
-      <div ref={containerRef} className="h-full w-full" />
-      {hoverTitle && (
-        <div className="pointer-events-none absolute left-4 top-4 rounded-md bg-elevated px-3 py-1.5 text-sm text-ink shadow-float">
-          {hoverTitle}
+    <div className="h-full px-8 py-6">
+      <div className="glass relative h-full w-full overflow-hidden">
+        <div ref={containerRef} className="h-full w-full" />
+        <h2 className="pointer-events-none absolute left-4 top-4 flex items-center gap-3 text-sm font-semibold text-ink">
+          <IconTile icon={Network} tone="teal" size={28} />
+          Hafıza haritası
+        </h2>
+        {hoverTitle && (
+          <div className="glass-soft pointer-events-none absolute left-4 top-16 max-w-[calc(100%-32px)] break-words px-3 py-2 text-sm text-ink [overflow-wrap:anywhere]">
+            {hoverTitle}
+          </div>
+        )}
+        <div className="glass-soft pointer-events-none absolute bottom-4 right-4 flex max-w-[calc(100%-32px)] flex-wrap items-center gap-3 px-3 py-2 text-xs text-muted">
+          <span className="flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: `#${NOTE_COLOR.toString(16)}` }}
+            />
+            {noteCount} not
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: `#${MEMORY_COLOR.toString(16)}` }}
+            />
+            {memoryCount} hafıza
+          </span>
         </div>
-      )}
-      <div className="pointer-events-none absolute bottom-4 right-4 flex items-center gap-3 rounded-md bg-elevated/80 px-3 py-1.5 text-xs text-muted shadow-float">
-        <span className="flex items-center gap-1.5">
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: `#${NOTE_COLOR.toString(16)}` }}
-          />
-          {noteCount} not
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: `#${MEMORY_COLOR.toString(16)}` }}
-          />
-          {memoryCount} hafıza
-        </span>
+        {editing && <MemoryGraphEditModal item={editing} onClose={() => setEditing(null)} />}
       </div>
-      {editing && <MemoryGraphEditModal item={editing} onClose={() => setEditing(null)} />}
     </div>
   )
 }
@@ -438,8 +463,18 @@ function MemoryGraphEditModal({
   }
 
   return (
-    <Modal open onClose={onClose} title={item.kind === 'note' ? 'Not başlığı' : 'Hafıza kaydı'}>
-      <h2 className="mb-3 text-sm font-medium text-muted">
+    <Modal
+      open
+      glass
+      onClose={onClose}
+      title={item.kind === 'note' ? 'Not başlığı' : 'Hafıza kaydı'}
+    >
+      <h2 className="mb-4 flex items-center gap-3 text-sm font-semibold text-ink">
+        <IconTile
+          icon={item.kind === 'note' ? FileText : Brain}
+          tone={item.kind === 'note' ? 'pink' : 'lilac'}
+          size={28}
+        />
         {item.kind === 'note' ? 'Not başlığı' : 'Hafıza kaydı'}
       </h2>
       <textarea

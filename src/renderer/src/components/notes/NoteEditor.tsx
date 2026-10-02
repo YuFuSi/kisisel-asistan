@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { FileText, Trash2 } from 'lucide-react'
 import type { Note } from '@shared/api'
 import { errorMessage } from '../../lib/errors'
+import IconTile from '../ui/IconTile'
+import { quietIconButtonClass } from '../../lib/styles'
 
 interface NoteEditorProps {
   note: Note
@@ -36,13 +38,15 @@ function NoteEditor({ note, onDelete }: NoteEditorProps): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-line px-6 py-3">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-4">
+        <IconTile icon={FileText} tone="pink" size={28} />
         <input
+          aria-label="Not başlığı"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onBlur={flush}
           placeholder="Başlık"
-          className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:text-faint"
+          className="min-w-0 flex-1 basis-32 rounded-md bg-transparent text-lg font-semibold text-ink outline-none placeholder:text-faint focus:ring-2 focus:ring-accent/30"
         />
         <span className="shrink-0 text-xs text-faint">
           {dirty ? 'Kaydediliyor...' : 'Kaydedildi'}
@@ -51,17 +55,18 @@ function NoteEditor({ note, onDelete }: NoteEditorProps): React.JSX.Element {
           onClick={onDelete}
           aria-label="Notu sil"
           title="Notu sil"
-          className="rounded p-1.5 text-faint transition-colors hover:text-negative"
+          className={`${quietIconButtonClass} hover:text-negative`}
         >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
       <textarea
+        aria-label="Not içeriği"
         value={content}
         onChange={(e) => setContent(e.target.value)}
         onBlur={flush}
         placeholder="Notunu yaz..."
-        className="flex-1 resize-none bg-transparent px-6 py-4 text-sm leading-7 text-ink outline-none placeholder:text-faint"
+        className="min-h-0 w-full flex-1 resize-none bg-transparent px-5 py-4 text-sm leading-7 text-ink outline-none placeholder:text-faint focus:shadow-[inset_0_0_0_2px_var(--color-line-strong)]"
       />
       {error && <p className="px-6 pb-3 text-sm text-negative select-text">{error}</p>}
     </div>
