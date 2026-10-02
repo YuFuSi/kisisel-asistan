@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { motion } from 'motion/react'
 import { Archive, FolderOpen, RotateCcw } from 'lucide-react'
 import type { BackupInfo } from '@shared/api'
 import Skeleton from '../ui/Skeleton'
 import { errorMessage } from '../../lib/errors'
-import { cardClass, secondaryButtonClass } from '../../lib/styles'
+import { secondaryButtonClass } from '../../lib/styles'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 import { useToast } from '../../lib/toast'
 
 function formatSize(bytes: number): string {
@@ -25,6 +27,7 @@ const describeBackup = (name: string): string =>
 
 // Veritabanı yedekleri (listeleme, elle yedek, geri yükleme) ve günlük klasörü
 function BackupSettings(): React.JSX.Element {
+  const reduced = useReducedMotion()
   const [backups, setBackups] = useState<BackupInfo[] | null>(null)
   const [busy, setBusy] = useState(false)
   const toast = useToast()
@@ -99,9 +102,15 @@ function BackupSettings(): React.JSX.Element {
           Henüz yedek yok. İlk otomatik yedek, uygulama açıldıktan yaklaşık bir dakika sonra alınır.
         </p>
       ) : (
-        <ul className={`${cardClass} divide-y divide-line`}>
+        <ul className="space-y-2">
           {backups.map((backup) => (
-            <li key={backup.name} className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <motion.li
+              key={backup.name}
+              layout={!reduced}
+              initial={false}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              className="glass-soft flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+            >
               <div className="min-w-0">
                 <div className="text-sm text-ink">{formatDate(backup.createdAt)}</div>
                 <div className="text-xs text-faint">
@@ -114,7 +123,7 @@ function BackupSettings(): React.JSX.Element {
                   Geri yükle
                 </span>
               </button>
-            </li>
+            </motion.li>
           ))}
         </ul>
       )}

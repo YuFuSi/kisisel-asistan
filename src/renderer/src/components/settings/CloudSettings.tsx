@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PROVIDERS, type CloudProviderId, type SettingsPatch, type SettingsView } from '@shared/api'
 import Field from './Field'
 import SecretField from './SecretField'
-import { inputClass } from '../../lib/styles'
+import { inputClass } from './styles'
 
 interface CloudSettingsProps {
   provider: CloudProviderId

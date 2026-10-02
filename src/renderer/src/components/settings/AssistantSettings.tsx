@@ -1,3 +1,4 @@
+import { detailsClass, summaryClass } from './styles'
 import { useState } from 'react'
 import {
   CONTEXT_LENGTHS,
@@ -7,7 +8,7 @@ import {
   type SettingsPatch,
   type SettingsView
 } from '@shared/api'
-import { compactInputClass, inputClass } from '../../lib/styles'
+import { compactInputClass, inputClass } from './styles'
 import Field from './Field'
 import Toggle from '../ui/Toggle'
 
@@ -52,7 +53,7 @@ function AssistantSettings({ settings, onUpdate }: AssistantSettingsProps): Reac
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Konuşma tonu">
           <select
             value={settings.tone}
@@ -87,10 +88,8 @@ function AssistantSettings({ settings, onUpdate }: AssistantSettingsProps): Reac
         </Field>
       </div>
 
-      <details className="rounded-control border border-line p-3">
-        <summary className="min-h-8 cursor-pointer text-sm text-muted">
-          İleri model ayarları
-        </summary>
+      <details className={detailsClass}>
+        <summary className={summaryClass}>İleri model ayarları</summary>
         <div className="mt-4 space-y-6">
           <Field
             label="Bağlam uzunluğu (Ollama)"

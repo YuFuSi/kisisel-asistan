@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { SettingsPatch, SettingsView } from '@shared/api'
 import { errorMessage } from '../../lib/errors'
-import { compactInputClass, inputClass, secondaryButtonClass } from '../../lib/styles'
+import { secondaryButtonClass } from '../../lib/styles'
+import { compactInputClass, inputClass } from './styles'
 import { useToast } from '../../lib/toast'
 import Field from './Field'
 import Toggle from '../ui/Toggle'
@@ -45,7 +46,7 @@ function BriefSettings({ settings, onUpdate }: BriefSettingsProps): React.JSX.El
         onChange={(checked) => void onUpdate({ briefSpoken: checked })}
       />
 
-      <div className="grid grid-cols-[auto_1fr] gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr]">
         <Field label="Saat" hint="Uygulama o saatte kapalıysa açılınca gösterilir.">
           <input
             type="time"

@@ -23,6 +23,8 @@ interface PageLayoutProps {
   tabs?: React.ReactNode
   width?: 'default' | 'wide'
   fill?: boolean
+  /** Ayarlar gibi hareket tercihini canlı izleyen sayfalar için statik giriş. */
+  reduceMotion?: boolean
   children: React.ReactNode
 }
 
@@ -35,13 +37,21 @@ function PageLayout({
   tabs,
   width = 'default',
   fill = false,
+  reduceMotion = false,
   children
 }: PageLayoutProps): React.JSX.Element {
   const frame = `mx-auto w-full ${WIDTH_CLASS[width]} px-8`
+  const entrance = reduceMotion
+    ? {
+        initial: false as const,
+        animate: { opacity: 1, y: 0, filter: 'none' },
+        transition: { duration: 0 }
+      }
+    : enter
 
   if (fill) {
     return (
-      <motion.div {...enter} className="flex h-full flex-col">
+      <motion.div {...entrance} className="flex h-full flex-col">
         <div className={`${frame} shrink-0 pt-8`}>
           <PageHeader title={title} description={description} actions={actions} />
           {tabs}
@@ -52,7 +62,7 @@ function PageLayout({
   }
 
   return (
-    <motion.div {...enter} className={`${frame} py-8`}>
+    <motion.div {...entrance} className={`${frame} py-8`}>
       <PageHeader title={title} description={description} actions={actions} />
       {tabs && <div className="mb-6">{tabs}</div>}
       {children}

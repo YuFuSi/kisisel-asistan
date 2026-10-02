@@ -4,7 +4,8 @@ import type { SecretId, SettingsView } from '@shared/api'
 import Field from './Field'
 import { errorMessage } from '../../lib/errors'
 import { useToast } from '../../lib/toast'
-import { inputClass, primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
+import { primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
+import { inputClass } from './styles'
 
 interface SecretFieldProps {
   id: SecretId
@@ -72,7 +73,7 @@ function SecretField({
           )
         }
       >
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-start gap-2">
           <input
             type="password"
             value={value}
@@ -87,7 +88,7 @@ function SecretField({
             }
             autoComplete="off"
             spellCheck={false}
-            className={inputClass}
+            className={`${inputClass} basis-48 flex-1`}
           />
           <button
             onClick={() => void save(value)}

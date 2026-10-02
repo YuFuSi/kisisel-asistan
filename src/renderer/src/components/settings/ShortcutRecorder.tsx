@@ -47,10 +47,8 @@ function ShortcutRecorder({ value, active, onChange }: ShortcutRecorderProps): R
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <div
-          className={`flex h-10 min-w-52 items-center gap-2 rounded-lg border px-3 text-sm ${
-            recording
-              ? 'border-accent bg-accent/10 text-accent-hover'
-              : 'border-line bg-surface text-ink'
+          className={`glass-soft flex min-h-10 min-w-0 max-w-full flex-wrap items-center gap-2 px-3 py-2 text-sm ${
+            recording ? 'ring-1 ring-accent/60 text-accent-hover' : 'text-ink'
           }`}
         >
           <Keyboard className="h-4 w-4 text-faint" />

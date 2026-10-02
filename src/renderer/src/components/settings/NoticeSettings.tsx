@@ -1,5 +1,5 @@
 import type { SettingsPatch, SettingsView } from '@shared/api'
-import { compactInputClass } from '../../lib/styles'
+import { compactInputClass } from './styles'
 import Field from './Field'
 import Toggle from '../ui/Toggle'
 
@@ -19,7 +19,7 @@ function NoticeSettings({ settings, onUpdate }: NoticeSettingsProps): React.JSX.
         onChange={(checked) => void onUpdate({ noticesSpoken: checked })}
       />
 
-      <div className="grid grid-cols-[auto_auto_1fr] items-end gap-4">
+      <div className="grid grid-cols-2 items-end gap-4 lg:grid-cols-[auto_auto_1fr]">
         <Field label="Sessiz saatler başlangıç">
           <input
             type="time"
@@ -44,7 +44,9 @@ function NoticeSettings({ settings, onUpdate }: NoticeSettingsProps): React.JSX.
             className={`${compactInputClass} w-32`}
           />
         </Field>
-        <p className="pb-2 text-xs text-muted">Bu aralıkta uyarılar sadece yazılı gelir.</p>
+        <p className="col-span-2 pb-2 text-xs text-muted lg:col-span-1">
+          Bu aralıkta uyarılar sadece yazılı gelir.
+        </p>
       </div>
     </div>
   )

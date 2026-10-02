@@ -1,3 +1,4 @@
+import { detailsClass, summaryClass } from './styles'
 import type { SettingsPatch, SettingsView } from '@shared/api'
 import Field from './Field'
 import OrbSettings from './OrbSettings'
@@ -47,10 +48,8 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         />
       </Field>
       <Field label="Jarvis küresi">
-        <details className="rounded-control border border-line p-3">
-          <summary className="min-h-8 cursor-pointer text-sm text-muted">
-            Görünüm ve ses efektleri
-          </summary>
+        <details className={detailsClass}>
+          <summary className={summaryClass}>Görünüm ve ses efektleri</summary>
           <div className="mt-4">
             <OrbSettings />
           </div>

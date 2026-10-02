@@ -35,10 +35,8 @@ function ConnectionTest(): React.JSX.Element {
 
       {result && (
         <div
-          className={`flex items-start gap-2 rounded-lg border px-4 py-3 text-sm select-text ${
-            result.ok
-              ? 'border-positive/30 bg-positive/10 text-positive'
-              : 'border-negative/30 bg-negative/10 text-negative'
+          className={`glass-soft flex items-start gap-2 px-4 py-3 text-sm select-text ring-1 ${
+            result.ok ? 'text-positive ring-positive/30' : 'text-negative ring-negative/30'
           }`}
         >
           {result.ok ? (
@@ -46,7 +44,7 @@ function ConnectionTest(): React.JSX.Element {
           ) : (
             <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
           )}
-          <span>{result.message}</span>
+          <span className="min-w-0 break-words">{result.message}</span>
         </div>
       )}
     </div>

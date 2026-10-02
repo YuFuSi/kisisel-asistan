@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react'
 import type { SettingsPatch, SettingsView } from '@shared/api'
 import Field from './Field'
 import { errorMessage } from '../../lib/errors'
-import { inputClass } from '../../lib/styles'
+import { inputClass } from './styles'
 
 interface OllamaSettingsProps {
   settings: SettingsView
@@ -82,7 +82,7 @@ function OllamaSettings({ settings, onUpdate }: OllamaSettingsProps): React.JSX.
             value={currentModel}
             onChange={(e) => void onUpdate({ models: { ollama: e.target.value } })}
             disabled={!models || models.length === 0}
-            className={inputClass}
+            className={`${inputClass} flex-1`}
           >
             {!currentModel && <option value="">Model seç</option>}
             {currentModel && !models?.includes(currentModel) && (
