@@ -1,5 +1,8 @@
+import { motion } from 'motion/react'
+import IconTile from '../ui/IconTile'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 import { useId, useState } from 'react'
-import { Check, ChevronDown, Circle, Loader2, Square, X } from 'lucide-react'
+import { Check, ChevronDown, Sparkles, ShieldAlert, Loader2, Square, X } from 'lucide-react'
 import type { ToolActivity, ToolApproval } from '@shared/api'
 import type { OutcomeKind } from '../../lib/outcome'
 import { activitySummary, formatActivityInput, splitActivitySteps } from '../../lib/activitySurface'
@@ -31,8 +34,14 @@ function ActivityStep({
   tool: ToolActivity
   technical: boolean
 }): React.JSX.Element {
+  const reduced = useReducedMotion()
   return (
-    <li className="min-w-0 py-2">
+    <motion.li
+      layout={reduced ? false : 'position'}
+      initial={false}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 28 }}
+      className="min-w-0 py-2"
+    >
       <div className="flex items-start gap-2 text-sm">
         {tool.status === 'running' ? (
           <Loader2
@@ -72,7 +81,7 @@ function ActivityStep({
           </div>
         </div>
       )}
-    </li>
+    </motion.li>
   )
 }
 
@@ -108,7 +117,7 @@ function ActivitySurface({
   return (
     <section
       aria-label="Pıtır etkinliği"
-      className={`mb-3 rounded-control border bg-surface ${approval ? 'border-caution/40' : 'border-line'}`}
+      className={`glass-soft mb-3 min-w-0 ${approval ? 'ring-1 ring-caution/30' : ''}`}
     >
       <div className="flex items-center gap-2 px-3 py-2">
         <button
@@ -120,9 +129,10 @@ function ActivitySurface({
           {pending && !approval ? (
             <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" aria-hidden="true" />
           ) : (
-            <Circle
-              className={`h-3 w-3 shrink-0 ${approval ? 'text-caution' : 'text-accent'}`}
-              aria-hidden="true"
+            <IconTile
+              icon={approval ? ShieldAlert : Sparkles}
+              tone={approval ? 'amber' : 'lilac'}
+              size={24}
             />
           )}
           <span className="min-w-0 flex-1">

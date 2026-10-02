@@ -1,6 +1,10 @@
+import { motion } from 'motion/react'
+import IconTile from '../ui/IconTile'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 import { useEffect, useRef, useState } from 'react'
 import {
   Download,
+  History,
   MessageSquarePlus,
   MoreHorizontal,
   Pencil,
@@ -79,7 +83,10 @@ function RowMenu({ pinned, onRename, onPin, onExport, onDelete }: RowMenuProps):
         <MoreHorizontal className="h-3.5 w-3.5" />
       </button>
       {open && (
-        <div className="animate-fade absolute right-1 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-line bg-elevated py-1 shadow-lg">
+        <div
+          className="animate-fade absolute right-1 z-20 mt-1 w-44 overflow-hidden glass py-1 shadow-float"
+          style={{ backgroundColor: 'var(--color-app)' }}
+        >
           <button onClick={run(onRename)} className={menuItemClass}>
             <Pencil className="h-3.5 w-3.5" />
             Yeniden adlandır
@@ -119,6 +126,7 @@ function ConversationList({
   onPin,
   onExport
 }: ConversationListProps): React.JSX.Element {
+  const reduced = useReducedMotion()
   // Adı düzenlenen sohbet
   const [editingId, setEditingId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
@@ -157,16 +165,19 @@ function ConversationList({
               }
             }}
             aria-label="Sohbet adı"
-            className="w-full rounded-md border border-accent/70 bg-surface px-2 py-1.5 text-sm text-ink outline-none"
+            className="w-full rounded-md border border-accent/70 bg-white/5 px-2 py-1.5 text-sm text-ink outline-none"
           />
         </div>
       )
     }
 
     return (
-      <div
+      <motion.div
         key={conversation.id}
-        className={`group flex items-start rounded-lg ${isActive ? 'bg-elevated' : 'hover:bg-elevated/60'}`}
+        layout={reduced ? false : 'position'}
+        initial={false}
+        transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 28 }}
+        className={`group mb-1 flex min-w-0 items-start ${isActive ? 'glass-soft ring-1 ring-accent/20' : 'rounded-xl hover:bg-white/[0.04]'}`}
       >
         <button
           onClick={() => onSelect(conversation.id)}
@@ -189,7 +200,7 @@ function ConversationList({
           onExport={() => onExport(conversation.id)}
           onDelete={() => onDelete(conversation.id)}
         />
-      </div>
+      </motion.div>
     )
   }
 
@@ -198,18 +209,24 @@ function ConversationList({
 
   return (
     <div
-      className={`flex min-h-0 shrink-0 flex-col ${drawer ? 'w-full flex-1' : 'w-60 border-r border-line'}`}
+      className={`flex min-h-0 min-w-0 shrink-0 flex-col ${drawer ? 'w-full flex-1' : 'glass-soft my-3 ml-3 w-60'}`}
     >
-      <div className="space-y-2 p-3">
+      <div className="space-y-3 p-3">
+        {!drawer && (
+          <div className="flex items-center gap-2 px-1 py-1">
+            <IconTile icon={History} tone="blue" />
+            <h2 className="text-sm font-medium text-ink">Sohbet geçmişi</h2>
+          </div>
+        )}
         <button
           onClick={onNew}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-line-strong px-3 py-2 text-sm text-ink transition-colors hover:bg-elevated"
+          className="flex w-full items-center justify-center gap-2 glass-soft px-3 py-2.5 text-sm text-ink transition-colors hover:bg-white/[0.06]"
         >
           <MessageSquarePlus className="h-4 w-4" />
           Yeni sohbet
         </button>
 
-        <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 transition-colors focus-within:border-line-strong">
+        <div className="flex items-center gap-2 rounded-xl border border-line bg-white/5 px-2.5 py-1.5 transition-colors focus-within:border-accent/50">
           <Search className="h-3.5 w-3.5 shrink-0 text-faint" />
           <input
             id={CONVERSATION_SEARCH_ID}

@@ -64,18 +64,18 @@ function Composer({
   }
 
   return (
-    <div className="border-t border-line p-4">
-      <div className="mx-auto max-w-3xl rounded-xl border border-line bg-surface px-4 py-3 transition-colors focus-within:border-line-strong">
+    <div className="shrink-0 p-4">
+      <div className="glass mx-auto max-w-3xl px-4 py-3 transition-shadow focus-within:ring-2 focus-within:ring-accent/20">
         {(attachments.length > 0 || attaching) && (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {attachments.map((doc) => (
               <span
                 key={doc.path}
                 title={doc.path}
-                className="animate-fade inline-flex max-w-64 items-center gap-1.5 rounded-lg border border-line bg-elevated py-1 pr-1 pl-2 text-xs text-ink"
+                className="glass-soft animate-fade inline-flex min-w-0 max-w-full items-center gap-1.5 py-1 pr-1 pl-2 text-xs text-ink"
               >
                 <FileText className="h-3.5 w-3.5 shrink-0 text-accent" />
-                <span className="truncate">{doc.name}</span>
+                <span className="min-w-0 truncate">{doc.name}</span>
                 {doc.partCount > 1 && (
                   <span className="shrink-0 text-faint">{doc.partCount} parça</span>
                 )}
@@ -144,7 +144,7 @@ function Composer({
                   : 'Bir mesaj yaz... (Shift+Enter: yeni satır)'
             }
             style={{ maxHeight: MAX_HEIGHT }}
-            className="flex-1 resize-none bg-transparent py-0.5 text-sm leading-6 outline-none placeholder:text-faint disabled:cursor-not-allowed"
+            className="min-w-0 flex-1 resize-none bg-transparent py-0.5 text-sm leading-6 outline-none placeholder:text-faint disabled:cursor-not-allowed"
           />
           <button
             onClick={() => void dictation.toggle()}

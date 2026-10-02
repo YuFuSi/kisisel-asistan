@@ -1,3 +1,4 @@
+import IconTile from '../ui/IconTile'
 import { Check, ShieldAlert, X } from 'lucide-react'
 import type { ToolApproval } from '@shared/api'
 
@@ -9,12 +10,12 @@ interface ApprovalCardProps {
 // Asistan riskli bir işlem yapmadan önce (uygulama/dosya açma) bu kart çıkar
 function ApprovalCard({ approval, onRespond }: ApprovalCardProps): React.JSX.Element {
   return (
-    <div className="rounded-xl border border-caution/40 bg-caution/5 p-4">
+    <div className="glass-soft p-4 ring-1 ring-caution/30">
       <div className="flex items-start gap-3">
-        <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-caution" />
+        <IconTile icon={ShieldAlert} tone="amber" size={32} />
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-caution">{approval.label}</div>
-          <div className="mt-1 text-sm text-ink select-text">{approval.summary}</div>
+          <div className="mt-1 text-sm break-words text-ink select-text">{approval.summary}</div>
           {approval.details && (
             <div className="mt-0.5 truncate text-xs text-faint" title={approval.details}>
               {approval.details}
