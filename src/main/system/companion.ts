@@ -4,6 +4,7 @@ import { is } from '@electron-toolkit/utils'
 import { classifyActivity, type Activity } from '../../shared/activity'
 import { daemonForegroundInfo } from '../lib/windowDaemon'
 import { getMainWindow } from './window'
+import { noteActivityForEye } from './smartEye'
 
 // Masaüstü arkadaş: görev çubuğunun hemen üstünde, ekran genişliğinde saydam bir şerit pencere.
 // Pıtır robotu burada yaşar: dolaşır, uyur, onay ister, iş bitince haber verir ve kullanıcının
@@ -86,6 +87,14 @@ async function poll(): Promise<void> {
   try {
     const info = await daemonForegroundInfo()
     activity = classifyActivity(info)
+    // Akıllı göz: uygunsa arka planda ekrana bakar, yorumu robota gönderir (poll'u bekletmez)
+    if (!hidden && !away) {
+      void noteActivityForEye(activity, info.title).then((remark) => {
+        if (remark && companionWindow && !companionWindow.isDestroyed()) {
+          companionWindow.webContents.send('companion:remark', remark)
+        }
+      })
+    }
   } catch {
     // Pencere yardımcısı cevap vermezse son bilinen durumla devam edilir
   }

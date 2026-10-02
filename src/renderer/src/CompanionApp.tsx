@@ -122,6 +122,7 @@ function CompanionApp(): React.JSX.Element {
   const replyConversation = useRef<number | null>(null)
   // En güncel say fonksiyonu (olay dinleyicileri ve zamanlayıcılar eski kopyayı tutmasın)
   const sayRef = useRef<(key: LineKey, skipGap?: boolean, test?: boolean) => void>(() => {})
+  const sayTextRef = useRef<(text: string) => void>(() => {})
   const lastLineAt = useRef(0)
   const pointerX = useRef<number | null>(null)
   const hovering = useRef(false)
@@ -137,6 +138,9 @@ function CompanionApp(): React.JSX.Element {
     const offActivity = window.api.companion.onActivity(setActivity)
     const offVisible = window.api.companion.onVisible(setShown)
     window.api.companion.presenceNow().then(setAway, () => {})
+    // Akıllı göz yorumu: ana süreç zaten seyrek ve uygun anlarda bakıyor; burada da sessizlik
+    // kuralları (gizli pencere, toplantı, sessiz ayar) uygulanır
+    const offRemark = window.api.companion.onRemark((text) => sayTextRef.current(text))
     const offAskStarted = window.api.companion.onAskStarted((conversationId) => {
       if (awaitingReply.current) replyConversation.current = conversationId
     })
@@ -149,6 +153,7 @@ function CompanionApp(): React.JSX.Element {
       offVisible()
       offPresence()
       offAskStarted()
+      offRemark()
     }
   }, [])
 
@@ -219,8 +224,17 @@ function CompanionApp(): React.JSX.Element {
     lastLineAt.current = now
     setLine({ text, key: now })
   }
+  const sayText = (text: string): void => {
+    const chattiness = settings?.companionChattiness ?? 'sometimes'
+    if (chattiness === 'quiet' || !shown) return
+    if (activity?.kind === 'meeting') return
+    const now = Date.now()
+    lastLineAt.current = now
+    setLine({ text, key: now })
+  }
   useEffect(() => {
     sayRef.current = say
+    sayTextRef.current = sayText
   })
 
   // Sadece geliştirmede: CDP testlerinin robota replik söyletebilmesi için

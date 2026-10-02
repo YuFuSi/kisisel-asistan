@@ -244,6 +244,8 @@ export interface AppSettings {
   companionEnabled: boolean
   /** Robotun kendiliğinden ne sıklıkla yorum yapacağı */
   companionChattiness: CompanionChattiness
+  /** Akıllı göz: Pıtır arada ekrana bakıp yorum yapar (yerel görüntü modeli, varsayılan kapalı) */
+  smartEyeEnabled: boolean
 }
 
 export interface SettingsPatch {
@@ -279,6 +281,7 @@ export interface SettingsPatch {
   notchEnabled?: boolean
   companionEnabled?: boolean
   companionChattiness?: CompanionChattiness
+  smartEyeEnabled?: boolean
 }
 
 // Arayüze gönderilen ayarlar: API anahtarlarının kendisi asla gönderilmez, sadece var/yok bilgisi
@@ -953,6 +956,8 @@ export interface Api {
     ask(text: string): void
     /** Robotun sorusu hangi sohbette gönderildi (cevabı doğru sohbetten almak için) */
     onAskStarted(listener: (conversationId: number) => void): () => void
+    /** Akıllı göz ekrana bakıp bir yorum buldu */
+    onRemark(listener: (text: string) => void): () => void
     /** Kullanıcı şu an uzakta mı (pencere yeniden açılınca) */
     presenceNow(): Promise<boolean>
     /** Ana pencerede verilen sohbeti açar */
