@@ -355,10 +355,18 @@ interface HandsProps {
   height: number
   /** Her yeni el hareketinde değişir; aynı hareket yeniden oynasın */
   gestureKey: number
+  /** Sağ ele takılı aksesuar (kıyafet dolabı) */
+  rightItem?: React.ReactNode
 }
 
 /** Gövdenin iki yanında süzülen cam eller */
-export function Hands({ gesture, width, height, gestureKey }: HandsProps): React.JSX.Element {
+export function Hands({
+  gesture,
+  width,
+  height,
+  gestureKey,
+  rightItem
+}: HandsProps): React.JSX.Element {
   const hand = width * 0.19
   return (
     <>
@@ -379,7 +387,9 @@ export function Hands({ gesture, width, height, gestureKey }: HandsProps): React
             transformOrigin: '50% 80%'
           }}
           animate={gestureFor(gesture, right, width, height)}
-        />
+        >
+          {right && rightItem}
+        </motion.span>
       ))}
     </>
   )

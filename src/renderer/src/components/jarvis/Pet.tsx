@@ -21,6 +21,8 @@ import {
 } from './petParts'
 import { onPetSignal } from '../../lib/petEvents'
 import { bondStage, bumpBond, openBond, useBond } from '../../lib/petBond'
+import { refreshWardrobe, useWardrobe } from '../../lib/wardrobe'
+import { AntennaAccessory, BodyAccessories, HandAccessory } from './Accessories'
 
 // Kendi hareketi bitince ya da iş başlayınca gövdenin döndüğü nötr hâl
 const NEUTRAL_BODY: TargetAndTransition = {
@@ -473,6 +475,25 @@ function Pet({
     []
   )
   const bond = useBond()
+  // Kıyafet dolabı: takılı aksesuarlar; açılışta ve etkileşim arttıkça yenileri kazanılır
+  const { equipped } = useWardrobe()
+  const wornOnBody = [equipped.head, equipped.eyes, equipped.body].filter(
+    (id): id is NonNullable<typeof id> => Boolean(id)
+  )
+  const interactions = bond.interactions
+  const firstSeen = bond.firstSeen
+  useEffect(() => {
+    const unlocked = refreshWardrobe({ interactions, firstSeen })
+    if (unlocked.length > 0) setTimeout(() => setReaction({ kind: 'happy', key: Date.now() }), 0)
+  }, [interactions, firstSeen])
+  // Yeni bir şey takınca sevinir (ilk açılışta değil)
+  const equippedKey = JSON.stringify(equipped)
+  const lastEquipped = useRef(equippedKey)
+  useEffect(() => {
+    if (lastEquipped.current === equippedKey) return
+    lastEquipped.current = equippedKey
+    setTimeout(() => setReaction({ kind: 'happy', key: Date.now() }), 0)
+  }, [equippedKey])
   const stage = bondStage(bond)
   const bondRef = useRef({ happiness: bond.happiness, stage })
   useEffect(() => {
@@ -672,7 +693,13 @@ function Pet({
           animate={fidgetControls}
         >
           {variant === 'robot' && !reduced && (
-            <Hands gesture={gesture} width={size} height={height} gestureKey={handKey} />
+            <Hands
+              gesture={gesture}
+              width={size}
+              height={height}
+              gestureKey={handKey}
+              rightItem={<HandAccessory id={equipped.hand} hand={size * 0.19} />}
+            />
           )}
           <motion.div
             className="relative"
@@ -692,6 +719,7 @@ function Pet({
                   transformOrigin: '50% 100%'
                 }}
               >
+                <AntennaAccessory id={equipped.antenna} size={size} />
                 <div
                   className="absolute left-1/2 rounded-full bg-white/35"
                   style={{
@@ -872,6 +900,7 @@ function Pet({
                 />
               ))}
 
+            <BodyAccessories ids={wornOnBody} size={size} height={height} />
             <ReactionExtras mood={mood} size={size} reduced={!!reduced || compact} night={night} />
             {night && !compact && variant === 'robot' && <NightCap size={size} still={reduced} />}
             {/* Onay bekliyor: amber ünlem balonu */}
