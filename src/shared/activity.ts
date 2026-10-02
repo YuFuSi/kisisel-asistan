@@ -33,17 +33,44 @@ const CODE_APPS = [
   'pycharm64',
   'webstorm64',
   'windsurf',
-  'zed'
+  'zed',
+  'studio64',
+  'sublime_text',
+  'notepad++'
 ]
-const MUSIC_APPS = ['spotify', 'itunes', 'applemusic', 'deezer', 'tidal', 'foobar2000', 'musicbee']
-const VIDEO_APPS = ['vlc', 'mpc-hc64', 'mpc-be64', 'potplayermini64', 'netflix', 'disney+', 'mpv']
+const MUSIC_APPS = [
+  'spotify',
+  'itunes',
+  'applemusic',
+  'fizy',
+  'deezer',
+  'tidal',
+  'foobar2000',
+  'musicbee'
+]
+const VIDEO_APPS = [
+  'vlc',
+  'mpc-hc64',
+  'mpc-be64',
+  'potplayermini64',
+  'netflix',
+  'disney+',
+  'max',
+  'blutv',
+  'gain',
+  'tod',
+  'exxen',
+  'tvplus',
+  'mpv'
+]
 const MEETING_APPS = ['zoom', 'teams', 'ms-teams', 'webex', 'skype']
-const CHAT_APPS = ['discord', 'whatsapp', 'telegram', 'slack', 'signal']
+const CHAT_APPS = ['discord', 'whatsapp', 'telegram', 'slack', 'signal', 'bip']
 const DOCUMENT_APPS = [
   'winword',
   'excel',
   'powerpnt',
   'notepad',
+  'canva',
   'obsidian',
   'notion',
   'acrord32',
@@ -68,20 +95,26 @@ const VIDEO_SITES = [
   'disney+',
   'prime video',
   'blutv',
+  'gain',
+  'tod',
   'exxen',
+  'tv+',
   'puhutv',
   'vimeo',
   'dizi',
   'film izle'
 ]
-const MUSIC_SITES = ['spotify', 'youtube music', 'soundcloud', 'deezer']
+const MUSIC_SITES = ['spotify', 'youtube music', 'soundcloud', 'deezer', 'apple music', 'fizy']
 const MEETING_SITES = ['google meet', 'meet.google', 'zoom meeting', 'teams']
-const CHAT_SITES = ['whatsapp', 'discord', 'telegram', 'instagram', 'messenger']
+const CHAT_SITES = ['whatsapp', 'bip', 'discord', 'telegram', 'instagram', 'messenger']
 const DOCUMENT_SITES = [
   'google docs',
   'google dokümanlar',
   'google e-tablolar',
   'google sheets',
+  'google slides',
+  'google slaytlar',
+  'canva',
   'notion',
   'overleaf'
 ]
@@ -125,7 +158,9 @@ export function classifyActivity(input: {
   if (BROWSERS.includes(process)) {
     // Sıra önemli: "YouTube Music" müziktir, "YouTube" videodur
     if (has(title, MUSIC_SITES)) return result('music', cleanTitle(input.title))
-    if (has(title, VIDEO_SITES)) return result('video', cleanTitle(input.title))
+    if (has(title, VIDEO_SITES) || /(^|[^a-z0-9])max([^a-z0-9]|$)/.test(title)) {
+      return result('video', cleanTitle(input.title))
+    }
     if (has(title, MEETING_SITES)) return result('meeting')
     if (has(title, CHAT_SITES)) return result('chat')
     if (has(title, DOCUMENT_SITES)) return result('document')
