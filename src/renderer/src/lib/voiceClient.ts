@@ -12,15 +12,15 @@ import { errorMessage } from './errors'
 import { pickVoice } from './voice'
 import captureWorkletUrl from './voiceCaptureWorklet.ts?worker&url'
 
-// Arayüz tarafında Jarvis sesi: ana sürecin sesli sohbet olaylarını dinler, mikrofonu açıp kapatır
-// ve Jarvis'in cümlelerini sırayla çalar. Uygulama açılışında bir kez başlatılır (initVoiceClient).
+// Arayüz tarafında Pıtır sesi: ana sürecin sesli sohbet olaylarını dinler, mikrofonu açıp kapatır
+// ve Pıtır'ın cümlelerini sırayla çalar. Uygulama açılışında bir kez başlatılır (initVoiceClient).
 
 export interface VoiceSnapshot {
   phase: VoicePhase
   sessionActive: boolean
   /** Son söylenen cümle (yazıya çevrilmiş) */
   userCaption: string | null
-  /** Jarvis'in cevabı (seslendirildikçe uzar) */
+  /** Pıtır'ın cevabı (seslendirildikçe uzar) */
   assistantCaption: string | null
   /** Sesli sohbetin kaydedildiği sohbet */
   conversationId: number | null
@@ -120,7 +120,7 @@ function startMic(): Promise<void> {
       // Aynı hata her dinleme denemesinde günlüğe tekrar yazılmasın
       if (message !== lastLoggedMicError) {
         lastLoggedMicError = message
-        window.api.app.logError(`Jarvis mikrofonu açılamadı: ${message}`)
+        window.api.app.logError(`Pıtır mikrofonu açılamadı: ${message}`)
       }
     } finally {
       micStarting = null
@@ -140,7 +140,7 @@ function stopMic(): void {
   void current.context.close()
 }
 
-// ---- Jarvis'in sesini çalma ----
+// ---- Pıtır'ın sesini çalma ----
 
 interface PlayItem {
   id: number
@@ -242,7 +242,7 @@ function playNext(): void {
         }
         source.start()
       } catch (err) {
-        window.api.app.logError(`Jarvis sesi çalınamadı: ${errorMessage(err)}`)
+        window.api.app.logError(`Pıtır sesi çalınamadı: ${errorMessage(err)}`)
         finish()
       }
     })()
@@ -290,7 +290,7 @@ function stopPlayback(): void {
   setSpeaking(false)
 }
 
-/** Jarvis uyanınca kısa, yükselen iki notalı bir ses */
+/** Pıtır uyanınca kısa, yükselen iki notalı bir ses */
 function playChime(): void {
   try {
     const context = new AudioContext()

@@ -134,7 +134,7 @@ function CommandPalette({
     return [
       {
         id: 'ask-jarvis',
-        label: `Bunu Jarvis'e sor: ${query.trim()}`,
+        label: `Bunu Pıtır'a sor: ${query.trim()}`,
         group: 'Eylemler',
         icon: MessageSquare,
         run: () => {

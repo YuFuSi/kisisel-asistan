@@ -80,7 +80,7 @@ function orbScaleFromSpread(spread: number): number {
   return MIN_ORB_SCALE + t * (MAX_ORB_SCALE - MIN_ORB_SCALE)
 }
 
-// Ana Sayfa öğeleri sırayla, yumuşak bir yaylanmayla belirir (Jarvis Cam)
+// Ana Sayfa öğeleri sırayla, yumuşak bir yaylanmayla belirir (Pıtır Cam)
 const rise = (delay: number): Record<string, unknown> => ({
   initial: { opacity: 0, y: 14, filter: 'blur(6px)' },
   animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
@@ -102,7 +102,7 @@ function voiceHint(voice: VoiceSnapshot): string {
   if (voice.sessionActive) {
     switch (voice.phase) {
       case 'capturing':
-        return 'Dinliyorum... Bitirmek için “dur” de veya Jarvis’e dokun.'
+        return 'Dinliyorum... Bitirmek için “dur” de veya Pıtır’a dokun.'
       case 'transcribing':
         return 'Söylediğini yazıya çeviriyorum...'
       case 'responding':
@@ -110,8 +110,8 @@ function voiceHint(voice: VoiceSnapshot): string {
     }
   }
   return voice.phase === 'wake'
-    ? '“Hey Jarvis” de veya konuşmak için Jarvis’e dokun'
-    : 'Konuşmak için Jarvis’e dokun'
+    ? '“Hey Jarvis” de veya konuşmak için Pıtır’a dokun'
+    : 'Konuşmak için Pıtır’a dokun'
 }
 
 // Ana deneyim küre ve komut; günlük bağlam kullanıcı açtığında görünür.
@@ -189,7 +189,7 @@ function HomePage({
   } = useHandTracking(handControlOn, HAND_GAIN_X, HAND_GAIN_Y)
   const orbScale = handControlOn && twoHandSpread !== null ? orbScaleFromSpread(twoHandSpread) : 1
   // İki hızlı alkış: eller kamerayı yönetmeden önce serbest olmalı, bu yüzden düğme yerine ses.
-  // Jarvis konuşurken/dinlerken alkış sayılmaz: hoparlörden çıkan kendi sesi mikrofona dönüp
+  // Pıtır konuşurken/dinlerken alkış sayılmaz: hoparlörden çıkan kendi sesi mikrofona dönüp
   // "iki alkış" gibi algılanabiliyor ve el kontrolü kendiliğinden açılıyordu. Kamera yoksa açılmaz.
   const toast = useToast()
   const voiceBusy = state === 'speaking' || state === 'listening'
@@ -326,13 +326,13 @@ function HomePage({
                   typed={typed}
                   activity={running?.name ?? null}
                   onClick={toggleVoiceSession}
-                  label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+                  label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'}
                 />
               ) : (
                 <button
                   onClick={toggleVoiceSession}
-                  aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
-                  title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Jarvis ile konuş'}
+                  aria-label={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'}
+                  title={voice.sessionActive ? 'Sesli sohbeti bitir' : 'Pıtır ile konuş'}
                   className="max-w-full cursor-pointer rounded-full transition-transform duration-[var(--motion-control)] focus-visible:outline-offset-[-24px]"
                   style={{ transform: `scale(${orbScale})` }}
                 >
@@ -409,7 +409,7 @@ function HomePage({
               )}
               {voice.assistantCaption && (
                 <p className="select-text">
-                  <span className="text-accent">Jarvis: </span>
+                  <span className="text-accent">Pıtır: </span>
                   <span className="text-muted">{voice.assistantCaption}</span>
                 </p>
               )}

@@ -13,7 +13,7 @@ import {
   type LucideIcon
 } from 'lucide-react'
 
-// Pet karakterinin görünüm sabitleri: ruh hâli, anten rengi, araç simgeleri (prototip "Jarvis Cam")
+// Pet karakterinin görünüm sabitleri: ruh hâli, anten rengi, araç simgeleri (prototip "Pıtır Cam")
 
 export type PetMood =
   | 'idle'
@@ -55,21 +55,21 @@ export const ANTENNA_COLOR: Record<PetMood, string> = {
 
 /** Ekran okuyucu için ruh hâlinin adı */
 export const MOOD_LABELS: Record<PetMood, string> = {
-  idle: 'Jarvis boşta',
-  listen: 'Jarvis dinliyor',
-  think: 'Jarvis düşünüyor',
-  work: 'Jarvis çalışıyor',
-  speak: 'Jarvis konuşuyor',
-  approval: 'Jarvis onayını bekliyor',
-  happy: 'Jarvis sevinçli',
-  sad: 'Jarvis üzgün',
-  sleep: 'Jarvis uyuyor',
-  tickle: 'Jarvis gülüyor',
-  dizzy: "Jarvis'in başı dönüyor",
-  angry: 'Jarvis kızgın',
-  bored: "Jarvis'in canı sıkılıyor",
-  shy: 'Jarvis utanıyor',
-  sulk: 'Jarvis küs'
+  idle: 'Pıtır boşta',
+  listen: 'Pıtır dinliyor',
+  think: 'Pıtır düşünüyor',
+  work: 'Pıtır çalışıyor',
+  speak: 'Pıtır konuşuyor',
+  approval: 'Pıtır onayını bekliyor',
+  happy: 'Pıtır sevinçli',
+  sad: 'Pıtır üzgün',
+  sleep: 'Pıtır uyuyor',
+  tickle: 'Pıtır gülüyor',
+  dizzy: "Pıtır'ın başı dönüyor",
+  angry: 'Pıtır kızgın',
+  bored: "Pıtır'ın canı sıkılıyor",
+  shy: 'Pıtır utanıyor',
+  sulk: 'Pıtır küs'
 }
 
 // Çalışan aracın adına göre ekranda gösterilecek simge (ilk eşleşen önek kazanır)

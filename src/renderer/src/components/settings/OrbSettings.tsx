@@ -48,7 +48,7 @@ function OrbSettings(): React.JSX.Element {
         </Field>
         <Field
           label="Karakter"
-          hint="Ana Sayfa'da Jarvis'i temsil eden karakter. Pet karakterler imleci takip eder, sevinir, üzülür, boşta kalınca uyur."
+          hint="Ana Sayfa'da Pıtır'ı temsil eden karakter. Pet karakterler imleci takip eder, sevinir, üzülür, boşta kalınca uyur."
         >
           <div className="flex flex-wrap gap-2">
             {CHARACTERS.map((character) => (
@@ -65,7 +65,7 @@ function OrbSettings(): React.JSX.Element {
         {prefs.character !== 'orb' && (
           <Field
             label="Aranız"
-            hint="Okşadıkça, övdükçe ve birlikte iş bitirdikçe Jarvis mutlu olur; uzun süre ilgilenmezsen surat asar. Zamanla utangaçlıktan kankalığa geçer."
+            hint="Okşadıkça, övdükçe ve birlikte iş bitirdikçe Pıtır mutlu olur; uzun süre ilgilenmezsen surat asar. Zamanla utangaçlıktan kankalığa geçer."
           >
             <div className="flex items-center gap-3">
               <div className="h-2 w-40 overflow-hidden rounded-full bg-elevated">
@@ -82,7 +82,7 @@ function OrbSettings(): React.JSX.Element {
         )}
         <Field
           label="Kürenin yüzü"
-          hint="Işıktan gözler Jarvis'in ne yaptığını gösterir: dinlerken büyür, düşünürken yana bakar, iş bitince gülümser."
+          hint="Işıktan gözler Pıtır'ın ne yaptığını gösterir: dinlerken büyür, düşünürken yana bakar, iş bitince gülümser."
         >
           <div className="flex items-center gap-2">
             <button onClick={() => setOrbPrefs({ face: true })} className={chip(prefs.face)}>

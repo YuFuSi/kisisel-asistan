@@ -5,7 +5,7 @@ import { setVoicePhase, useAssistantState, type AssistantState } from './assista
 export interface RemoteAssistant {
   state: AssistantState
   sessionActive: boolean
-  /** Jarvis bir uyarı gösterdikçe artar (küre nabız atar) */
+  /** Pıtır bir uyarı gösterdikçe artar (küre nabız atar) */
   notice: number
 }
 

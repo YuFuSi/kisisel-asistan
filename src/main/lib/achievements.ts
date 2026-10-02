@@ -16,7 +16,7 @@ export function computeAchievements(stats: UsageStats): Achievement[] {
     {
       id: 'first-step',
       title: 'İlk adım',
-      description: 'Jarvis ilk kez bir araç kullandı.',
+      description: 'Pıtır ilk kez bir araç kullandı.',
       achieved: stats.totalCalls >= 1,
       progress: Math.min(1, stats.totalCalls / 1)
     },
@@ -30,14 +30,14 @@ export function computeAchievements(stats: UsageStats): Achievement[] {
     {
       id: 'streak-3',
       title: 'Alışkanlık',
-      description: '3 gün üst üste Jarvis kullanıldı.',
+      description: '3 gün üst üste Pıtır kullanıldı.',
       achieved: stats.activeDayStreak >= 3,
       progress: Math.min(1, stats.activeDayStreak / 3)
     },
     {
       id: 'streak-7',
       title: 'Düzenli kullanıcı',
-      description: '7 gün üst üste Jarvis kullanıldı.',
+      description: '7 gün üst üste Pıtır kullanıldı.',
       achieved: stats.activeDayStreak >= 7,
       progress: Math.min(1, stats.activeDayStreak / 7)
     },

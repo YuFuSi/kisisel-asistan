@@ -26,7 +26,7 @@ function showTrayHintOnce(): void {
   const { globalShortcut } = getSettings()
   const shortcut = globalShortcut ? ` ya da ${formatAccelerator(globalShortcut)} tuşlarına bas` : ''
   new Notification({
-    title: 'Jarvis arka planda çalışıyor',
+    title: 'Pıtır arka planda çalışıyor',
     body: `Hatırlatmaların gelmeye devam edecek. Açmak için sistem tepsisindeki simgeye tıkla${shortcut}.`,
     icon
   }).show()
@@ -60,7 +60,7 @@ export function createMainWindow(options: { startHidden: boolean }): BrowserWind
     height: 860,
     minWidth: 900,
     minHeight: 560,
-    title: 'Jarvis',
+    title: 'Pıtır',
     // Renkler main.css'teki --color-app ve --color-muted ile aynı
     backgroundColor: '#0b0c0f',
     // Kendi başlık çubuğumuzu çiziyoruz; kapat/küçült düğmelerini Windows çiziyor
@@ -125,7 +125,7 @@ export function showMainWindow(): void {
   const window = mainWindow
   // Ana pencere bir şekilde kapanmış ama uygulama açık kalmışsa (ör. çentik penceresi açık olduğu
   // için uygulama kapanmadı) kısayol, bildirim veya yeniden açma hiçbir şey yapmıyordu; kullanıcı
-  // Jarvis'i hiç açamıyordu. Pencere yoksa yeniden oluşturulur.
+  // Pıtır'ı hiç açamıyordu. Pencere yoksa yeniden oluşturulur.
   if (!window || window.isDestroyed()) {
     console.warn('Ana pencere yoktu, yeniden oluşturuluyor')
     createMainWindow({ startHidden: false })

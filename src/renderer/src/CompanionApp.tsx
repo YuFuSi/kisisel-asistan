@@ -26,10 +26,10 @@ import { useSfxEnabled } from './lib/soundEffects'
 import { currentStep } from './lib/workSteps'
 import { bubbleText, inQuietHours } from './lib/companionText'
 
-// Masaüstü arkadaş (#companion): görev çubuğunun üstündeki saydam şeritte yaşayan Jarvis robotu.
+// Masaüstü arkadaş (#companion): görev çubuğunun üstündeki saydam şeritte yaşayan Pıtır robotu.
 // Çentiğin işlerini yapar (onay, iş bitti, çalışan adım, belge bırakma) ve kullanıcının ne yaptığına
 // göre arada konuşma balonuyla yorum yapar. Boştayken dolaşır, video izlenirken köşeye gelip izler
-// ve bir süre sonra uyuyakalır. Tıklanınca Jarvis açılır.
+// ve bir süre sonra uyuyakalır. Tıklanınca Pıtır açılır.
 
 const SIZE = 104
 // Robotun kutusu: eller, anten ve efektler için pay
@@ -100,7 +100,7 @@ function CompanionApp(): React.JSX.Element {
   const [shownOutcome, setShownOutcome] = useState<Outcome | null>(null)
   const [dragging, setDragging] = useState(false)
   const [videoSleepy, setVideoSleepy] = useState(false)
-  // Pencere gizliyken (tam ekran oyun, Jarvis önde) dolaşma, yorum ve ses durur
+  // Pencere gizliyken (tam ekran oyun, Pıtır önde) dolaşma, yorum ve ses durur
   const [shown, setShown] = useState(true)
   // Kullanıcı uzun süre uzaktayken robot uyur, dönünce karşılar
   const [away, setAway] = useState(false)
@@ -152,7 +152,7 @@ function CompanionApp(): React.JSX.Element {
     }
   }, [])
 
-  // --- Soru: robota yazılan soru Jarvis'e gider; cevabı bu pencere de dinler (sohbet olayları
+  // --- Soru: robota yazılan soru Pıtır'a gider; cevabı bu pencere de dinler (sohbet olayları
   // tüm pencerelere yayınlanıyor) ve kısaltılmış hâlini balonda söyler
   useEffect(
     () =>
@@ -428,7 +428,7 @@ function CompanionApp(): React.JSX.Element {
       ? {
           // Toplantıda ekran paylaşılıyor olabilir: işlemin ayrıntısı balonda yazılmaz
           text: meeting
-            ? `${pickLine('approval', approval.approval.id)} Ayrıntısı Jarvis penceresinde.`
+            ? `${pickLine('approval', approval.approval.id)} Ayrıntısı Pıtır penceresinde.`
             : `${pickLine('approval', approval.approval.id)} ${approval.approval.label}: ${approval.approval.summary}${approvals.length > 1 ? ` (${approvals.length} işlem)` : ''}`,
           tone: 'approval',
           actions: (
@@ -576,8 +576,8 @@ function CompanionApp(): React.JSX.Element {
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') closeAsk()
                 }}
-                aria-label="Jarvis’e sor"
-                placeholder="Jarvis’e sor..."
+                aria-label="Pıtır’a sor"
+                placeholder="Pıtır’a sor..."
                 className="min-h-9 min-w-0 flex-1 rounded-[12px] bg-white/5 px-3 text-sm text-ink outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent/60"
               />
               <button
@@ -598,7 +598,7 @@ function CompanionApp(): React.JSX.Element {
                 }}
                 className="text-accent hover:text-accent-hover"
               >
-                Jarvis’i aç
+                Pıtır’ı aç
               </button>
               <button type="button" onClick={closeAsk} className="text-muted hover:text-ink">
                 Kapat
@@ -673,7 +673,7 @@ function CompanionApp(): React.JSX.Element {
                 if (asking) closeAsk()
                 else openAsk()
               }}
-              label="Jarvis’e sor"
+              label="Pıtır’a sor"
             />
           </motion.div>
         </div>

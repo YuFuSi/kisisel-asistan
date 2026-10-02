@@ -56,7 +56,7 @@ function AutomationsPage(): React.JSX.Element {
           compact
           icon={Workflow}
           title="İlk rutinini kur"
-          description="Jarvis belirlediğin saatte senin yerine bir işi yapsın: sabah özeti, akşam raporu, haftalık temizlik gibi."
+          description="Pıtır belirlediğin saatte senin yerine bir işi yapsın: sabah özeti, akşam raporu, haftalık temizlik gibi."
         />
       )}
       <ul className="space-y-2">

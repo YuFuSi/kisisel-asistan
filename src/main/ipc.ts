@@ -225,7 +225,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('system:personalNote', () => getPersonalNote('home'))
   ipcMain.handle('system:weather', () => getHomeWeather())
 
-  // Jarvis sesi. Mikrofon sesi ve "çalma bitti" haberi sık geldiği için cevap beklenmez (on)
+  // Pıtır sesi. Mikrofon sesi ve "çalma bitti" haberi sık geldiği için cevap beklenmez (on)
   ipcMain.handle('voice:packStatus', () => getVoicePackStatus())
   ipcMain.handle('voice:installPack', () => installVoicePack())
   ipcMain.handle('voice:state', () => getVoiceState())

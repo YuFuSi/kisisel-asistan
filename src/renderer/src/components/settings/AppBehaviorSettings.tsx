@@ -33,7 +33,7 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
       />
       <Toggle
         label="Masaüstü arkadaş"
-        description="Jarvis robotu görev çubuğunun üstünde yaşar: onay ister, iş bitince haber verir, ne yaptığına göre arada yorum yapar (video izlerken yanına gelir). Sadece pencere başlığına bakar, ekran görüntüsü almaz. Açıkken çentik gösterilmez. Kısayol: Ctrl+Shift+J."
+        description="Pıtır robotu görev çubuğunun üstünde yaşar: onay ister, iş bitince haber verir, ne yaptığına göre arada yorum yapar (video izlerken yanına gelir). Sadece pencere başlığına bakar, ekran görüntüsü almaz. Açıkken çentik gösterilmez. Kısayol: Ctrl+Shift+J."
         checked={settings.companionEnabled}
         onChange={(checked) => void onUpdate({ companionEnabled: checked })}
       />
@@ -67,8 +67,8 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
         </Field>
       )}
       <Toggle
-        label="Jarvis Çentiği"
-        description="Ekranın üst ortasında küçük gözlü damla: Jarvis çalışırken ne yaptığını yazar, onay gerekince başka programdayken bile oradan onaylarsın. Tam ekran oyun ve videoda gizlenir."
+        label="Pıtır Çentiği"
+        description="Ekranın üst ortasında küçük gözlü damla: Pıtır çalışırken ne yaptığını yazar, onay gerekince başka programdayken bile oradan onaylarsın. Tam ekran oyun ve videoda gizlenir."
         checked={settings.notchEnabled}
         onChange={(checked) => void onUpdate({ notchEnabled: checked })}
       />
@@ -82,7 +82,7 @@ function AppBehaviorSettings({ settings, onUpdate }: AppBehaviorSettingsProps): 
           onChange={(accelerator) => onUpdate({ globalShortcut: accelerator })}
         />
       </Field>
-      <Field label="Jarvis küresi">
+      <Field label="Pıtır küresi">
         <details className={detailsClass}>
           <summary className={summaryClass}>Görünüm ve ses efektleri</summary>
           <div className="mt-4">

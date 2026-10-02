@@ -36,7 +36,7 @@ export interface OrbPrefs {
   intensity: string
   /** Kürede ışıktan gözler (yüz) gösterilsin mi */
   face: boolean
-  /** Ana Sayfa'daki karakter: klasik küre veya pet (prototip "Jarvis Cam") */
+  /** Ana Sayfa'daki karakter: klasik küre veya pet (prototip "Pıtır Cam") */
   character: CharacterId
 }
 

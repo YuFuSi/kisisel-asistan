@@ -5,7 +5,7 @@ interface ResultCardProps {
   card: ToolCard
 }
 
-// Bağlamsal kart: Jarvis'in bir araçla bulduğu/yaptığı şeyin kısa, okunur hâli (hava, takvim,
+// Bağlamsal kart: Pıtır'ın bir araçla bulduğu/yaptığı şeyin kısa, okunur hâli (hava, takvim,
 // dosya, görev, hatırlatma). Tüm kartlar aynı iskeleti paylaşır: ikonlu başlık + en fazla 5 satır.
 function ResultCard({ card }: ResultCardProps): React.JSX.Element {
   return (

@@ -107,7 +107,7 @@ function ActivitySurface({
 
   return (
     <section
-      aria-label="Jarvis etkinliği"
+      aria-label="Pıtır etkinliği"
       className={`mb-3 rounded-control border bg-surface ${approval ? 'border-caution/40' : 'border-line'}`}
     >
       <div className="flex items-center gap-2 px-3 py-2">
@@ -127,7 +127,7 @@ function ActivitySurface({
           )}
           <span className="min-w-0 flex-1">
             <span className="block text-xs text-faint">
-              Jarvis etkinliği{tools.length > 0 && ` · ${tools.length} adım`}
+              Pıtır etkinliği{tools.length > 0 && ` · ${tools.length} adım`}
             </span>
             <span role="status" className="block text-sm font-medium break-words text-ink">
               {summary}
@@ -143,7 +143,7 @@ function ActivitySurface({
             onClick={() => void stop()}
             disabled={stopRequested}
             className={buttonClass('ghost', 'sm')}
-            aria-label="Jarvis işlemini durdur"
+            aria-label="Pıtır işlemini durdur"
           >
             <Square className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{stopRequested ? 'Durduruluyor' : 'Durdur'}</span>

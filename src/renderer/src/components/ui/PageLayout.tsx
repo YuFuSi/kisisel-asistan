@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import PageHeader from './PageHeader'
 
-// Sayfa açılınca içerik hafif bulanıklıktan netleşerek, çok az yükselerek belirir (Jarvis Cam)
+// Sayfa açılınca içerik hafif bulanıklıktan netleşerek, çok az yükselerek belirir (Pıtır Cam)
 const enter = {
   initial: { opacity: 0, y: 10, filter: 'blur(4px)' },
   animate: { opacity: 1, y: 0, filter: 'blur(0px)' },

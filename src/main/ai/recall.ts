@@ -12,7 +12,7 @@ import { embedText } from './embeddings'
 
 // Hatırlama: her mesajda hangi hafızaların ve geçmiş konuşmaların modele verileceğini seçer.
 // Veri modelden bağımsız veritabanında olduğu için seçili model (Gemini, Qwen...) değişse de aynı
-// Jarvis hatırlar. Anlamsal arama (bge-m3) kullanılamazsa anahtar kelime sıralamasına düşer.
+// Pıtır hatırlar. Anlamsal arama (bge-m3) kullanılamazsa anahtar kelime sıralamasına düşer.
 
 // Profil kayıtları her zaman; bunların dışında konuya göre en fazla bu kadar bilgi
 const PROFILE_LIMIT = 15

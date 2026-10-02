@@ -18,7 +18,7 @@ const LOOK: Record<AssistantState, { opacity: number; scale: number; spin: numbe
     approval: { opacity: 0.85, scale: 1, spin: 0, hue: 150 }
   }
 
-// Kürenin arkasında parlayan ışık halkası (Jarvis Cam): bulanık, renkli bir halka; durum
+// Kürenin arkasında parlayan ışık halkası (Pıtır Cam): bulanık, renkli bir halka; durum
 // değişince yumuşakça büyür, parlar ya da yavaşça döner. Sadece CSS dönüşümü ve opaklık değişir.
 function OrbHalo({ state, size }: OrbHaloProps): React.JSX.Element {
   const reduced = useReducedMotion()

@@ -6,7 +6,7 @@ import { daemonForegroundInfo } from '../lib/windowDaemon'
 import { getMainWindow } from './window'
 
 // Masaüstü arkadaş: görev çubuğunun hemen üstünde, ekran genişliğinde saydam bir şerit pencere.
-// Jarvis robotu burada yaşar: dolaşır, uyur, onay ister, iş bitince haber verir ve kullanıcının
+// Pıtır robotu burada yaşar: dolaşır, uyur, onay ister, iş bitince haber verir ve kullanıcının
 // ne yaptığına (video, oyun, kod...) tepki verir. Çentiğin yerini alır.
 // Fare robotun üstünde değilken tıklamalar alttaki programlara geçer (setIgnoreMouseEvents + forward).
 // Öndeki pencere sadece başlık ve program adıyla izlenir; ekran görüntüsü alınmaz, hiçbir şey dışarı gitmez.
@@ -78,7 +78,7 @@ const sameActivity = (a: Activity, b: Activity): boolean =>
   a.kind === b.kind && a.detail === b.detail && a.fullscreen === b.fullscreen
 
 // Öndeki pencereye bakıp aktiviteyi günceller ve görünürlüğü ayarlar:
-// - Jarvis penceresi öndeyse gizlenir (orada zaten robot var)
+// - Pıtır penceresi öndeyse gizlenir (orada zaten robot var)
 // - Tam ekranda sadece video izlenirken görünür (robot da izler); oyunda ve sunumda gizlenir
 async function poll(): Promise<void> {
   if (!companionWindow) return

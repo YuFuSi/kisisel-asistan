@@ -18,7 +18,7 @@ interface SuggestionInput {
 const STALE_DAYS = 3
 
 /**
- * Jarvis'in Ana Sayfa'ya değil, sidebar'a doğrudan çıkardığı öneriler: geciken görevler ve
+ * Pıtır'ın Ana Sayfa'ya değil, sidebar'a doğrudan çıkardığı öneriler: geciken görevler ve
  * yaklaşan saatli işler için tek tıkla harekete geçilebilen kısa cümleler. En fazla 2 öneri döner,
  * en önemlisi (gecikme) önce gelir; kalabalık etmesin diye kapsam kasıtlı dar tutulur.
  */

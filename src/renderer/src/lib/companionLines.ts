@@ -113,7 +113,7 @@ export const COMPANION_LINES: Partial<Record<LineKey, string[]>> = {
     'Ben hazırım, sen nasılsın?',
     'Anten açık, görevler bekliyor.',
     'Bugün güzel şeyler üretelim.',
-    'Sistem hazır, Jarvis de hazır.'
+    'Sistem hazır, Pıtır de hazır.'
   ],
   welcomeBack: [
     'Aa, tanıdık bir yüz.',
@@ -165,7 +165,7 @@ export const COMPANION_LINES: Partial<Record<LineKey, string[]>> = {
     'Anten çekiyor, fikir gelmiyor.',
     'Sessizlik de güzelmiş aslında.',
     'Bir gün ayak isteyeceğim.',
-    'Tamam Jarvis, düşünmeye devam.'
+    'Tamam Pıtır, düşünmeye devam.'
   ]
 }
 

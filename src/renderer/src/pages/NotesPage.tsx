@@ -8,11 +8,11 @@ import Tabs, { type TabItem } from '../components/ui/Tabs'
 import { useReducedMotion } from '../lib/useReducedMotion'
 
 // Hafıza: tek sekme sırası (tasarım turu). Eskiden Liste/Harita ve Notlarım/Asistanın hafızası
-// diye iki kat sekme vardı. İlk açılışta Jarvis'in bildikleri gelir: sayfanın asıl işi bu.
+// diye iki kat sekme vardı. İlk açılışta Pıtır'ın bildikleri gelir: sayfanın asıl işi bu.
 type Tab = 'memories' | 'notes' | 'graph'
 
 const TABS: TabItem<Tab>[] = [
-  { id: 'memories', label: "Jarvis'in bildikleri" },
+  { id: 'memories', label: "Pıtır'ın bildikleri" },
   { id: 'notes', label: 'Notlarım' },
   { id: 'graph', label: 'Harita' }
 ]

@@ -82,7 +82,7 @@ describe('formatTranscript ve buildExtractionPrompt', () => {
     expect(text).toContain('Kullanıcı: Şunu özetle')
     expect(text).toContain('[1 belge eklendi]')
     expect(text).not.toContain('gizli içerik')
-    expect(text).toContain('Jarvis: Tamam.')
+    expect(text).toContain('Pıtır: Tamam.')
   })
 
   it('çok uzun sohbette en yeni kısmı tutar', () => {

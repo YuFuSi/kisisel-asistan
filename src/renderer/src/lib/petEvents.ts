@@ -1,4 +1,4 @@
-// Pet karaktere sayfalardan gelen küçük sinyaller (ör. kullanıcı Jarvis'i övdü)
+// Pet karaktere sayfalardan gelen küçük sinyaller (ör. kullanıcı Pıtır'ı övdü)
 
 export type PetSignal = 'praise'
 

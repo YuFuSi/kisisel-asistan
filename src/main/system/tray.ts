@@ -17,7 +17,7 @@ let actions: TrayActions | null = null
 export function createTray(trayActions: TrayActions): void {
   actions = trayActions
   tray = new Tray(nativeImage.createFromPath(icon).resize({ width: 32, height: 32 }))
-  tray.setToolTip('Jarvis')
+  tray.setToolTip('Pıtır')
   // Tek tıkla pencere açılır; sağ tıkla menü
   tray.on('click', () => trayActions.onOpen())
   refreshTrayMenu()
@@ -31,9 +31,9 @@ export function refreshTrayMenu(): void {
 
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Jarvis'i aç", click: onOpen },
+      { label: "Pıtır'ı aç", click: onOpen },
       { label: 'Yeni sohbet', click: onNewChat },
-      { label: 'Jarvis Çentiğini aç/kapat', click: onToggleNotch },
+      { label: 'Pıtır Çentiğini aç/kapat', click: onToggleNotch },
       { type: 'separator' },
       {
         label: 'Windows açılınca başlat',

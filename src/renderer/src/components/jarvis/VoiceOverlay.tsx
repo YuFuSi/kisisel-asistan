@@ -26,7 +26,7 @@ interface VoiceOverlayProps {
   onOpenConversation: (conversationId: number) => void
 }
 
-// "Her yerde Jarvis": Ana Sayfa dışındayken sesli sohbet başlarsa sayfa kararır, ortada büyük
+// "Her yerde Pıtır": Ana Sayfa dışındayken sesli sohbet başlarsa sayfa kararır, ortada büyük
 // küre ve altyazılar belirir. Esc veya "Bitir" sohbeti kapatır; araç adımları ve sonuç kartları altyazının altında görünür.
 function VoiceOverlay({ onOpenConversation }: VoiceOverlayProps): React.JSX.Element | null {
   const voice = useVoice()

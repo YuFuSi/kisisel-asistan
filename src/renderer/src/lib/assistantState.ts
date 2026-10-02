@@ -6,7 +6,7 @@ import { bumpBond } from './petBond'
 import { playSfx } from './soundEffects'
 import { upsertStep, type WorkStep } from './workSteps'
 
-/** Jarvis küresinin ve menüdeki durum göstergesinin gösterdiği durum */
+/** Pıtır küresinin ve menüdeki durum göstergesinin gösterdiği durum */
 export type AssistantState = 'idle' | 'listening' | 'thinking' | 'working' | 'speaking' | 'approval'
 
 export const STATE_LABELS: Record<AssistantState, string> = {
@@ -100,7 +100,7 @@ function setEmotion(kind: Emotion | null): void {
   emotionListeners.forEach((listener) => listener())
   // Biten iş robotla bağı güçlendirir; çentik de aynı olayı aldığı için sadece ana pencere sayar
   if (kind === 'success' && window.location.hash !== '#notch') bumpBond(4)
-  // Sesli sohbette Jarvis zaten konuşuyor; sadece yazılı akışta efekt çal
+  // Sesli sohbette Pıtır zaten konuşuyor; sadece yazılı akışta efekt çal
   if (kind === 'error') playSfx('error')
   else if (kind === 'unsure') playSfx('approval')
   else if (kind === 'success' && voicePhase === 'off') playSfx('done')
@@ -258,7 +258,7 @@ export function respondToApproval(approvalId: string, approved: boolean): void {
   const item = approvals.find((entry) => entry.approval.id === approvalId)
   setApprovals(approvals.filter((entry) => entry.approval.id !== approvalId))
   update()
-  // Yanıt ana sürece ulaşmazsa kart geri gelir; yoksa kullanıcı onayladığını sanır, Jarvis beklerdi
+  // Yanıt ana sürece ulaşmazsa kart geri gelir; yoksa kullanıcı onayladığını sanır, Pıtır beklerdi
   window.api.chat.respondToApproval(approvalId, approved).catch((err: unknown) => {
     console.error('Onay yanıtı gönderilemedi:', err)
     if (item && !approvals.some((entry) => entry.approval.id === approvalId)) {

@@ -12,7 +12,7 @@ import type { Automation, AutomationRun } from '../../shared/api'
 const CHECK_INTERVAL_MS = 30_000
 
 // Aynı rutin aynı anda iki kez çalışmasın diye: zamanlayıcı ile "Şimdi çalıştır" (veya art arda
-// iki "Şimdi çalıştır" tıklaması) çakışabilir. Süreç içi kilit yeterli; iki ayrı Jarvis kopyası
+// iki "Şimdi çalıştır" tıklaması) çakışabilir. Süreç içi kilit yeterli; iki ayrı Pıtır kopyası
 // zaten tek kopya kilidiyle (requestSingleInstanceLock) engelleniyor.
 const runningAutomationIds = new Set<number>()
 

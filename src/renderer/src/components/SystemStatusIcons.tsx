@@ -35,7 +35,7 @@ function diskLevel(disk: { free: number; total: number }): Level {
   return ratio < 0.1 ? 'warn' : 'ok'
 }
 
-// Jarvis'in çalışması için gereken parçaların durumu: başlık çubuğunda sadece simge; sorun varsa renklenir
+// Pıtır'ın çalışması için gereken parçaların durumu: başlık çubuğunda sadece simge; sorun varsa renklenir
 function SystemStatusIcons(): React.JSX.Element {
   const [status, setStatus] = useState<SystemStatus | null>(null)
   const online = useOnline()

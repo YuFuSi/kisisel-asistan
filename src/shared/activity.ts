@@ -142,7 +142,12 @@ export function classifyActivity(input: {
     fullscreen: input.fullscreen
   })
 
-  if (process === 'kisisel-asistan' || process === 'electron' || title === 'jarvis') {
+  if (
+    process === 'kisisel-asistan' ||
+    process === 'electron' ||
+    title === 'pıtır' ||
+    title === 'jarvis'
+  ) {
     return result('jarvis')
   }
   if (DESKTOP_APPS.includes(process) && (title === '' || title === 'program manager')) {

@@ -83,7 +83,7 @@ function CommandBox({ onSubmit, onTyping }: CommandBoxProps): React.JSX.Element 
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
         <input
-          aria-label="Jarvis’e komut ver"
+          aria-label="Pıtır’a komut ver"
           id={HOME_COMMAND_ID}
           ref={inputRef}
           value={text}

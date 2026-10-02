@@ -45,7 +45,7 @@ export function getWhisper(): WhisperServer {
   const { whisperServer, whisperModel } = getVoicePaths()
   if (!whisperServer || !whisperModel) {
     throw new Error(
-      'İnternetsiz konuşma tanıma kurulu değil. Ayarlar > Ses bölümünden Jarvis ses paketini indir.'
+      'İnternetsiz konuşma tanıma kurulu değil. Ayarlar > Ses bölümünden Pıtır ses paketini indir.'
     )
   }
   whisper = new WhisperServer(whisperServer, whisperModel)
@@ -71,7 +71,7 @@ export function getPiper(): PiperVoice {
   }
   const paths = getVoicePaths()
   if (!paths.piper || !paths.piperVoice) {
-    throw new Error('Türkçe ses kurulu değil. Ayarlar > Ses bölümünden Jarvis ses paketini indir.')
+    throw new Error('Türkçe ses kurulu değil. Ayarlar > Ses bölümünden Pıtır ses paketini indir.')
   }
   piper = new PiperVoice(paths.piper, paths.piperVoice, lengthScale)
   return piper
