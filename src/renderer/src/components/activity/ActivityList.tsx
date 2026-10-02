@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
+import { motion } from 'motion/react'
 import { Ban, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import type { ActivityEntry, ActivityStatus, ToolSource } from '@shared/api'
 import Skeleton from '../ui/Skeleton'
 import { formatReminderTime } from '../../lib/dates'
 import { cardClass } from '../../lib/styles'
 import { useLiveData } from '../../lib/useLiveData'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 
 const SOURCE_LABELS: Record<ToolSource, string> = {
   chat: 'Sohbet',
@@ -57,10 +59,17 @@ interface ActivityListProps {
   limit?: number
   /** Ana Sayfa kartı için sade görünüm */
   compact?: boolean
+  /** Ayarlar'daki cam liste görünümü. */
+  glass?: boolean
 }
 
 // Asistanın son kullandığı araçlar (etkinlik kaydı); yeni işlem olunca kendiliğinden yenilenir
-function ActivityList({ limit = 10, compact = false }: ActivityListProps): React.JSX.Element {
+function ActivityList({
+  limit = 10,
+  compact = false,
+  glass = false
+}: ActivityListProps): React.JSX.Element {
+  const reduced = useReducedMotion()
   const load = useCallback(() => window.api.activity.list(limit), [limit])
   const { data, error } = useLiveData(load, 'activity')
 
@@ -98,14 +107,27 @@ function ActivityList({ limit = 10, compact = false }: ActivityListProps): React
   }
 
   return (
-    <ul className={`${cardClass} divide-y divide-line`}>
+    <ul className={glass ? 'space-y-2' : `${cardClass} divide-y divide-line`}>
       {data.map((entry) => (
-        <li key={entry.id} className="flex items-start gap-3 px-4 py-3" title={entry.detail}>
+        <motion.li
+          key={entry.id}
+          layout={glass && !reduced}
+          initial={false}
+          transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+          className={`${glass ? 'glass-soft ' : ''}flex items-start gap-3 px-4 py-3`}
+          title={entry.detail}
+        >
           <span className="mt-0.5 shrink-0" title={STATUS_LABELS[entry.status]}>
             <StatusIcon status={entry.status} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-3">
+            <div
+              className={
+                glass
+                  ? 'flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1'
+                  : 'flex items-baseline justify-between gap-3'
+              }
+            >
               <span className="truncate text-sm text-ink">{entry.label}</span>
               <span className="shrink-0 text-xs text-faint">
                 {formatReminderTime(entry.createdAt)}
@@ -113,7 +135,7 @@ function ActivityList({ limit = 10, compact = false }: ActivityListProps): React
             </div>
             <div className="truncate text-xs text-muted">{describe(entry)}</div>
           </div>
-        </li>
+        </motion.li>
       ))}
     </ul>
   )

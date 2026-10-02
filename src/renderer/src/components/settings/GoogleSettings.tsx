@@ -37,7 +37,7 @@ function GoogleSettings({
   if (status?.connected) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-positive/30 bg-positive/10 px-4 py-3">
+        <div className="glass-soft flex flex-wrap items-center justify-between gap-4 px-4 py-3 ring-1 ring-positive/30">
           <span className="flex min-w-0 items-center gap-2 text-sm text-positive">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span className="truncate select-text">Bağlı: {status.email ?? 'Google hesabı'}</span>
@@ -66,7 +66,7 @@ function GoogleSettings({
         türünde bir OAuth istemcisi oluştur, sonra bilgilerini buraya gir.
       </p>
       {settings.unreadableSecrets.includes('google-refresh-token') && (
-        <p className="rounded-xl border border-caution/30 bg-caution/10 px-4 py-3 text-sm text-caution">
+        <p className="glass-soft px-4 py-3 text-sm text-caution ring-1 ring-caution/30">
           Daha önce bağlanan Google hesabının anahtarı bu bilgisayarda çözülemiyor. Bilgileri
           kontrol edip hesabı yeniden bağla.
         </p>

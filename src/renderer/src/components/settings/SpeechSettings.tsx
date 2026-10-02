@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'motion/react'
 import { CheckCircle2, Download, Loader2, Volume2 } from 'lucide-react'
 import {
   SPEECH_PROVIDERS,
@@ -12,7 +13,9 @@ import Field from './Field'
 import SecretField from './SecretField'
 import Toggle from '../ui/Toggle'
 import { errorMessage } from '../../lib/errors'
-import { cardClass, inputClass, primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
+import { primaryButtonClass, secondaryButtonClass } from '../../lib/styles'
+import { choiceClass, inputClass } from './styles'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 import { useToast } from '../../lib/toast'
 import { listVoiceOptions, speakText, type VoiceOption } from '../../lib/voice'
 import { useVoice } from '../../lib/voiceClient'
@@ -32,17 +35,13 @@ interface SpeechSettingsProps {
   onUpdate: (patch: SettingsPatch) => Promise<void>
 }
 
-const choiceClass = (selected: boolean): string =>
-  `rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-    selected ? 'border-accent bg-accent/10' : 'border-line hover:border-line-strong'
-  }`
-
 // Jarvis sesi: yerel ses paketi, "hey jarvis", konuşmayı yazıya çevirme ve cevapları okuma
 function SpeechSettings({
   settings,
   onSettings,
   onUpdate
 }: SpeechSettingsProps): React.JSX.Element {
+  const reduced = useReducedMotion()
   const toast = useToast()
   const voice = useVoice()
   const [voices, setVoices] = useState<VoiceOption[]>([])
@@ -123,11 +122,17 @@ function SpeechSettings({
         label="Jarvis ses paketi"
         hint="İnternetsiz konuşma tanıma, doğal Türkçe ses ve “Hey Jarvis” ile uyandırma için gerekir. Dosyalar bilgisayarında kalır, ses hiçbir yere gönderilmez."
       >
-        <div className={`${cardClass} divide-y divide-line`}>
+        <div className="space-y-2">
           {pack ? (
             pack.items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                <span className="text-sm text-ink">{item.label}</span>
+              <motion.div
+                key={item.id}
+                layout={!reduced}
+                initial={false}
+                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                className="glass-soft flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
+                <span className="min-w-0 text-sm text-ink">{item.label}</span>
                 <span className="flex shrink-0 items-center gap-1.5 text-xs">
                   {item.installed ? (
                     <>
@@ -143,7 +148,7 @@ function SpeechSettings({
                     <span className="text-faint">{item.sizeMb} MB</span>
                   )}
                 </span>
-              </div>
+              </motion.div>
             ))
           ) : (
             <div className="px-4 py-3 text-sm text-faint">Yükleniyor...</div>
@@ -226,12 +231,13 @@ function SpeechSettings({
         label="Konuşmayı yazıya çeviren servis"
         hint="Sesli sohbet ve sohbet kutusundaki mikrofon bu servisi kullanır."
       >
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           {STT_IDS.map((id) => (
             <button
               key={id}
               onClick={() => void onUpdate({ sttProvider: id })}
               disabled={id === 'local' && !localSttReady}
+              aria-pressed={id === provider}
               className={choiceClass(id === provider)}
             >
               <div className="text-sm font-medium">{SPEECH_PROVIDERS[id].label}</div>
@@ -259,12 +265,13 @@ function SpeechSettings({
       )}
 
       <Field label="Cevapları okuyan ses">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {TTS_OPTIONS.map((option) => (
             <button
               key={option.id}
               onClick={() => void onUpdate({ ttsEngine: option.id })}
               disabled={option.id === 'piper' && !piperReady}
+              aria-pressed={option.id === settings.ttsEngine}
               className={choiceClass(option.id === settings.ttsEngine)}
             >
               <div className="text-sm font-medium">{option.label}</div>
@@ -323,11 +330,8 @@ function SpeechSettings({
             <button
               key={id}
               onClick={() => void onUpdate({ voiceStyle: id })}
-              className={`rounded-[10px] border px-3 py-1.5 text-sm transition-colors ${
-                settings.voiceStyle === id
-                  ? 'border-accent bg-accent/15 text-ink'
-                  : 'border-line text-muted hover:border-line-strong hover:text-ink'
-              }`}
+              aria-pressed={settings.voiceStyle === id}
+              className={choiceClass(settings.voiceStyle === id)}
             >
               {label}
             </button>
