@@ -24,6 +24,7 @@ import { useReducedMotion } from './lib/useReducedMotion'
 import { speakBabble } from './lib/babble'
 import { useSfxEnabled } from './lib/soundEffects'
 import { currentStep } from './lib/workSteps'
+import { bubbleText, inQuietHours } from './lib/companionText'
 
 // Masaüstü arkadaş (#companion): görev çubuğunun üstündeki saydam şeritte yaşayan Jarvis robotu.
 // Çentiğin işlerini yapar (onay, iş bitti, çalışan adım, belge bırakma) ve kullanıcının ne yaptığına
@@ -41,18 +42,6 @@ const REST_AFTER_PLACE_MS = 3 * 60_000
 // Cevap balonu süresi: kısa cevaplar az, uzunlar biraz daha uzun kalır
 const replyMs = (text: string): number => Math.min(20_000, 6000 + text.length * 40)
 
-// Sohbet cevabını balona sığacak düz metne çevirir (Markdown işaretleri atılır, uzunsa kısaltılır)
-function bubbleText(markdown: string, max = 280): string {
-  const plain = markdown
-    .replace(/```[\s\S]*?```/g, ' (kod) ')
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[#*_`>|]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (plain.length <= max) return plain
-  const cut = plain.slice(0, max)
-  return `${cut.slice(0, cut.lastIndexOf(' ') > 0 ? cut.lastIndexOf(' ') : max)}…`
-}
 const LINE_MS = 5500
 // Video bu kadar sürerse robot uyuyakalır
 const VIDEO_SLEEP_MS = 10 * 60_000
@@ -74,19 +63,6 @@ const IDLE_GAP_MS: Record<Chattiness, number> = {
 }
 
 const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
-
-function inQuietHours(settings: SettingsView | null): boolean {
-  if (!settings?.quietStart || !settings.quietEnd) return false
-  const now = new Date()
-  const minutes = now.getHours() * 60 + now.getMinutes()
-  const toMinutes = (value: string): number => {
-    const [h, m] = value.split(':').map(Number)
-    return h * 60 + m
-  }
-  const start = toMinutes(settings.quietStart)
-  const end = toMinutes(settings.quietEnd)
-  return start <= end ? minutes >= start && minutes < end : minutes >= start || minutes < end
-}
 
 // Düz sohbet cevapları gösterilmez; sadece araçla yapılan işler ve sorunlar
 function worthShowing(outcome: Outcome | null): boolean {
