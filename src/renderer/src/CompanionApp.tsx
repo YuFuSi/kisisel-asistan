@@ -41,11 +41,18 @@ const VIDEO_SLEEP_MS = 10 * 60_000
 // Kod bu kadar sürerse mola önerir
 const LONG_CODE_MS = 90 * 60_000
 
-// Konuşkanlık: kendiliğinden yorumlar arasında en az bu kadar süre
-const LINE_GAP_MS: Record<SettingsView['companionChattiness'], number> = {
+// Konuşkanlık: yorumlar arasında en az bu kadar süre. Kullanıcının yaptığı işe tepki ("video
+// açtın") daha sık olabilir; boştayken kendi kendine konuşma daha seyrek.
+type Chattiness = SettingsView['companionChattiness']
+const REACT_GAP_MS: Record<Chattiness, number> = {
+  quiet: Infinity,
+  sometimes: 3 * 60_000,
+  chatty: 60_000
+}
+const IDLE_GAP_MS: Record<Chattiness, number> = {
   quiet: Infinity,
   sometimes: 15 * 60_000,
-  chatty: 3 * 60_000
+  chatty: 4 * 60_000
 }
 
 const loadSettings = (): Promise<SettingsView> => window.api.settings.get()
@@ -118,7 +125,8 @@ function CompanionApp(): React.JSX.Element {
   // rahatsız edilmemesi gereken durumlara (toplantı, tam ekran oyun) uyar
   const say = (key: LineKey, force = false): void => {
     const now = Date.now()
-    const gap = LINE_GAP_MS[settings?.companionChattiness ?? 'sometimes']
+    const chattiness = settings?.companionChattiness ?? 'sometimes'
+    const gap = key === 'idle' ? IDLE_GAP_MS[chattiness] : REACT_GAP_MS[chattiness]
     if (!force) {
       if (now - lastLineAt.current < gap) return
       if (inQuietHours(settings ?? null)) return

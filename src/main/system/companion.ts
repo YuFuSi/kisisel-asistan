@@ -88,6 +88,12 @@ async function poll(): Promise<void> {
   if (!companionWindow || companionWindow.isDestroyed()) return
 
   if (activity.kind !== 'jarvis' && !sameActivity(activity, lastActivity)) {
+    if (activity.kind !== lastActivity.kind) {
+      // Sadece tür yazılır; pencere başlıkları günlüğe girmez (gizlilik)
+      console.info(
+        `Masaüstü arkadaş: aktivite ${activity.kind}${activity.fullscreen ? ' (tam ekran)' : ''}`
+      )
+    }
     lastActivity = activity
     companionWindow.webContents.send('companion:activity', activity)
   }
