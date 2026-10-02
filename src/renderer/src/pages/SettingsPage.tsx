@@ -12,6 +12,7 @@ import {
   Monitor,
   Settings2,
   Sparkles,
+  Shirt,
   type LucideIcon
 } from 'lucide-react'
 import {
@@ -37,6 +38,7 @@ import PageLayout from '../components/ui/PageLayout'
 import Skeleton from '../components/ui/Skeleton'
 import Tabs from '../components/ui/Tabs'
 import { errorMessage } from '../lib/errors'
+import WardrobeSettings from '../components/settings/WardrobeSettings'
 import IconTile, { type IconTone } from '../components/ui/IconTile'
 import { choiceClass, detailsClass, summaryClass } from '../components/settings/styles'
 import { useReducedMotion } from '../lib/useReducedMotion'
@@ -228,6 +230,9 @@ function SettingsPage(): React.JSX.Element {
             <>
               <Section title="Pencere ve kısayollar" icon={Monitor} tone="teal">
                 <AppBehaviorSettings settings={settings} onUpdate={update} />
+              </Section>
+              <Section title="Kıyafet dolabı" icon={Shirt} tone="pink">
+                <WardrobeSettings />
               </Section>
               <Section title="Jarvis'in uyarıları" icon={Bell} tone="amber">
                 <NoticeSettings settings={settings} onUpdate={update} />
