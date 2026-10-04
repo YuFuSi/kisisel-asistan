@@ -663,6 +663,7 @@ function CompanionApp(): React.JSX.Element {
             }
           >
             <Pet
+              desktop
               variant={variant}
               state={state}
               emotion={emotion}
