@@ -2,7 +2,8 @@ import { useSyncExternalStore } from 'react'
 
 // Pet ile kullanıcının "bağı": mutluluk puanı ve tanışıklık. Sadece bu bilgisayardaki görünüm
 // tercihi gibi localStorage'da tutulur (ana pencere ve çentik aynı kaynağı paylaşır).
-// - Mutluluk (0-100): okşama, övgü, biten işler artırır; uzun süre ilgilenilmezse saatte 2 düşer.
+// - Mutluluk (0-100): okşama, övgü, biten işler artırır; uzakta geçen her saat 1 düşer (bir seferde en
+//   fazla 25, 20'nin altına inmez).
 // - Tanışıklık: ilk tanışmadan beri geçen gün ve etkileşim sayısıyla utangaç → arkadaş → kanka.
 
 export interface Bond {
@@ -21,7 +22,10 @@ export const BOND_STAGE_LABELS: Record<BondStage, string> = {
 }
 
 const KEY = 'jarvis-pet-bond'
-const DECAY_PER_HOUR = 2
+const DECAY_PER_HOUR = 1
+// Bir ayrılıkta en fazla bu kadar düşer ve bu tabanın altına inmez (bir gece uzak kalmak robotu üzmesin)
+const MAX_DECAY = 25
+const FLOOR = 20
 
 function fresh(): Bond {
   const now = Date.now()
@@ -74,7 +78,10 @@ export function openBond(): number {
   const awayHours = Math.max(0, (now - bond.lastSeen) / 3_600_000)
   save({
     ...bond,
-    happiness: Math.max(5, bond.happiness - awayHours * DECAY_PER_HOUR),
+    happiness: Math.max(
+      Math.min(bond.happiness, FLOOR),
+      bond.happiness - Math.min(MAX_DECAY, awayHours * DECAY_PER_HOUR)
+    ),
     lastSeen: now
   })
   openedAway = awayHours

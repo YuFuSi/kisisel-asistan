@@ -66,6 +66,9 @@ interface PetProps {
   forceMood?: PetMood | null
   /** false: kendi sürükle-bırak tepkisi kapalı (masaüstünde robotu dış kap taşır) */
   draggable?: boolean
+  /** Masaüstü arkadaş: fare bu pencereye nadiren gelir; fareye bağlı sıkılma/uyku kapalı
+   * (uyku dışarıdan forceMood ile, bilgisayarın gerçek boşta kalma süresine göre gelir) */
+  desktop?: boolean
   /** Pencere gizliyken (masaüstü arkadaş) tüm sürekli animasyonlar durur */
   paused?: boolean
   /** Üstüne belge sürükleniyor: ağzını açıp bekler */
@@ -346,6 +349,7 @@ function Pet({
   compact = false,
   hungry = false,
   paused = false,
+  desktop = false,
   draggable = true,
   onMoodChange,
   forceMood = null,
@@ -377,6 +381,7 @@ function Pet({
   // Uyku: uzun süre fare/klavye hareketi ve iş olmazsa uyur, ilk harekette uyanır
   const [bored, setBored] = useState(false)
   useEffect(() => {
+    if (desktop) return
     let timer = setTimeout(() => setAsleep(true), SLEEP_AFTER_MS)
     let boredTimer = setTimeout(() => setBored(true), BORED_AFTER_MS)
     const wake = (): void => {
@@ -395,7 +400,7 @@ function Pet({
       window.removeEventListener('pointermove', wake)
       window.removeEventListener('keydown', wake)
     }
-  }, [state])
+  }, [state, desktop])
 
   // Göz kırpma: 3-6 sn arayla, bazen çift
   useEffect(() => {
@@ -537,7 +542,7 @@ function Pet({
       ? reaction.kind
       : calm && forceMood
         ? forceMood
-        : baseMood === 'idle' && (bored || bond.happiness < 25)
+        : baseMood === 'idle' && bored
           ? 'bored'
           : baseMood
   useEffect(() => {
